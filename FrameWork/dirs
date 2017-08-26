@@ -1,0 +1,7 @@
+dirs=DDraw \
+     Engine \
+     Math \
+     Window \
+     Vpal \
+     Font \
+     Init
