@@ -1,0 +1,5 @@
+dirs=Window \
+     FrameWork \
+     DemoScenes \
+     TestApps\
+     Apps
