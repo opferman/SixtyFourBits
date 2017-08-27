@@ -30,6 +30,8 @@ PARAMFRAME struct
     Param2         dq ?
     Param3         dq ?
     Param4         dq ?
+    Param5         dq ?
+    Param6         dq ?
 PARAMFRAME ends
 
 SAVEREGSFRAME struct
@@ -42,10 +44,27 @@ SAVEREGSFRAME struct
     SaveR13        dq ?
 SAVEREGSFRAME ends
 
-FIRE_DEMO_STRUCTURE struct
+FUNC_PARAMS struct
+    ReturnAddress  dq ?
+    Param1         dq ?
+    Param2         dq ?
+    Param3         dq ?
+    Param4         dq ?
+    Param5         dq ?
+    Param6         dq ?
+    Param7         dq ?
+FUNC_PARAMS ends
+
+PAL_DEMO_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
-FIRE_DEMO_STRUCTURE ends
+PAL_DEMO_STRUCTURE ends
+
+PAL_DEMO_STRUCTURE_FUNC struct
+   ParameterFrame PARAMFRAME      <?>
+   SaveFrame      SAVEREGSFRAME   <?>
+   FuncParams     FUNC_PARAMS     <?>
+PAL_DEMO_STRUCTURE_FUNC ends
 
 public PalDemo_Init
 public PalDemo_Demo
@@ -55,13 +74,20 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
-INFALTE_FONT EQU <12>
-WORD_DELAY EQU <2>
 
 .DATA
-				   
+
+FirstWord db "Pure", 0
+SecondWord db "Assembly", 0				   
 				  DoubleBuffer   dq  ?
 				  VirtualPallete dq ?
+
+FrameCountDown dd 7000
+
+Red   db  0 
+Green db  0
+Blue  db  0FFh
+Direction db 1
 
 .CODE
 
@@ -78,7 +104,7 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
  alloc_stack(SIZEOF PAL_DEMO_STRUCTURE)
  save_reg rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
   MOV RSI, RCX
@@ -93,71 +119,118 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
   CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
-  JZ @FireInit_Failed
+  JZ @PalInit_Failed
 
   MOV RCX, 256
   CALL VPal_Create
   TEST RAX, RAX
-  JZ @FireInit_Failed
+  JZ @PalInit_Failed
 
   MOV [VirtualPallete], RAX
 
-  
-@PopulatePalleteBlue:
+  XOR R12, R12
+
+@PopulatePallete:
 
   XOR EAX, EAX
 
  ; Red
-  MOV AL, BYTE PTR [RDI]  
+  MOV AL, BYTE PTR [Red]  
   SHL EAX, 16
-  INC RDI
 
   ; Green
-  MOV AL, BYTE PTR [RDI]
+  MOV AL, BYTE PTR [Green]
   SHL AX, 8
-  INC RDI
 
   ; Blue
-  MOV AL, BYTE PTR [RDI]
-  INC RDI
+  MOV AL, BYTE PTR [Blue]
 
   MOV R8, RAX
-  MOV R12, RDX
+  MOV RDX, R12
   MOV RCX, [VirtualPallete]
   CALL VPal_SetColorIndex
 
-  MOV RDX, R12
-  INC RDX
-  CMP RDX, 256
+  DEC [Blue]
+  
+  INC R12
+  CMP R12, 256
   JB @PopulatePallete
 
+
+
+  ;
+  ; Plot The New Pixels
+  ;  
+  MOV r13, [DoubleBuffer]
+
+  XOR R9, R9
+  XOR r12, r12
+  XOR CL, CL    ; Start Color
+
+@FillBackground:
+
+	  MOV BYTE PTR [r13], CL
+  	  INC r13
+      INC r12
+      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+      JB @FillBackground
+
+   ; Screen Height Increment
+   ADD CL, [Direction]
+   CMP CL, 0
+   JNE @NextTest
+   MOV [Direction], 1    
+
+@NextTest:
+	CMP CL, 0FFh
+	JNE @NextLoop
+	MOV [Direction], -1
+@NextLoop:
+  
+
+   XOR r12, r12
+   INC R9
+
+   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+   JB @FillBackground
+   
  
+  MOV PAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 12
+  LEA RDX, [FirstWord]
   MOV RCX, RSI
-  CALL PalDemo_FillScreen
+  MOV R8D, 50
+  MOV R9D, 200
+  CALL Pal_PrintWord
 
-
-  MOV RSI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
+  MOV PAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 12
+  LEA RDX, [SecondWord]
+  MOV RCX, RSI
+  MOV R8D, 20
+  MOV R9D, 500
+  CALL Pal_PrintWord
+  
+  MOV RSI, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV RDI, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE PAL_DEMO_STRUCTURE
   MOV EAX, 1
   RET
 
-@FireInit_Failed:
-  MOV RSI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
+@PalInit_Failed:
+  MOV RSI, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV RDI, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE PAL_DEMO_STRUCTURE
   XOR RAX, RAX
   RET
-NESTED_END Fire_Init, _TEXT$00
+NESTED_END PalDemo_Init, _TEXT$00
 
 
 
 ;*********************************************************
-;  Fire_Demo
+;  PalDemo_Demo
 ;
 ;        Parameters: Master Context
 ;
@@ -165,15 +238,15 @@ NESTED_END Fire_Init, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Fire_Demo, _TEXT$00
- alloc_stack(SIZEOF FIRE_DEMO_STRUCTURE)
- save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
+NESTED_ENTRY PalDemo_Demo, _TEXT$00
+ alloc_stack(SIZEOF PAL_DEMO_STRUCTURE)
+ save_reg rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10
+ save_reg r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
   MOV RDI, RCX
@@ -182,14 +255,14 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
   ; Plot The New Pixels
   ;  
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [FireBuffer]
+  MOV r13, [DoubleBuffer]
 
   XOR R9, R9
   XOR r12, r12
 
 @FillScreen:
       ;
-	  ; Get the Virtual Pallete Index for the pixe on the screen
+	  ; Get the Virtual Pallete Index for the pixel on the screen
 	  ;
       XOR EDX, EDX
 	  MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
@@ -223,142 +296,33 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
    CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
+   MOV RDX, 1
+   MOV RCX, [VirtualPallete]
+   CALL  VPal_Rotate
 
 
-  MOV RCX, RDI
-  CALL Fire_RandomFillBottom
 
-  MOV RCX, RDI
-  CALL Fire_MoveFire
-
-  CMP [FrameCountDown], 0b1h
-  JBE @SkipWord
-
-  MOV RCX, [FrameNumber]
-  INC RCX
-  MOV [FrameNumber], RCX
-  CMP RCX, WORD_DELAY
-  JB @SkipWord
-
-  LEA RDX, [TestString]
-  MOV RCX, RDI
-  MOV R8D, [LocationX]
-  MOV R9D, [LocationY]
-  CALL Fire_PrintWord
-
-  LEA RDX, [TestString]
-  MOV RCX, RDI
-  MOV R8D, [LocationX2]
-  MOV R9D, [LocationY2] 
-  CALL Fire_PrintWord
-
-
-  MOV R8D, [DirectionX]
-  ADD [LocationX], R8D
-  MOV R8D, [DirectionY]
-  ADD [Locationy], R8D
-
-  CMP [LocationY], 1 
-  JG @NextYTest
-
-  MOV [LocationY], 1
-  NEG [DirectionY]
-  INC [DirectionY]
-  JMP @StartXTests
-@NextYTest:
-  CMP [LocationY], 655 
-  Jl @StartXTests
-
-  MOV [LocationY], 655
-  INC [DirectionY]
-  NEG [DirectionY]
-  JMP @StartXTests  
-
-@StartXTests:
-  CMP [LocationX], 1 
-  JG @NextXTest
-
-  MOV [LocationX], 1
-
-  NEG [DirectionX]
-  INC [DirectionX]
-
-  JMP @DoSecondSet
-@NextXTest:
-  CMP [LocationX], 928 
-  Jl  @DoSecondSet
-
-  MOV [LocationX], 928
-  INC [DirectionX]
-  NEG [DirectionX]
-
-@DoSecondSet:
-
-  MOV R8D, [DirectionX2]
-  ADD [LocationX2], R8D
-  MOV R8D, [DirectionY2]
-  ADD [Locationy2], R8D
-
-  CMP [LocationY2], 1 
-  JG @NextYTest2
-
-  MOV [LocationY2], 1
-  NEG [DirectionY2]
-  INC [DirectionY2]
-  JMP @StartXTests2
-@NextYTest2:
-  CMP [LocationY2], 655 
-  Jl @StartXTests2
-
-  MOV [LocationY2], 655
-  INC [DirectionY2]
-  NEG [DirectionY2]
-  
-
-@StartXTests2:
-  CMP [LocationX2], 1 
-  JG @NextXTest2
-
-  MOV [LocationX2], 1
-
-  NEG [DirectionX2]
-  INC [DirectionX2]
-
-  JMP @DoFrameReset
-@NextXTest2:
-  CMP [LocationX2], 928 
-  Jl  @DoFrameReset
-
-  MOV [LocationX2], 928
-  INC [DirectionX2]
-  NEG [DirectionX2]
-  
- @DoFrameReset:
-
-  MOV [FrameNumber], 0
-
-@SkipWord:
  
-  MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  MOV r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
+  MOV r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
+  ADD RSP, SIZE PAL_DEMO_STRUCTURE
   
   DEC [FrameCountDown]
   MOV EAX, [FrameCountDown]
   RET
-NESTED_END Fire_Demo, _TEXT$00
+NESTED_END PalDemo_Demo, _TEXT$00
 
 
 
 ;*********************************************************
-;  Fire_Free
+;  PalDemo_Free
 ;
 ;        Parameters: Master Context
 ;
@@ -366,130 +330,67 @@ NESTED_END Fire_Demo, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Fire_Free, _TEXT$00
- alloc_stack(SIZEOF FIRE_DEMO_STRUCTURE)
- save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
+NESTED_ENTRY PalDemo_Free, _TEXT$00
+ alloc_stack(SIZEOF PAL_DEMO_STRUCTURE)
+ save_reg rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
 
  MOV RCX, [VirtualPallete]
  CALL VPal_Free
 
-  MOV RCX, [FireBuffer]
+  MOV RCX, [DoubleBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
   CALL LocalFree
  @SkipFreeingMem:
-  MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
+  ADD RSP, SIZE PAL_DEMO_STRUCTURE
   RET
-NESTED_END Fire_Free, _TEXT$00
+NESTED_END PalDemo_Free, _TEXT$00
+
+
+
 
 
 
 ;*********************************************************
-;  Fire_RandomFillBottom
+;  Pal_PrintWord
 ;
-;        Parameters: Master Context
+;        Parameters: Master Context, String, X, Y, BOOL TRUE = Clear, Font Size
 ;
 ;       
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Fire_RandomFillBottom, _TEXT$00
- alloc_stack(SIZEOF FIRE_DEMO_STRUCTURE)
- save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
-.ENDPROLOG 
-  MOV RDI, RCX
-    
-  MOV R11, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-  SUB RAX, 2
-  MUL R11
-  SHL R11, 1
-
-  MOV R10, [FireBuffer]
-  ADD R10, RAX
-
-  CMP [FrameCountDown], 045h
-  JBE @BlackOut
-
-@FillBottomRow:
-  CALL rand
-  MOV RCX, 256
-  DIV RCX
-  
-  MOV BYTE PTR [R10], DL  ; Remainder
-  INC R10
-  DEC R11
-  JNZ @FillBottomRow  
-
-@ExitFunction:
-  MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
-  RET
-@BlackOut:
-
- 
-  MOV BYTE PTR [R10], 0 ; Blackout
-  INC R10
-  DEC R11
-  JNZ @BlackOut
-
-  JMP @ExitFunction
-
-NESTED_END Fire_RandomFillBottom, _TEXT$00
-
-
-;*********************************************************
-;  Fire_PrintWord
-;
-;        Parameters: Master Context, String, X, Y, BOOL TRUE = Clear
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY Fire_PrintWord, _TEXT$00
- alloc_stack(SIZEOF FIRE_DEMO_STRUCTURE)
- save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
+NESTED_ENTRY Pal_PrintWord, _TEXT$00
+ alloc_stack(SIZEOF PAL_DEMO_STRUCTURE)
+ save_reg rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10
+ save_reg r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
   MOV RDI, RCX
   MOV R10, RDX
   MOV R11, R8
   MOV R12, R9
 
-@Fire_PrintStringLoop:
+@Pal_PrintStringLoop:
 
   XOR RCX, RCX
   MOV CL, [R10]
   CALL Font_GetBitFont
   TEST RAX, RAX
   JZ @ErrorOccured
-  MOV RCX, [FireBuffer]
+  MOV RCX, [DoubleBuffer]
   MOV R13, RAX
   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
   XOR RDX, RDX
@@ -499,18 +400,18 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
   XOR RDX, RDX
   ADD RCX, R11
   XOR R13, R13
-  MOV RSI, INFALTE_FONT
+  MOV RSI, PAL_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
 @VerticleLines:
   MOV BL, 80h
 @HorizontalLines:
   TEST BL, [RAX]
   JZ @SkipBit
   ; Match INFALTE_FONT
-  MOV DWORD PTR [RCX+RDX],   0FEFFCFFFh  
-  MOV DWORD PTR [RCX+RDX+4], 0FFCFFFFEh
-  MOV DWORD PTR [RCX+RDX+8], 0F6FEFFDFh  
+  MOV DWORD PTR [RCX+RDX],   0FFFEFDFCh 
+  MOV DWORD PTR [RCX+RDX+4], 0FBFAF9F8h
+  MOV DWORD PTR [RCX+RDX+8], 0F7F6F5F4h
 @SkipBit:
-  ADD RDX, INFALTE_FONT
+  ADD RDX, PAL_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
   SHR BL, 1
   TEST BL, BL
   JNZ @HorizontalLines
@@ -518,171 +419,35 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
   ADD RCX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
   DEC RSI
   JNZ @VerticleLines 
-  MOV RSI, INFALTE_FONT
+  MOV RSI, PAL_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
   INC RAX
   INC R13
   CMP R13, 8
   JB @VerticleLines
   INC R10
-  ADD R11, INFALTE_FONT * 8 + 3
+
+  MOV RCX, PAL_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+  SHL RCX, 3
+  ADD R11, RCX
+  ADD R11, 3
+ 
   CMP BYTE PTR [R10], 0 
-  JNE @Fire_PrintStringLoop
+  JNE @Pal_PrintStringLoop
   MOV EAX, 1
 @ErrorOccured:
-  MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
+  MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
+  MOV r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  ADD RSP, SIZE PAL_DEMO_STRUCTURE
   RET
-NESTED_END Fire_PrintWord, _TEXT$00
+NESTED_END Pal_PrintWord, _TEXT$00
 
 
 
 
-;*********************************************************
-;  Fire_MoveFire
-;
-;        Parameters: Master Context
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY Fire_MoveFire, _TEXT$00
- alloc_stack(SIZEOF FIRE_DEMO_STRUCTURE)
- save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
-.ENDPROLOG 
-  MOV RDI, RCX
 
-  ;
-  ; Start from the second to bottom row
-  ;    
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-  SUB RAX, 2
- 
-  ;
-  ; Start at the second pixel inward.
-  ;
-  MOV R10, [FireBuffer]
-  ADD R10, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  INC R10
-
-  MOV R11, RAX
-  MOV RBX, RCX
-
-  XOR R8, R8
-
-@MoveFireUp:
-	  XOR RDX, RDX
-	  CALL rand
-	  MOV RCX, 3
-	  DIV RCX
-
-	  MOV [TopWind], DL
-	  
-	  CALL rand
-	  MOV RCX, 3
-	  DIV RCX
-
-	  XOR ECX, ECX
-	  XOR EAX, EAX
-	  	      
-	  ;
-	  ; Get the pixels to determine the fire.  
-	  ;      
-	  ;  The algorithm is (P+P+P+P/4 = N-1)
-	  ;
-	  ;  Two Wind Options.
-	  ;
-	  ;             N     N      N
-	  ;            PPP    PPP  PPP
-	  ;             P       P  P
-
-
-
-	  MOV CL, [R10]
-	  MOV AL, CL
-  
-	  MOV CL, [R10+1]
-	  ADD EAX, ECX
-  
-	  MOV CL, [R10-1]
-	  ADD EAX, ECX
-
-	  ;
-	  ; Update for Wind
-	  ;
-	  DEC RDX
-	  ADD RDX, RBX
-	  MOV CL, [R10+RDX]
-
-	  ADD EAX, ECX
-	  SHR EAX, 2
-
-	  OR AL, AL
-	  JZ @PlotPixel
-
-	  DEC AL     ; Decay Pixels
-
-@PlotPixel:
-	  ;
-	  ; Plot New Pixel
-	  ;
-	  MOV R12, R10
-	  SUB R12, RBX
-
-	  ;
-	  ; Implement the Top Wind.
-	  ;
-	  XOR EDX, EDX
-	  MOV DL, [TopWind]
-	  DEC RDX
-	  ADD R12, RDX       
-
-	  ;
-	  ; Plot the pixel
-	  ;
-	  MOV BYTE PTR [R12], AL
-
-	  INC R10
-	  INC R8
-	  MOV RCX, RBX
-	  DEC RCX
-	  CMP R8, RCX
-	  JB @MoveFireUp 
-
-  XOR R8, R8
-  ;
-  ; Start at the second pixel inward.
-  ;
-
-  MOV RBX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  INC R10
-  
-  DEC R11
-  JNZ  @MoveFireUp
-
-
- @SkipFreeingMem:
-  MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
-  RET
-NESTED_END Fire_MoveFire, _TEXT$00
 END

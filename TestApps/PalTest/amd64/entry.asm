@@ -41,9 +41,9 @@ WINMAIN_FRAME ends
 ; Global Data
 ;*********************************************************
 
-GlobalDemoStructure  dq Paldemo_Init 
-                     dq Paldemo_Demo
-                     dq Paldemo_Free
+GlobalDemoStructure  dq PalDemo_Init 
+                     dq PalDemo_Demo
+                     dq PalDemo_Free
 ;
 ; End Tag
 ;

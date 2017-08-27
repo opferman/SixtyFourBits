@@ -183,12 +183,12 @@ NESTED_ENTRY VPal_Rotate, _TEXT$00
 @SanatizeRotationIndex:
   MOV RDX, VPAL_HANDLE.RotateIndex[RCX]
 
-  CMP VPAL_HANDLE.NumberIndexes[RCX], RDX
+  CMP RDX, VPAL_HANDLE.NumberIndexes[RCX]
   JGE @SantizeGreaterPositive
 
   MOV RAX,  VPAL_HANDLE.NumberIndexes[RCX]
   NEG RAX
-  CMP RAX, RDX
+  CMP RDX, RAX
   JLE @SantizeLessNegative
 
   MOV RDI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
