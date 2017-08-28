@@ -73,6 +73,7 @@ MAX_FRAMES EQU <2000>
    PrevFrameCounter dd ?
    GlobalRDIOffset dq ?
    DisplayFlag db ?
+   RandomColor dd ?
 
 .CODE
 
@@ -95,6 +96,7 @@ NESTED_ENTRY Fallingline_Init, _TEXT$00
   MOV [PrevFrameCounter], 0
   MOV [GlobalRDIOffset], 0
   MOV [DisplayFlag], 0
+  MOV [RandomColor], 0FF0000h
   ;
   ; Initialize Random Numbers
   ;
@@ -133,6 +135,12 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
 
 .ENDPROLOG 
   
+  MOV r11, 0FFFFFFFh
+  @DelayLoop:
+  DEC r11
+  JNZ @DelayLoop
+  
+  
   MOV RSI, RCX
 
   ;
@@ -160,14 +168,8 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   SUB r11, RAX
   CMP RDI, r11
   JA @DemoEnd
-  ;
-  ; Generate new random color
-  ;
   
-  CALL rand
-  AND EAX, 0FFFFFFFh
-  ;MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  ;SHR RDX, 2
+  MOV EAX, [RandomColor]
   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   REP STOSD
   
@@ -231,7 +233,13 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   REP STOSD
   JMP @Terminate1
   
-  @DemoEnd:
+  @DemoEnd:  
+  ;
+  ; Generate new random color
+  ;
+  CALL rand
+  AND EAX, 0FFFFFFFh
+  MOV [RandomColor],EAX
   MOV [FrameCounter], 0
   MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
