@@ -327,15 +327,15 @@ FRAME_TEXT EQU <150>
 				  Temp  dd ?
 				  CurrentText dq ?
 
-				  CometList dd 10, 10, 2, 2
-				            dd 400, 10, 2, 2
-                            dd 500, 10, -3, 2
-							dd 1, 1, 2, 3
-							dd 600, 1, -3, 3
-							dd 350, 1, 2, 3
-							dd 555, 1, -3, 3
-							dd 200, 1, 2, 3
-							dd 650, 1, -3, 3
+				  CometList dd 10, 11, 2, 2
+				            dd 400, 11, 2, 2
+                            dd 500, 11, -3, 2
+							dd 1, 11, 2, 3
+							dd 600, 11, -3, 3
+							dd 350, 11, 2, 3
+							dd 555, 11, -3, 3
+							dd 200, 11, 2, 3
+							dd 650, 11, -3, 3
 							dd -1
 
 				  TextStart dd 350, 625 
@@ -935,6 +935,12 @@ NESTED_ENTRY Fire_HandleComets, _TEXT$00
  save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
   MOV RDI, RCX
+
+  CALL rand
+  MOV EBX, EAX
+  AND EBX, 3h
+  INC EBX
+  INC EBX
   LEA R8, [CometList]
 
 @CometLoop:
@@ -983,11 +989,13 @@ NESTED_ENTRY Fire_HandleComets, _TEXT$00
 
 @CometHitsLeft:
   MOV DWORD PTR [R8], 0
-  NEG DWORD PTR [R8 + 8]
+  
+  MOV [R8 + 8], EBX
   JMP @CometCheckYAxis
 
 @CometHitsRight:
   MOV DWORD PTR [R8], EAX
+  MOV [R8 + 8], EBX
   NEG DWORD PTR [R8 + 8]
   
 @CometCheckYAxis:
@@ -1002,15 +1010,23 @@ NESTED_ENTRY Fire_HandleComets, _TEXT$00
 
 @CometHitsTop:
   MOV DWORD PTR [R8 + 4], 10
-  NEG DWORD PTR [R8 + 12]
+  MOV [R8 + 12], EBX
   JMP @GetNextComet
 
 @CometHitsBottom:
   MOV DWORD PTR [R8 + 4], 650
+  MOV [R8 + 12], EBX
   NEG DWORD PTR [R8 + 12]
 
 @GetNextComet:
+  
+  ; Round Robin
+  INC EBX
+  CMP EBX, 4
+  JBE @Updated
+  MOV EBX, 2
 
+@Updated:
   ADD R8, 16
 
 JMP @CometLoop
