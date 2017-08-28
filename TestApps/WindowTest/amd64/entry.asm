@@ -1,9 +1,9 @@
 ;*********************************************************
-; Demo Entry Code
+; Window Test Code
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  2/24/2010
+;  By Toby Opferman  2/24/2010-2017
 ;
 ;*********************************************************
 
@@ -33,7 +33,16 @@ pszWindowClass       db 'TestClassWindow', 0
 pszWindowTitle       db 'Test Demo', 0
 bFullScreenMode      dq  1
 .CODE
-  
+
+
+;*********************************************************
+; WinMain
+;
+;  The main entry point to the application.
+;
+;
+;
+;*********************************************************     
 NESTED_ENTRY WinMain, _TEXT$00
   alloc_stack(SIZEOF WINMAIN_FRAME)
 .ENDPROLOG 

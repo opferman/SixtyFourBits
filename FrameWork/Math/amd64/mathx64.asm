@@ -3,7 +3,7 @@
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  2/27/2010
+;  By Toby Opferman  2/27/2010-2017
 ;
 ;*********************************************************
 

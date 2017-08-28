@@ -3,7 +3,7 @@
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  2/24/2010
+;  By Toby Opferman  2/24/2010-2017
 ;
 ;*********************************************************
 
@@ -53,10 +53,10 @@ LOOP_STACK_FRAME ends
 WINPROG_STACK_FRAME struct
     ParamFrameStruct   PARAMFRAME  <?>
     Param5         dq ?
-	SaveParam1     dq ?
-	SaveParam2     dq ?
-	SaveParam3     dq ?
-	SaveParam4     dq ?
+    SaveParam1     dq ?
+    SaveParam2     dq ?
+    SaveParam3     dq ?
+    SaveParam4     dq ?
 WINPROG_STACK_FRAME ends
 
 W_SETUP_PARAMS struct
@@ -69,7 +69,7 @@ W_SETUP_PARAMS struct
     Param10        dq ?
     Param11        dq ?
     Param12        dq ?
-	WinRect        RECT <?>
+    WinRect        RECT <?>
     WndClassStruct WNDCLASSEX <?>
     SaveRegsStruct       SAVEREGS <?>
 W_SETUP_PARAMS ends

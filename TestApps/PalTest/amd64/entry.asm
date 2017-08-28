@@ -3,7 +3,7 @@
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  2/24/2010
+;  By Toby Opferman  2/24/2010-2017
 ;
 ;*********************************************************
 
@@ -58,11 +58,23 @@ pszMsgCpt       db 'Palette Demo', 0
 pszMsgTxt       db 'Do you want to view in full screen?', 0
 
 .CODE
-  
+
+;*********************************************************
+; WinMain
+;
+;  The main entry point to the application.
+;
+;
+;
+;*********************************************************   
 NESTED_ENTRY WinMain, _TEXT$00
   alloc_stack(SIZEOF WINMAIN_FRAME)
 .ENDPROLOG 
   
+  ;
+  ; TODO: The resolution is hard coded, should it be input or 
+  ;       should it change to use the plaform's current resolution.
+  ;
   MOV WINMAIN_FRAME.InitializationStruct.BitsPerPixel[RSP], 20h
   MOV WINMAIN_FRAME.InitializationStruct.ScreenWidth[RSP],  1024
   MOV WINMAIN_FRAME.InitializationStruct.ScreenHeight[RSP], 768

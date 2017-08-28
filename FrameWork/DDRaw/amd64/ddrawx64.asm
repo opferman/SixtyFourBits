@@ -472,7 +472,7 @@ NESTED_ENTRY DDrawx64_PixelPlot, _TEXT$00
   MOV BYTE PTR [RCX], R8B
 
 @CompletePlot:  
-	  
+      
   MOV EAX, 1
       
   MOV RDI, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi[RSP]

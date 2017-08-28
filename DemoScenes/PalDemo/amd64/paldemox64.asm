@@ -3,7 +3,7 @@
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  2/27/2010
+;  By Toby Opferman  2017
 ;
 ;*********************************************************
 
@@ -40,7 +40,7 @@ SAVEREGSFRAME struct
     SaveRbx        dq ?
     SaveR10        dq ?
     SaveR11        dq ?
-	SaveR12        dq ?
+    SaveR12        dq ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
 
@@ -77,17 +77,15 @@ extern rand:proc
 
 .DATA
 
-FirstWord db "Pure", 0
-SecondWord db "Assembly", 0				   
-				  DoubleBuffer   dq  ?
-				  VirtualPallete dq ?
-
-FrameCountDown dd 7000
-
-Red   db  0 
-Green db  0
-Blue  db  0FFh
-Direction db 1
+  FirstWord      db "Pure", 0
+  SecondWord     db "Assembly", 0				   
+  DoubleBuffer   dq  ?
+  VirtualPallete dq ?
+  FrameCountDown dd 7000
+  Red            db  0 
+  Green          db  0
+  Blue           db  0FFh
+  Direction      db 1
 
 .CODE
 
@@ -169,8 +167,8 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
 
 @FillBackground:
 
-	  MOV BYTE PTR [r13], CL
-  	  INC r13
+      MOV BYTE PTR [r13], CL
+      INC r13
       INC r12
       CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
       JB @FillBackground
@@ -182,9 +180,9 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
    MOV [Direction], 1    
 
 @NextTest:
-	CMP CL, 0FFh
-	JNE @NextLoop
-	MOV [Direction], -1
+    CMP CL, 0FFh
+    JNE @NextLoop
+    MOV [Direction], -1
 @NextLoop:
   
 
@@ -252,7 +250,7 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
   MOV RDI, RCX
 
   ;
-  ; Plot The New Pixels
+  ; Update the screen with the buffer
   ;  
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [DoubleBuffer]
@@ -262,19 +260,19 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
 
 @FillScreen:
       ;
-	  ; Get the Virtual Pallete Index for the pixel on the screen
-	  ;
+      ; Get the Virtual Pallete Index for the pixel on the screen
+      ;
       XOR EDX, EDX
-	  MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
-	  MOV RCX, [VirtualPallete]
-	  CALL VPal_GetColorIndex 
+      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+      MOV RCX, [VirtualPallete]
+      CALL VPal_GetColorIndex 
 
-	  ; Plot Pixel
-	  MOV DWORD PTR [RSI], EAX
+      ; Plot Pixel
+      MOV DWORD PTR [RSI], EAX
 
-	  ; Increment to the next location
-	  ADD RSI, 4
-  	  INC r13
+      ; Increment to the next location
+      ADD RSI, 4
+      INC r13
   
       INC r12
 
@@ -296,13 +294,13 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
    CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
+   ;
+   ; Rotate the pallete by 1.  This is the only animation being performed.
+   ;
    MOV RDX, 1
    MOV RCX, [VirtualPallete]
    CALL  VPal_Rotate
-
-
-
- 
+    
   MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]

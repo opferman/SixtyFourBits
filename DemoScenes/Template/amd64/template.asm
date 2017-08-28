@@ -45,7 +45,7 @@ SAVEREGSFRAME struct
     SaveRbx        dq ?
     SaveR10        dq ?
     SaveR11        dq ?
-	SaveR12        dq ?
+    SaveR12        dq ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
 

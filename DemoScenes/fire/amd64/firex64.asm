@@ -2,8 +2,10 @@
 ; Fire 
 ;
 ;  Written in Assembly x64
+;
+;  
 ; 
-;  By Toby Opferman  2/27/2010
+;  By Toby Opferman  2/27/2010-2017
 ;
 ;*********************************************************
 
@@ -38,7 +40,7 @@ SAVEREGSFRAME struct
     SaveRbx        dq ?
     SaveR10        dq ?
     SaveR11        dq ?
-	SaveR12        dq ?
+    SaveR12        dq ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
 
@@ -266,7 +268,7 @@ FRAME_TEXT EQU <150>
                    db 3Fh, 3Fh, 23h
                    db 3Fh, 3Fh, 24h
                    db 3Fh, 3Fh, 24h
-				   db 3Fh, 3Fh, 25h
+                   db 3Fh, 3Fh, 25h
                    db 3Fh, 3Fh, 25h
                    db 3Fh, 3Fh, 26h
                    db 3Fh, 3Fh, 26h
@@ -317,57 +319,57 @@ FRAME_TEXT EQU <150>
                    db 3Fh, 3Fh, 3Eh
                    db 3Fh, 3Fh, 3Fh                      
 
-				   
-				  FrameTarget dd ?
-				  FireBuffer  dq ?
-				  StarBuffer  dq ?
-				  TopWind     db ?
-				  VirtualPallete dq ?
-				  VirtualPalleteStars dq ?
-				  Temp  dd ?
-				  CurrentText dq ?
+                   
+                  FrameTarget dd ?
+                  FireBuffer  dq ?
+                  StarBuffer  dq ?
+                  TopWind     db ?
+                  VirtualPallete dq ?
+                  VirtualPalleteStars dq ?
+                  Temp  dd ?
+                  CurrentText dq ?
 
-				  CometList dd 10, 11, 2, 2
-				            dd 400, 11, 2, 2
+                  CometList dd 10, 11, 2, 2
+                            dd 400, 11, 2, 2
                             dd 500, 11, -3, 2
-							dd 1, 11, 2, 3
-							dd 600, 11, -3, 3
-							dd 350, 11, 2, 3
-							dd 555, 11, -3, 3
-							dd 200, 11, 2, 3
-							dd 650, 11, -3, 3
-							dd -1
+                            dd 1, 11, 2, 3
+                            dd 600, 11, -3, 3
+                            dd 350, 11, 2, 3
+                            dd 555, 11, -3, 3
+                            dd 200, 11, 2, 3
+                            dd 650, 11, -3, 3
+                            dd -1
 
-				  TextStart dd 350, 625 
-				            db "Pure", 0
-				            dd 250, 625 
-							db "x86-64", 0
-				            dd 75, 625
-							db "Assembly", 0
-							dd 75, 625
-							db 1,1,1,1,1,1,1,1, 0
-											            dd 150, 625
-							db  "Simple", 0
-											            dd  350, 625 
-							db "Fire", 0
-											            dd 150, 625
-							db  "Blinking", 0
-											            dd 350, 625 
-							db  "Stars", 0
-											            dd 75, 625
-							db  "DEC AL", 0
-											            dd 300, 625 
-							db  "Flying", 0
-											            dd 300, 625 
-							db  "Comets", 0
-											            dd 75, 625
-							db  "DEC RCX", 0
-											            dd 10, 625
-							db  "JMP @Text", 0
-							; ; Add more text
-							db 0
+                  TextStart dd 350, 625 
+                            db "Pure", 0
+                            dd 250, 625 
+                            db "x86-64", 0
+                            dd 75, 625
+                            db "Assembly", 0
+                            dd 75, 625
+                            db 1,1,1,1,1,1,1,1, 0
+                                                        dd 150, 625
+                            db  "Simple", 0
+                                                        dd  350, 625 
+                            db "Fire", 0
+                                                        dd 150, 625
+                            db  "Blinking", 0
+                                                        dd 350, 625 
+                            db  "Stars", 0
+                                                        dd 75, 625
+                            db  "DEC AL", 0
+                                                        dd 300, 625 
+                            db  "Flying", 0
+                                                        dd 300, 625 
+                            db  "Comets", 0
+                                                        dd 75, 625
+                            db  "DEC RCX", 0
+                                                        dd 10, 625
+                            db  "JMP @Text", 0
+                            ; ; Add more text
+                            db 0
 
-				  FrameCountDown dd 7000
+                  FrameCountDown dd 7000
 .CODE
 
 ;*********************************************************
@@ -388,6 +390,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
 .ENDPROLOG 
   MOV RSI, RCX
 
+  ;
+  ; Initialize Global Variables 
+  ;
   MOV [VirtualPallete], 0
   MOV EAX, [FrameCountDown]
   SUB EAX, FRAME_TEXT
@@ -396,6 +401,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   LEA RAX, [TextStart]
   MOV [CurrentText], RAX
 
+  ;
+  ; Allocate Double Screen Buffer for Fire
+  ;
   MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MUL R9
@@ -406,6 +414,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   TEST RAX, RAX
   JZ @FireInit_Failed
 
+  ;
+  ; Allocate Double Screen Buffer for Stars
+  ;
   MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MUL R9
@@ -416,7 +427,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   TEST RAX, RAX
   JZ @FireInit_Failed
 
-   
+  ;
+  ; Create Virtual Palette for Stars
+  ;   
   MOV RCX, 256
   CALL VPal_Create
   TEST RAX, RAX
@@ -441,7 +454,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   CMP RDX, 256
   JB @PopulateStarPallete
 
-  
+  ;
+  ; Create Virtual Palette for Fire
+  ; 
   MOV RCX, 256
   CALL VPal_Create
   TEST RAX, RAX
@@ -480,16 +495,13 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   CMP RDX, 256
   JB @PopulatePallete
 
-  ; Setup random numbers - Should be done by math library
-  ;XOR RCX, RCX
-  ;CALL time
-  ;MOV RCX, RAX
-  ;CALL srand
-  
+  ;
+  ; Initialize Graphics for Fire and Stars
+  ; 
+
   MOV RCX, RSI
   CALL Fire_RandomFillBottom
-
-
+  
   MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MUL R9
@@ -510,10 +522,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
 
   CMP R13, R14
   JB @PlotStars
-
-
-
-
+  
   MOV RSI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
@@ -558,7 +567,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 
 
   ;
-  ; Plot The New Pixels
+  ; Plot the background stars
   ;  
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [StarBuffer]
@@ -568,20 +577,20 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 
 @FillScreenStars:
       ;
-	  ; Get the Virtual Pallete Index for the pixe on the screen
-	  ;
+      ; Get the Virtual Pallete Index for the pixel on the screen
+      ;
       XOR EDX, EDX
-	  MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
 
-	  MOV RCX, [VirtualPalleteStars]
-	  CALL VPal_GetColorIndex 
+      MOV RCX, [VirtualPalleteStars]
+      CALL VPal_GetColorIndex 
 
-	  ; Plot Pixel
-	  MOV DWORD PTR [RSI], EAX
+      ; Plot Pixel
+      MOV DWORD PTR [RSI], EAX
 
-	  ; Increment to the next location
-	  ADD RSI, 4
-  	  INC r13
+      ; Increment to the next location
+      ADD RSI, 4
+      INC r13
   
       INC r12
 
@@ -604,10 +613,8 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
    JB @FillScreenStars
 
 
-
-
   ;
-  ; Plot The New Pixels
+  ; Plot the fire buffer
   ;  
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [FireBuffer]
@@ -617,21 +624,25 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 
 @FillScreen:
       ;
-	  ; Get the Virtual Pallete Index for the pixe on the screen
-	  ;
+      ; Get the Virtual Pallete Index for the pixe on the screen
+      ;
       XOR EDX, EDX
-	  MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
-	  CMP DL, 0
-	  JE @SkipPlottingPixelItIszero
-	  MOV RCX, [VirtualPallete]
-	  CALL VPal_GetColorIndex 
+      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
 
-	  ; Plot Pixel
-	  MOV DWORD PTR [RSI], EAX
+	  ;
+	  ; Skip zero so the stars will show.  The stars have already zeroed out the screen also.
+	  ;
+      CMP DL, 0
+      JE @SkipPlottingPixelItIszero
+      MOV RCX, [VirtualPallete]
+      CALL VPal_GetColorIndex 
+
+      ; Plot Pixel
+      MOV DWORD PTR [RSI], EAX
 @SkipPlottingPixelItIszero:
-	  ; Increment to the next location
-	  ADD RSI, 4
-  	  INC r13
+      ; Increment to the next location
+      ADD RSI, 4
+      INC r13
   
       INC r12
 
@@ -653,14 +664,19 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
    CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
-      
+  ;
+  ; Update the fire graphics
+  ;      
   MOV RCX, RDI
   CALL Fire_RandomFillBottom
 
   MOV RCX, RDI
   CALL Fire_MoveFire
 
-
+  ;
+  ; Words are displayed at certain frame intervals
+  ; perform that check now.
+  ;
   MOV EAX, [FrameCountDown]
 
   CMP EAX, [FrameTarget]
@@ -671,6 +687,9 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
   JMP  @DoneFireDemo
 @HandleNextWord:
 
+  ;
+  ; Update the next target to display text
+  ; 
   SUB [FrameTarget], FRAME_TEXT
 
   MOV RAX, [CurrentText]
@@ -694,10 +713,14 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
   LEA RAX, [TextStart]
 @UpdateNextWord:
   MOV [CurrentText], RAX
-	 
+     
   CALL Fire_PrintWord
 
 @DoneFireDemo:
+ 
+  ;
+  ; Make the stars blink or flicker
+  ;
 
   MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RDI]
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RDI]
@@ -728,6 +751,9 @@ JMP @SkipUpdateStar
   CMP R13, R14
   JB @PlotStars  
 
+  ;
+  ; Update the comets
+  ;
   MOV RCX, RDI
   CALL Fire_HandleComets
  
@@ -1038,7 +1064,10 @@ NESTED_ENTRY Fire_HandleComets, _TEXT$00
 
 @GetNextComet:
   
-  ; Round Robin
+  ;
+  ; Comets try to get different random velocity values
+  ; so modify the new velocity assignment each round.
+  ;
   INC EBX
   CMP EBX, 4
   JBE @Updated
@@ -1104,83 +1133,83 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
   XOR R8, R8
 
 @MoveFireUp:
-	  XOR RDX, RDX
-	  CALL rand
-	  MOV RCX, 3
-	  DIV RCX
+      XOR RDX, RDX
+      CALL rand
+      MOV RCX, 3
+      DIV RCX
 
-	  MOV [TopWind], DL
-	  
-	  CALL rand
-	  MOV RCX, 3
-	  DIV RCX
+      MOV [TopWind], DL
+      
+      CALL rand
+      MOV RCX, 3
+      DIV RCX
 
-	  XOR ECX, ECX
-	  XOR EAX, EAX
-	  	      
-	  ;
-	  ; Get the pixels to determine the fire.  
-	  ;      
-	  ;  The algorithm is (P+P+P+P/4 = N-1)
-	  ;
-	  ;  Two Wind Options.
-	  ;
-	  ;             N     N      N
-	  ;            PPP    PPP  PPP
-	  ;             P       P  P
+      XOR ECX, ECX
+      XOR EAX, EAX
+              
+      ;
+      ; Get the pixels to determine the fire.  
+      ;      
+      ;  The algorithm is ((P+P+P+P/4)-1 = N)
+      ;
+      ;  Two Wind Options.
+      ;
+      ;             N     N      N
+      ;            PPP    PPP  PPP
+      ;             P       P  P
 
 
 
-	  MOV CL, [R10]
-	  MOV AL, CL
+      MOV CL, [R10]
+      MOV AL, CL
   
-	  MOV CL, [R10+1]
-	  ADD EAX, ECX
+      MOV CL, [R10+1]
+      ADD EAX, ECX
   
-	  MOV CL, [R10-1]
-	  ADD EAX, ECX
+      MOV CL, [R10-1]
+      ADD EAX, ECX
 
-	  ;
-	  ; Update for Wind
-	  ;
-	  DEC RDX
-	  ADD RDX, RBX
-	  MOV CL, [R10+RDX]
+      ;
+      ; Update for Wind
+      ;
+      DEC RDX
+      ADD RDX, RBX
+      MOV CL, [R10+RDX]
 
-	  ADD EAX, ECX
-	  SHR EAX, 2
+      ADD EAX, ECX
+      SHR EAX, 2
 
-	  OR AL, AL
-	  JZ @PlotPixel
+      OR AL, AL
+      JZ @PlotPixel
 
-	  DEC AL     ; Decay Pixels
+      DEC AL     ; Decay Pixels
 
 @PlotPixel:
-	  ;
-	  ; Plot New Pixel
-	  ;
-	  MOV R12, R10
-	  SUB R12, RBX
+      ;
+      ; Plot New Pixel
+      ;
+      MOV R12, R10
+      SUB R12, RBX
 
-	  ;
-	  ; Implement the Top Wind.
-	  ;
-	  XOR EDX, EDX
-	  MOV DL, [TopWind]
-	  DEC RDX
-	  ADD R12, RDX       
+      ;
+      ; Implement the Top Wind.
+      ;
+      XOR EDX, EDX
+      MOV DL, [TopWind]
+      DEC RDX
+      ADD R12, RDX       
 
-	  ;
-	  ; Plot the pixel
-	  ;
-	  MOV BYTE PTR [R12], AL
+      ;
+      ; Plot the pixel
+      ;
+      MOV BYTE PTR [R12], AL
 
-	  INC R10
-	  INC R8
-	  MOV RCX, RBX
-	  DEC RCX
-	  CMP R8, RCX
-	  JB @MoveFireUp 
+      INC R10
+      INC R8
+      MOV RCX, RBX
+      DEC RCX
+      CMP R8, RCX
+      JB @MoveFireUp 
 
   XOR R8, R8
   ;
