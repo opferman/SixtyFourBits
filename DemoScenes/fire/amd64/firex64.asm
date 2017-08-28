@@ -56,7 +56,7 @@ extern srand:proc
 extern rand:proc
 
 INFALTE_FONT EQU <12>
-WORD_DELAY EQU <2>
+FRAME_TEXT EQU <150>
 
 .DATA
 
@@ -316,21 +316,39 @@ WORD_DELAY EQU <2>
                    db 3Fh, 3Fh, 3Eh
                    db 3Fh, 3Fh, 3Eh
                    db 3Fh, 3Fh, 3Fh                      
+
 				   
-				  FrameNumber dq ?
-				  FireBuffer  dq  ?
+				  FrameTarget dd ?
+				  FireBuffer  dq ?
+				  StarBuffer  dq ?
 				  TopWind     db ?
 				  VirtualPallete dq ?
-				  TestString db 1, 0
-				  LocationX  dd 350
-				  LocationY  dd 650
-				  DirectionX dd -3
-				  DirectionY dd -3
+				  VirtualPalleteStars dq ?
+				  Temp  dd ?
+				  CurrentText dq ?
 
-				  LocationX2  dd 450
-				  LocationY2  dd 650
-				  DirectionX2 dd 1
-				  DirectionY2 dd 1
+				  CometList dd 10, 10, 2, 2
+				            dd 400, 10, 2, 2
+                            dd 500, 10, -3, 2
+							dd 1, 1, 2, 3
+							dd 600, 1, -3, 3
+							dd 350, 1, 2, 3
+							dd 555, 1, -3, 3
+							dd 200, 1, 2, 3
+							dd 650, 1, -3, 3
+							dd -1
+
+				  TextStart dd 350, 625 
+				            db "Pure", 0
+				            dd 250, 625 
+							db "x86-64", 0
+				            dd 75, 625
+							db "Assembly", 0
+							dd 75, 625
+							db 1,1,1,1,1,1,1,1, 0
+							; ; Add more text
+							db 0
+
 				  FrameCountDown dd 7000
 .CODE
 
@@ -353,7 +371,12 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
-  MOV [FrameNumber], 0
+  MOV EAX, [FrameCountDown]
+  SUB EAX, FRAME_TEXT
+  MOV [FrameTarget], EAX
+
+  LEA RAX, [TextStart]
+  MOV [CurrentText], RAX
 
   MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
@@ -365,6 +388,42 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   TEST RAX, RAX
   JZ @FireInit_Failed
 
+  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MUL R9
+  MOV RDX, RAX
+  MOV ECX, 040h ; LMEM_ZEROINIT
+  CALL LocalAlloc
+  MOV [StarBuffer], RAX
+  TEST RAX, RAX
+  JZ @FireInit_Failed
+
+   
+  MOV RCX, 256
+  CALL VPal_Create
+  TEST RAX, RAX
+  JZ @FireInit_Failed
+
+  MOV [VirtualPalleteStars], RAX
+
+  XOR EAX, EAX
+  XOR RDX, RDX
+
+@PopulateStarPallete:
+  MOV [Temp], EAX
+  MOV R8, RAX
+  MOV R12, RDX
+  MOV RCX, [VirtualPalleteStars]
+  CALL VPal_SetColorIndex
+  MOV EAX, [Temp]
+  ADD EAX, 010101h
+
+  MOV RDX, R12
+  INC RDX
+  CMP RDX, 256
+  JB @PopulateStarPallete
+
+  
   MOV RCX, 256
   CALL VPal_Create
   TEST RAX, RAX
@@ -412,17 +471,30 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   MOV RCX, RSI
   CALL Fire_RandomFillBottom
 
-  LEA RDX, [TestString]
-  MOV RCX, RSI
-  MOV R8D, [LocationX]
-  MOV R9D, [LocationY]
-  CALL Fire_PrintWord
 
-  LEA RDX, [TestString]
-  MOV RCX, RSI
-  MOV R8D, [LocationX2]
-  MOV R9D, [LocationY2]
-  CALL Fire_PrintWord
+  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MUL R9
+  MOV R14, RAX
+  MOV R13, [StarBuffer]
+  ADD R14, R13
+
+@PlotStars:
+  
+  CALL rand
+
+  CMP AX, 25
+  JA @NoStarPlot
+  CALL rand
+  MOV [R13], AL
+ @NoStarPlot:
+  INC R13
+
+  CMP R13, R14
+  JB @PlotStars
+
+
+
 
   MOV RSI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -466,6 +538,56 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 .ENDPROLOG 
   MOV RDI, RCX
 
+
+  ;
+  ; Plot The New Pixels
+  ;  
+  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
+  MOV r13, [StarBuffer]
+
+  XOR R9, R9
+  XOR r12, r12
+
+@FillScreenStars:
+      ;
+	  ; Get the Virtual Pallete Index for the pixe on the screen
+	  ;
+      XOR EDX, EDX
+	  MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+
+	  MOV RCX, [VirtualPalleteStars]
+	  CALL VPal_GetColorIndex 
+
+	  ; Plot Pixel
+	  MOV DWORD PTR [RSI], EAX
+
+	  ; Increment to the next location
+	  ADD RSI, 4
+  	  INC r13
+  
+      INC r12
+
+      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+      JB @FillScreenStars
+
+   ; Calcluate Pitch
+   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+   SHL RAX, 2
+   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
+   SUB RBX, RAX
+   ADD RSI, RBX
+
+   ; Screen Height Increment
+
+   XOR r12, r12
+   INC R9
+
+   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   JB @FillScreenStars
+
+
+
+
   ;
   ; Plot The New Pixels
   ;  
@@ -481,12 +603,14 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 	  ;
       XOR EDX, EDX
 	  MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+	  CMP DL, 0
+	  JE @SkipPlottingPixelItIszero
 	  MOV RCX, [VirtualPallete]
 	  CALL VPal_GetColorIndex 
 
 	  ; Plot Pixel
 	  MOV DWORD PTR [RSI], EAX
-
+@SkipPlottingPixelItIszero:
 	  ; Increment to the next location
 	  ADD RSI, 4
   	  INC r13
@@ -511,121 +635,83 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
    CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
-
-
+      
   MOV RCX, RDI
   CALL Fire_RandomFillBottom
 
   MOV RCX, RDI
   CALL Fire_MoveFire
 
-  CMP [FrameCountDown], 0b1h
-  JBE @SkipWord
 
-  MOV RCX, [FrameNumber]
-  INC RCX
-  MOV [FrameNumber], RCX
-  CMP RCX, WORD_DELAY
-  JB @SkipWord
+  MOV EAX, [FrameCountDown]
 
-  LEA RDX, [TestString]
+  CMP EAX, [FrameTarget]
+  JE @HandleNextWord
+
+  ; Add more effects
+
+  JMP  @DoneFireDemo
+@HandleNextWord:
+
+  SUB [FrameTarget], FRAME_TEXT
+
+  MOV RAX, [CurrentText]
+
+  MOV R8D, [RAX]
+  MOV R9D, [RAX+4]
+  LEA RDX, [RAX+8]
   MOV RCX, RDI
-  MOV R8D, [LocationX]
-  MOV R9D, [LocationY]
+
+  ADD RAX, 8
+@NextWord:
+  CMP BYTE PTR [RAX], 0
+  JE @FoundNextWord
+  INC RAX
+  JMP @NextWord
+  
+@FoundNextWord:
+  INC RAX
+  CMP BYTE PTR [RAX], 0
+  JNE @UpdateNextWord
+  LEA RAX, [TextStart]
+@UpdateNextWord:
+  MOV [CurrentText], RAX
+	 
   CALL Fire_PrintWord
 
-  LEA RDX, [TestString]
+@DoneFireDemo:
+
+  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  MUL R9
+  MOV R14, RAX
+  MOV R13, [StarBuffer]
+  ADD R14, R13
+
+@PlotStars:
+  CMP BYTE PTR [R13], 0
+  JE @SkipUpdateStar
+  
+  MOV EAX, [FrameCountDown]
+  AND AL, 0Fh
+
+  CMP AL, 8
+  JB @Decrement
+
+  ADD BYTE PTR [R13], 2
+
+JMP @SkipUpdateStar      
+@Decrement:
+  SUB BYTE PTR [R13], 2
+
+@SkipUpdateStar:
+  INC R13
+
+  CMP R13, R14
+  JB @PlotStars  
+
   MOV RCX, RDI
-  MOV R8D, [LocationX2]
-  MOV R9D, [LocationY2] 
-  CALL Fire_PrintWord
-
-
-  MOV R8D, [DirectionX]
-  ADD [LocationX], R8D
-  MOV R8D, [DirectionY]
-  ADD [Locationy], R8D
-
-  CMP [LocationY], 1 
-  JG @NextYTest
-
-  MOV [LocationY], 1
-  NEG [DirectionY]
-  INC [DirectionY]
-  JMP @StartXTests
-@NextYTest:
-  CMP [LocationY], 655 
-  Jl @StartXTests
-
-  MOV [LocationY], 655
-  INC [DirectionY]
-  NEG [DirectionY]
-  JMP @StartXTests  
-
-@StartXTests:
-  CMP [LocationX], 1 
-  JG @NextXTest
-
-  MOV [LocationX], 1
-
-  NEG [DirectionX]
-  INC [DirectionX]
-
-  JMP @DoSecondSet
-@NextXTest:
-  CMP [LocationX], 928 
-  Jl  @DoSecondSet
-
-  MOV [LocationX], 928
-  INC [DirectionX]
-  NEG [DirectionX]
-
-@DoSecondSet:
-
-  MOV R8D, [DirectionX2]
-  ADD [LocationX2], R8D
-  MOV R8D, [DirectionY2]
-  ADD [Locationy2], R8D
-
-  CMP [LocationY2], 1 
-  JG @NextYTest2
-
-  MOV [LocationY2], 1
-  NEG [DirectionY2]
-  INC [DirectionY2]
-  JMP @StartXTests2
-@NextYTest2:
-  CMP [LocationY2], 655 
-  Jl @StartXTests2
-
-  MOV [LocationY2], 655
-  INC [DirectionY2]
-  NEG [DirectionY2]
-  
-
-@StartXTests2:
-  CMP [LocationX2], 1 
-  JG @NextXTest2
-
-  MOV [LocationX2], 1
-
-  NEG [DirectionX2]
-  INC [DirectionX2]
-
-  JMP @DoFrameReset
-@NextXTest2:
-  CMP [LocationX2], 928 
-  Jl  @DoFrameReset
-
-  MOV [LocationX2], 928
-  INC [DirectionX2]
-  NEG [DirectionX2]
-  
- @DoFrameReset:
-
-  MOV [FrameNumber], 0
-
-@SkipWord:
+  CALL Fire_HandleComets
  
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -637,7 +723,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
   MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
   ADD RSP, SIZE FIRE_DEMO_STRUCTURE
-  
+
   DEC [FrameCountDown]
   MOV EAX, [FrameCountDown]
   RET
@@ -749,7 +835,7 @@ NESTED_END Fire_RandomFillBottom, _TEXT$00
 ;*********************************************************
 ;  Fire_PrintWord
 ;
-;        Parameters: Master Context, String, X, Y, BOOL TRUE = Clear
+;        Parameters: Master Context, String, X, Y
 ;
 ;       
 ;
@@ -794,9 +880,9 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
   TEST BL, [RAX]
   JZ @SkipBit
   ; Match INFALTE_FONT
-  MOV DWORD PTR [RCX+RDX],   0FEFFCFFFh  
-  MOV DWORD PTR [RCX+RDX+4], 0FFCFFFFEh
-  MOV DWORD PTR [RCX+RDX+8], 0F6FEFFDFh  
+  MOV DWORD PTR [RCX+RDX],   0FFFFFFFFh  
+  MOV DWORD PTR [RCX+RDX+4], 0FFFFFFFFh
+  MOV DWORD PTR [RCX+RDX+8], 0FFFFFFFFh  
 @SkipBit:
   ADD RDX, INFALTE_FONT
   SHR BL, 1
@@ -829,6 +915,118 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
 NESTED_END Fire_PrintWord, _TEXT$00
 
 
+;*********************************************************
+;  Fire_HandleComets
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Fire_HandleComets, _TEXT$00
+ alloc_stack(SIZEOF FIRE_DEMO_STRUCTURE)
+ save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
+ save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
+.ENDPROLOG 
+  MOV RDI, RCX
+  LEA R8, [CometList]
+
+@CometLoop:
+  CMP DWORD PTR [R8], -1
+  JE @NoMoreComets
+
+  ;
+  ; Plot Coment
+  ;
+  MOV EAX,  DWORD PTR [R8+4]
+  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  MUL R9
+  ADD EAX, DWORD PTR [R8]
+  MOV R13, [FireBuffer]
+  ADD RAX, R13
+  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  MOV DWORD PTR [RAX], 0FFFFFFFFh ; Comet 
+  ADD RAX, R9
+  MOV DWORD PTR [RAX], 0FFFFFFFFh ; Comet 
+  ADD RAX, R9
+  MOV DWORD PTR [RAX], 0FFFFFFFFh ; Comet 
+  ADD RAX, R9
+  MOV DWORD PTR [RAX], 0FFFFFFFFh ; Comet 
+
+  ;
+  ; Update Comet Location
+  ;
+  MOV EAX, [R8 + 8]
+  ADD [R8], EAX
+
+  MOV EAX, [R8 + 12]
+  ADD [R8 + 4], EAX
+ 
+ ;
+ ; Check Coment Bounds
+ ;
+
+  CMP DWORD PTR [R8], 0
+  JLE @CometHitsLeft
+  
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  SUB RAX, 10
+  CMP DWORD PTR [R8], EAX
+  JGE @CometHitsRight
+  JMP @CometCheckYAxis
+
+@CometHitsLeft:
+  MOV DWORD PTR [R8], 0
+  NEG DWORD PTR [R8 + 8]
+  JMP @CometCheckYAxis
+
+@CometHitsRight:
+  MOV DWORD PTR [R8], EAX
+  NEG DWORD PTR [R8 + 8]
+  
+@CometCheckYAxis:
+
+  CMP DWORD PTR [R8+4], 10
+  JLE @CometHitsTop
+  
+  CMP DWORD PTR [R8+4], 650
+  JGE @CometHitsBottom
+
+  JMP @GetNextComet
+
+@CometHitsTop:
+  MOV DWORD PTR [R8 + 4], 10
+  NEG DWORD PTR [R8 + 12]
+  JMP @GetNextComet
+
+@CometHitsBottom:
+  MOV DWORD PTR [R8 + 4], 650
+  NEG DWORD PTR [R8 + 12]
+
+@GetNextComet:
+
+  ADD R8, 16
+
+JMP @CometLoop
+
+@NoMoreComets:
+
+  MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
+  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  ADD RSP, SIZE FIRE_DEMO_STRUCTURE
+  RET
+NESTED_END Fire_HandleComets, _TEXT$00
 
 
 ;*********************************************************
