@@ -20,7 +20,10 @@
 ; Included Files
 ;*********************************************************
 include ksamd64.inc
+include soft3d_public.inc
 
+extern LocalAlloc:proc
+extern LocalFree:proc
 
 PARAMFRAME struct
     Param1         dq ?
@@ -118,7 +121,9 @@ NESTED_END Soft3D_Init, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Soft3D_SetCameraRotation, _TEXT$00
 .ENDPROLOG 
-
+  MOVQ SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RCX], xmm1
+  MOVQ SOFT3D_INTERNAL_CONTEXT.CameraY_Radians[RCX], xmm2
+  MOVQ SOFT3D_INTERNAL_CONTEXT.CameraZ_Radians[RCX], xmm3
   RET
 NESTED_END Soft3D_SetCameraRotation, _TEXT$00
 
@@ -126,7 +131,7 @@ NESTED_END Soft3D_SetCameraRotation, _TEXT$00
 ;*********************************************************
 ;  Soft3D_SetViewDistance
 ;
-;        Parameters: 
+;        Parameters: 3D Context, View Distance
 ;
 ;       
 ;
@@ -134,14 +139,14 @@ NESTED_END Soft3D_SetCameraRotation, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Soft3D_SetViewDistance, _TEXT$00
 .ENDPROLOG 
-
+  MOVQ SOFT3D_INTERNAL_CONTEXT.ViewDistance[RCX], xmm1
   RET
 NESTED_END Soft3D_SetViewDistance, _TEXT$00
 
 ;*********************************************************
 ;  Soft3D_SetViewPoint
 ;
-;        Parameters: 
+;        Parameters: 3D Context, TD_POINT
 ;
 ;       
 ;
@@ -149,7 +154,14 @@ NESTED_END Soft3D_SetViewDistance, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Soft3D_SetViewPoint, _TEXT$00
 .ENDPROLOG 
+  MOVQ xmm0, TD_POINT.x[RDX]
+  MOVQ SOFT3D_INTERNAL_CONTEXT.ViewPoint.x[RCX], xmm0
 
+  MOVQ xmm0, TD_POINT.y[RDX]
+  MOVQ SOFT3D_INTERNAL_CONTEXT.ViewPoint.y[RCX], xmm0
+
+  MOVQ xmm0, TD_POINT.z[RDX]
+  MOVQ SOFT3D_INTERNAL_CONTEXT.ViewPoint.z[RCX], xmm0
   RET
 NESTED_END Soft3D_SetViewPoint, _TEXT$00
 
@@ -184,7 +196,7 @@ NESTED_END Soft3D_Close, _TEXT$00
 ;*********************************************************
 ;  Soft3D_SetAspectRatio
 ;
-;        Parameters: 
+;        Parameters: 3D Context, Aspect Ratio
 ;
 ;       
 ;
@@ -192,7 +204,7 @@ NESTED_END Soft3D_Close, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Soft3D_SetAspectRatio, _TEXT$00
 .ENDPROLOG 
-
+  MOVQ SOFT3D_INTERNAL_CONTEXT.Aspect[RCX], xmm1
   RET
 NESTED_END Soft3D_SetAspectRatio, _TEXT$00
 
@@ -226,7 +238,6 @@ NESTED_ENTRY Soft3D_PlotPixel, _TEXT$00
   RET
 NESTED_END Soft3D_PlotPixel, _TEXT$00
 
-void ThreeD_Close(H3D h3D);
 
 
 END
