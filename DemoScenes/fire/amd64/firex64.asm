@@ -348,23 +348,23 @@ FRAME_TEXT EQU <150>
                             db "Assembly", 0
                             dd 75, 625
                             db 1,1,1,1,1,1,1,1, 0
-                                                        dd 150, 625
+                            dd 150, 625
                             db  "Simple", 0
-                                                        dd  350, 625 
+                            dd  350, 625 
                             db "Fire", 0
-                                                        dd 150, 625
+                            dd 150, 625
                             db  "Blinking", 0
-                                                        dd 350, 625 
+                            dd 350, 625 
                             db  "Stars", 0
-                                                        dd 75, 625
+                            dd 75, 625
                             db  "DEC AL", 0
-                                                        dd 300, 625 
+                            dd 300, 625 
                             db  "Flying", 0
-                                                        dd 300, 625 
+                            dd 300, 625 
                             db  "Comets", 0
-                                                        dd 75, 625
+                            dd 75, 625
                             db  "DEC RCX", 0
-                                                        dd 10, 625
+                            dd 10, 625
                             db  "JMP @Text", 0
                             ; ; Add more text
                             db 0
