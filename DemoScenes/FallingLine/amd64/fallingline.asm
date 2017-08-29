@@ -72,8 +72,6 @@ MAX_FRAMES EQU <2000>
    FrameCounter dd ?
    PrevFrameCounter dd ?
    GlobalRDIOffset dq ?
-   DisplayFlag db ?
-   RandomColor dd ?
    ColorValue dd ?
 
 .CODE
@@ -96,7 +94,6 @@ NESTED_ENTRY Fallingline_Init, _TEXT$00
   MOV [FrameCounter], 0
   MOV [PrevFrameCounter], 0
   MOV [GlobalRDIOffset], 0
-  MOV [DisplayFlag], 0
   MOV [ColorValue], 0FF0000h
   ;
   ; Initialize Random Numbers
@@ -147,12 +144,28 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   ;
   ; Get the Video Buffer
   ;  
-  CMP [DisplayFlag], 0
-  JNZ @DisplayLine
-  JMP @ClearLine
   
-  @DisplayLine:
-  MOV [DisplayFlag], 0
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  MOV r10, [GlobalRDIOffset]
+  MOV RAX, R10
+  MUL [PrevFrameCounter]
+  MOV R10, RAX
+  ADD RDI, r10
+  MOV RAX, [GlobalRDIOffset]
+  SHR RAX, 2
+  MUL MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  MOV R11, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  ADD R11, RAX
+  MOV RAX, [GlobalRDIOffset]
+  SHR RAX, 2
+  SUB r11, RAX
+  CMP RDI, r11
+  JA @DemoEnd
+  MOV RAX, 0
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
+
+  
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
   MOV r10, [GlobalRDIOffset]
   MOV RAX, R10
@@ -177,8 +190,6 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   @SetColor:
   SHL [ColorValue], 16
   MOV EAX, [ColorValue]
- ; MOV [RandomColor],EAX
-  ;MOV EAX, [RandomColor]
   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   REP STOSD
   
@@ -217,30 +228,6 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
 
   ADD RSP, SIZE FALLINGLINE_FUNCTION_STRUCT
   RET
-  
-  
-  @ClearLine:
-  MOV [DisplayFlag], 1
-  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  MOV r10, [GlobalRDIOffset]
-  MOV RAX, R10
-  MUL [PrevFrameCounter]
-  MOV R10, RAX
-  ADD RDI, r10
-  MOV RAX, [GlobalRDIOffset]
-  SHR RAX, 2
-  MUL MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R11, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  ADD R11, RAX
-  MOV RAX, [GlobalRDIOffset]
-  SHR RAX, 2
-  SUB r11, RAX
-  CMP RDI, r11
-  JA @DemoEnd
-  MOV RAX, 0
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  REP STOSD
-  JMP @DisplayLine
   
   @DemoEnd:  
   ;
