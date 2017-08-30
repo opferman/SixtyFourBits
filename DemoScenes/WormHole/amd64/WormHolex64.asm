@@ -84,6 +84,7 @@ Red            db 0h
 Blue           db 0h
 Green          db 0h
 ColorInc       dw 1h
+ColorOffset    dw 0
 
 .CODE
 
@@ -298,9 +299,15 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   CALL WormHole_DrawCircle   
 
   DEC R12
+
+  MOV RCX, R12
+  AND RCX, 00Fh
+  CMP RCX, 0
+  JNE @skipit
   INC R10
 
-  CMP R12, 1024-55
+@skipit:
+  CMP R12, 100
   JA @PlotCircles
 
 ;@PlotCircles2:
@@ -484,6 +491,8 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  save_reg r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, WH_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
+
+MOV  [ColorOffset], 0
  
  MOV RSI, RCX
  MOV R10, R9 ; Radius
@@ -520,6 +529,7 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   MOV CX, [ColorInc]
   MOV WORD PTR [RAX], CX
   INC  [ColorInc]
+  INC  [ColorOffset]
   CMP  [ColorInc], MAX_COLORS
   JB @NoColorRest_1_1
   MOV [ColorInc], 0
@@ -564,6 +574,8 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
 
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
  ;
  ; Quadrant 1.2
  ; 
@@ -580,10 +592,10 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   ADD RAX,[DoubleBuffer]
   MOV CX, [ColorInc]
   MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_1_2
-  MOV [ColorInc], 0
+  DEC  [ColorInc]
+  CMP  [ColorInc], 0
+  JNE @NoColorRest_1_2
+  MOV [ColorInc], 1
 @NoColorRest_1_2:
 
 
@@ -624,6 +636,9 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  MOV RAX, R10
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
+
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
  ;
  ; Quadrant 2.1
  ; 
@@ -684,6 +699,10 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  MOV RAX, R10
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
+
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
+
  ;
  ; Quadrant 2.2
  ; 
@@ -700,10 +719,10 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   ADD RAX,[DoubleBuffer]
   MOV CX, [ColorInc]
   MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_2_2
-  MOV [ColorInc], 0
+  DEC  [ColorInc]
+  CMP  [ColorInc], 0
+  JNE @NoColorRest_2_2
+  MOV [ColorInc], 1
 @NoColorRest_2_2:
 
   CMP R13, 0
@@ -744,7 +763,8 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  MOV RAX, R10
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
-
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
  ;
  ; Quadrant 3.1
  ; 
@@ -805,7 +825,8 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  MOV RAX, R10
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
-
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
 
  ;
  ; Quadrant 3.2
@@ -823,10 +844,10 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   ADD RAX,[DoubleBuffer]
   MOV CX, [ColorInc]
   MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_3_2
-  MOV [ColorInc], 0
+  DEC  [ColorInc]
+  CMP  [ColorInc], 0
+  JNE @NoColorRest_3_2
+  MOV [ColorInc], 1
 @NoColorRest_3_2:
 
   CMP R13, 0
@@ -867,6 +888,8 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  MOV RAX, R10
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
 
 
  ;
@@ -930,6 +953,9 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
 
+ MOV CX, [ColorOffset]
+ ADD [ColorInc], CX
+
  ;
  ; Quadrant 4.2
  ; 
@@ -946,10 +972,10 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   ADD RAX,[DoubleBuffer]
   MOV CX, [ColorInc]
   MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_4_2
-  MOV [ColorInc], 0
+  DEC  [ColorInc]
+  CMP  [ColorInc], 0
+  JNE @NoColorRest_4_2
+  MOV [ColorInc], 1
 @NoColorRest_4_2:
 
   CMP R13, 0
