@@ -154,6 +154,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   CMP R12, 256
   JB @PopulatePallete
 
+  DEC [Blue]
 
 @PopulatePallete2:
 
@@ -181,7 +182,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   CMP R12, 256+256
   JB @PopulatePallete2
 
-
+  DEC [RED]
   @PopulatePallete3:
 
   XOR EAX, EAX
@@ -208,6 +209,8 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   CMP R12, 256+256+256
   JB @PopulatePallete3
 
+  DEC [Green]
+
  @PopulatePallete4:
 
   XOR EAX, EAX
@@ -233,7 +236,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   INC R12
   CMP R12, 256+256+256+256
   JB @PopulatePallete4
-
+  MOV [Blue], 0
  @PopulatePallete5:
 
   XOR EAX, EAX
@@ -260,6 +263,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   CMP R12, 256+256+256+256+256
   JB @PopulatePallete5
 
+  MOV [Red], 0
 
  @PopulatePallete6:
 
@@ -312,6 +316,9 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
       CMP WORD PTR [r10], 0
 	  JNE @SkipPixel
 
+	  CMP WORD PTR [R10+2], 0
+	  JNE @FillPixel
+
 	  MOV CX, [ColorInc]
 	  MOV WORD PTR [r10], CX
 
@@ -319,6 +326,11 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
       CMP  [ColorInc], MAX_COLORS
       JB @SkipPixel
       MOV [ColorInc], 1
+	  JMP @SkipPixel
+@FillPixel:
+      MOV CX, [R10+2]
+	  MOV [R10], CX
+
 
 @SkipPixel:
       Add r10, 2
