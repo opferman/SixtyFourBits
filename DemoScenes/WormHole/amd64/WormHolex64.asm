@@ -74,15 +74,16 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
-
+MAX_COLORS EQU <256+256+256+256+256+256>
 .DATA
 
 DoubleBuffer   dq ?
 VirtualPallete dq ?
 FrameCountDown dd 4000
-Red            db 0FFh
-Blue           db 0FFh
-Green          db 0FFh
+Red            db 0h
+Blue           db 0h
+Green          db 0h
+ColorInc       dw 1h
 
 .CODE
 
@@ -117,14 +118,14 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   TEST RAX, RAX
   JZ @PalInit_Failed
 
-  MOV RCX, 4096   ; 4096 Colors!
+  MOV RCX, MAX_COLORS
   CALL VPal_Create
   TEST RAX, RAX
   JZ @PalInit_Failed
 
   MOV [VirtualPallete], RAX
 
-  MOV R12, 1
+  XOR R12, R12
 
 @PopulatePallete:
 
@@ -146,15 +147,172 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOV RCX, [VirtualPallete]
   CALL VPal_SetColorIndex
 
+  INC [Blue]
+
   INC R12
-  CMP R12, 4096
+  CMP R12, 256
   JB @PopulatePallete
 
-  MOV R9, 25
-  MOV R8, 200
-  MOV RDX, 300
+
+@PopulatePallete2:
+
+  XOR EAX, EAX
+
+ ; Red
+  MOV AL, BYTE PTR [Red]  
+  SHL EAX, 16
+
+  ; Green
+  MOV AL, BYTE PTR [Green]
+  SHL AX, 8
+
+  ; Blue
+  MOV AL, BYTE PTR [Blue]
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  CALL VPal_SetColorIndex
+
+  INC [Red]
+
+  INC R12
+  CMP R12, 256+256
+  JB @PopulatePallete2
+
+
+  @PopulatePallete3:
+
+  XOR EAX, EAX
+
+ ; Red
+  MOV AL, BYTE PTR [Red]  
+  SHL EAX, 16
+
+  ; Green
+  MOV AL, BYTE PTR [Green]
+  SHL AX, 8
+
+  ; Blue
+  MOV AL, BYTE PTR [Blue]
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  CALL VPal_SetColorIndex
+
+  INC [Green]
+
+  INC R12
+  CMP R12, 256+256+256
+  JB @PopulatePallete3
+
+ @PopulatePallete4:
+
+  XOR EAX, EAX
+
+ ; Red
+  MOV AL, BYTE PTR [Red]  
+  SHL EAX, 16
+
+  ; Green
+  MOV AL, BYTE PTR [Green]
+  SHL AX, 8
+
+  ; Blue
+  MOV AL, BYTE PTR [Blue]
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  CALL VPal_SetColorIndex
+
+  DEC [Blue]
+
+  INC R12
+  CMP R12, 256+256+256+256
+  JB @PopulatePallete4
+
+ @PopulatePallete5:
+
+  XOR EAX, EAX
+
+ ; Red
+  MOV AL, BYTE PTR [Red]  
+  SHL EAX, 16
+
+  ; Green
+  MOV AL, BYTE PTR [Green]
+  SHL AX, 8
+
+  ; Blue
+  MOV AL, BYTE PTR [Blue]
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  CALL VPal_SetColorIndex
+
+  DEC [Red]
+
+  INC R12
+  CMP R12, 256+256+256+256+256
+  JB @PopulatePallete5
+
+
+ @PopulatePallete6:
+
+  XOR EAX, EAX
+
+ ; Red
+  MOV AL, BYTE PTR [Red]  
+  SHL EAX, 16
+
+  ; Green
+  MOV AL, BYTE PTR [Green]
+  SHL AX, 8
+
+  ; Blue
+  MOV AL, BYTE PTR [Blue]
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  CALL VPal_SetColorIndex
+
+  DEC [Green]
+  INC [Red]
+
+  INC R12
+  CMP R12, 256+256+256+256+256+256
+  JB @PopulatePallete6
+
+  MOV R12, 1024-51
+  MOV R10, 50
+
+@PlotCircles:
+  MOV R9, R10
+  MOV R8, 350
+  MOV RDX, R12
   MOV RCX, RSI
   CALL WormHole_DrawCircle   
+
+  DEC R12
+  INC R10
+
+  CMP R12, 1024-55
+  JA @PlotCircles
+
+;@PlotCircles2:
+;  MOV R9, R12
+;  MOV R8, 350
+;  MOV RDX, 500
+;  MOV RCX, RSI
+;  CALL WormHole_DrawCircle   
+;  INC R12
+
+;  CMP R12, 100
+  ;JB @PlotCircles2
  
   
   MOV RSI, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -247,9 +405,9 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    ;
    ; Rotate the pallete by 1.  This is the only animation being performed.
    ;
-;   MOV RDX, 1
-;   MOV RCX, [VirtualPallete]
-;   CALL  VPal_Rotate
+   MOV RDX, 1
+   MOV RCX, [VirtualPallete]
+   CALL  VPal_Rotate
     
    MOV rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
    MOV rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -359,7 +517,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_1_1
+  MOV [ColorInc], 0
+@NoColorRest_1_1:
 
   CMP R13, 0
   JG @Check_Second_Error_1_1
@@ -414,7 +578,14 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_1_2
+  MOV [ColorInc], 0
+@NoColorRest_1_2:
+
 
   CMP R13, 0
   JG @Check_Second_Error_1_2
@@ -467,7 +638,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest2_1
+  MOV [ColorInc], 0
+@NoColorRest2_1:
 
   CMP R13, 0
   JG @Check_Second_Error_2_1
@@ -521,7 +698,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_2_2
+  MOV [ColorInc], 0
+@NoColorRest_2_2:
 
   CMP R13, 0
   JG @Check_Second_Error_2_2
@@ -576,7 +759,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_3_1
+  MOV [ColorInc], 0
+@NoColorRest_3_1:
 
   CMP R13, 0
   JG @Check_Second_Error_3_1
@@ -632,7 +821,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_3_2
+  MOV [ColorInc], 0
+@NoColorRest_3_2:
 
   CMP R13, 0
   JG @Check_Second_Error_3_2
@@ -688,7 +883,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_4_1
+  MOV [ColorInc], 0
+@NoColorRest_4_1:
 
   CMP R13, 0
   JG @Check_Second_Error_4_1
@@ -743,7 +944,13 @@ NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
   SHL RAX, 1
 
   ADD RAX,[DoubleBuffer]
-  MOV WORD PTR [RAX], 200
+  MOV CX, [ColorInc]
+  MOV WORD PTR [RAX], CX
+  INC  [ColorInc]
+  CMP  [ColorInc], MAX_COLORS
+  JB @NoColorRest_4_2
+  MOV [ColorInc], 0
+@NoColorRest_4_2:
 
   CMP R13, 0
   JG @Check_Second_Error_4_2
