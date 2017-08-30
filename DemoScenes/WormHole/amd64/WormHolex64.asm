@@ -289,26 +289,52 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   JB @PopulatePallete6
 
   MOV R12, 1024-51
-  MOV R10, 50
+  MOV R10, 1
 
 @PlotCircles:
   MOV R9, R10
-  MOV R8, 350
-  MOV RDX, R12
+  MOV R8, 768/2
+  MOV RDX, 1024/2
   MOV RCX, RSI
   CALL WormHole_DrawCircle   
-
-  DEC R12
-
-  MOV RCX, R12
-  AND RCX, 00Fh
-  CMP RCX, 0
-  JNE @skipit
   INC R10
 
 @skipit:
-  CMP R12, 100
-  JA @PlotCircles
+  CMP R10, 768/2 - 10
+  JB @PlotCircles
+
+  MOV r10, [DoubleBuffer]
+  XOR R12, r12
+  XOR R9, R9
+
+ @FillScreenInit:
+
+      CMP WORD PTR [r10], 0
+	  JNE @SkipPixel
+
+	  MOV CX, [ColorInc]
+	  MOV WORD PTR [r10], CX
+
+	  INC [ColorInc]
+      CMP  [ColorInc], MAX_COLORS
+      JB @SkipPixel
+      MOV [ColorInc], 1
+
+@SkipPixel:
+      Add r10, 2
+  
+      INC r12
+
+      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+      JB @FillScreenInit
+
+   ; Screen Height Increment
+
+   XOR r12, r12
+   INC R9
+
+   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+   JB @FillScreenInit
 
 ;@PlotCircles2:
 ;  MOV R9, R12
