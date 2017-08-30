@@ -23,7 +23,7 @@ include ksamd64.inc
 include soft3d_public.inc
 
 extern LocalAlloc:proc
-extern LocalFree:proc
+extern LocalFree:proc 
 
 PARAMFRAME struct
     Param1         dq ?
