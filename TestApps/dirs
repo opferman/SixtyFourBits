@@ -2,4 +2,5 @@ dirs=\
 WindowTest \
 FireTest \
 PalTest \
-WormTest
+WormTest \
+BubbleTest

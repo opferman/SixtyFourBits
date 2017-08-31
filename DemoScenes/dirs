@@ -2,4 +2,5 @@ dirs=\
 fire \
 template \
 PalDemo \
-WormHole
+WormHole \
+Bubble
