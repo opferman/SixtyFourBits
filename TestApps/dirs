@@ -5,4 +5,5 @@ PalTest \
 WormTest \
 BubbleTest \
 PlasmaTest \
-StarTest
+StarTest \
+BallTest
