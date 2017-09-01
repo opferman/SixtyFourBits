@@ -1,5 +1,4 @@
-dirs=Window \
-     FrameWork \
+dirs=FrameWork \
      DemoScenes \
      TestApps\
      Apps
