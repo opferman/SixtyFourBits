@@ -1,0 +1,6 @@
+*.log
+*.wrn
+*.err
+*.obj
+*.exe
+obj*_win7_amd64
