@@ -260,13 +260,13 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   CALL rand
   MOV r10,0FFh
   DIV r10
-  ADD RDX, 0180h
+  ADD RDX, 0280h
   MOV [X_offset],RDX
   
   CALL rand
   MOV r13,0FFh
   DIV r13
-  ADD RDX, 0100h
+  ADD RDX, 0200h
   MOV [Y_offset],RDX
   
   MOV r11, [X_offset]
@@ -292,19 +292,19 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   
   @StartBoundCheck:
   ;check left
-  CMP r11, 080h
+  CMP r11, 0180h
   JBE @ChangeLeft
   
   ;check right 
-  CMP r11, 0380h
+  CMP r11, 0350h
   JAE @ChangeRight
   
   ;check top
-  CMP r12, 0300h
+  CMP r12, 0250h
   JAE @ChangeTop
   
   ;check Bottom
-  CMP r12, 010h
+  CMP r12, 0100h
   JBE @ChangeBottom
   
   MOV RCX, r11
