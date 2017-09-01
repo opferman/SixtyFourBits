@@ -2,4 +2,5 @@ dirs=\
 WindowTest \
 FireTest \
 PalTest \
-FallingLines
+FallingLines \
+brownian
