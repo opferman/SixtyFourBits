@@ -77,6 +77,8 @@ MAX_FRAMES EQU <2000>
    X_offset dq ?
    Y_offset dq ?
    Brownian_InitFlag dd ?
+   xDirection dd ?
+   yDirection dd ?
 
 .CODE
 
@@ -100,6 +102,8 @@ NESTED_ENTRY Brownian_Init, _TEXT$00
   MOV [GlobalRDIOffset], 0
   MOV [ColorValue], 0FF0000h
   MOV [Brownian_InitFlag], 0h
+  MOV [xDirection], 01h
+  MOV [yDirection], 01h
   ;
   ; Initialize Random Numbers
   ;
@@ -211,45 +215,45 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   
   
   @PlotRandom:
-  XOR r10, r10
-  XOR r13, r13
+  ;XOR r10, r10
+  ;XOR r13, r13
   
-  CALL rand
-  MOV r10,03FEh
-  DIV r10
-  ADD RDX, 01h ;0180h
-  MOV [X_offset],RDX
+  ;CALL rand
+  ;MOV r10,03FEh
+  ;DIV r10
+  ;ADD RDX, 01h ;0180h
+  ;MOV [X_offset],RDX
   
-  CALL rand
-  MOV r13,02FEh
-  DIV r13
-  ADD RDX, 01h ;0100h
-  MOV [Y_offset],RDX
-  MOV RCX, [X_offset]
-  MOV RDX, [Y_offset]
-  CALL CheckBrownian_Bounds
-  CMP RAX, 0
-  JE @PlotRandom
+  ;CALL rand
+  ;MOV r13,02FEh
+  ;DIV r13
+  ;ADD RDX, 01h ;0100h
+  ;MOV [Y_offset],RDX
+  ;MOV RCX, [X_offset]
+  ;MOV RDX, [Y_offset]
+  ;CALL CheckBrownian_Bounds
+  ;CMP RAX, 0
+  ;JE @PlotRandom
   
-  MOV RAX,[Y_offset]
-  MOV RDX, 0400h
-  MUL RDX
-  ADD RAX, [X_offset]
-  MOV r10, PlotBuffer
-  ADD r10,RAX
-  MOV RDX,1
-  MOV [r10], RDX
+ ; MOV RAX,[Y_offset]
+ ; MOV RDX, 0400h
+ ; MUL RDX
+ ; ADD RAX, [X_offset]
+ ; MOV r10, PlotBuffer
+ ; ADD r10,RAX
+ ; MOV RDX,1
+ ; MOV [r10], RDX
+ ; 
+  ;MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  ;MOV RCX, RSI
+  ;MOV RDX, [X_offset]
+  ;MOV r8, [Y_offset]
+  ;CALL Brownian_PlotLocation
+  ;ADD RDI, RAX
+  ;MOV EAX, 0FF0000h
+  ;MOV [RDI], RAX
   
-  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  MOV RCX, RSI
-  MOV RDX, [X_offset]
-  MOV r8, [Y_offset]
-  CALL Brownian_PlotLocation
-  ADD RDI, RAX
-  MOV EAX, 0FF0000h
-  MOV [RDI], RAX
-  
-  @PlotRandomInternal:
+
   XOR r10, r10
   XOR r13, r13
   
@@ -264,16 +268,55 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   DIV r13
   ADD RDX, 0100h
   MOV [Y_offset],RDX
-  MOV RCX, [X_offset]
-  MOV RDX, [Y_offset]
+  
+  MOV r11, [X_offset]
+  MOV r12, [Y_offset]
+  
+  @PlotRandomInternal:
+  
+  CMP [xDirection], 0
+  JE @DecrementX
+  INC r11
+  JMP @YCompare
+  @DecrementX:
+  DEC r11
+  
+  @Ycompare:
+  CMP [yDirection], 0
+  JE  @DecrementY
+  INC r12
+  JMP @StartBoundCheck
+  @DecrementY:
+  DEC r12
+  
+  
+  @StartBoundCheck:
+  ;check left
+  CMP r11, 080h
+  JBE @ChangeLeft
+  
+  ;check right 
+  CMP r11, 0380h
+  JAE @ChangeRight
+  
+  ;check top
+  CMP r12, 0300h
+  JAE @ChangeTop
+  
+  ;check Bottom
+  CMP r12, 010h
+  JBE @ChangeBottom
+  
+  MOV RCX, r11
+  MOV RDX, r12
   CALL CheckBrownian_Bounds
   CMP RAX, 0
   JE @PlotRandomInternal
   
-  MOV RAX,[Y_offset]
+  MOV RAX,r12
   MOV RDX, 0400h
   MUL RDX
-  ADD RAX, [X_offset]
+  ADD RAX, r11
   MOV r10, PlotBuffer
   ADD r10,RAX
   MOV RDX,1
@@ -281,8 +324,8 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
   MOV RCX, RSI
-  MOV RDX, [X_offset]
-  MOV r8, [Y_offset]
+  MOV RDX, r11
+  MOV r8,  r12
   CALL Brownian_PlotLocation
   ADD RDI, RAX
   MOV EAX, 0FFFFFFh
@@ -301,6 +344,49 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
 
   ADD RSP, SIZE BROWNIAN_FUNCTION_STRUCT
   RET
+  
+  @ChangeLeft:
+  CMP [xDirection], 0
+  JNE @PlotRandomInternal
+  INC [xDirection]
+  CALL rand
+  MOV r13,10h
+  DIV r13
+  ADD r11, RDX
+  JMP @PlotRandomInternal
+  
+  @ChangeRight:
+  CMP [xDirection], 1
+  JNE @PlotRandomInternal
+  DEC [xDirection]
+  CALL rand
+  MOV r13,09h
+  DIV r13
+  SUB r11, RDX
+  JMP @PlotRandomInternal
+  
+  @ChangeTop:
+  CMP [yDirection], 1
+  JNE @PlotRandomInternal
+  DEC [yDirection]
+  
+  CALL rand
+  MOV r13,20h
+  DIV r13
+  SUB r12, RDX
+  JMP @PlotRandomInternal
+  
+  @ChangeBottom:
+  CMP [yDirection], 0
+  JNE @PlotRandomInternal
+  INC [yDirection]
+  
+  CALL rand
+  MOV r13,0fh
+  DIV r13
+  ADD r12, RDX
+  JMP @PlotRandomInternal
+  
 NESTED_END Brownian_Demo, _TEXT$00
 
 
@@ -321,8 +407,8 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   MOV r11, RDX
   
   SUB RSI, 1  ; Check Left
-  CMP RSI, 01h
-  JBE @FoundPixel
+  ;CMP RSI, 01h
+  ;JBE @FoundPixel
   
   MOV RAX,r11
   MOV RDX, 0400h
@@ -335,8 +421,8 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   JE @FoundPixel
   
   ADD RSI, 2  ; Check Right
-  CMP RSI, 03FEh
-  JAE @FoundPixel
+  ;CMP RSI, 03FEh
+  ;JAE @FoundPixel
   
   MOV RAX,r11
   MOV RDX, 0400h
@@ -350,8 +436,8 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   
   SUB RSI, 1   ;Check Top
   ADD r11, 1
-  CMP r11, 02FEh
-  JAE @FoundPixel
+  ;CMP r11, 02FEh
+  ;JAE @FoundPixel
   
  MOV RAX,r11
   MOV RDX, 0400h
@@ -364,8 +450,8 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   JE @FoundPixel
   
   SUB r11, 2 ;Check Bottom
-  CMP r11, 1
-  JBE @FoundPixel
+  ;CMP r11, 1
+  ;JBE @FoundPixel
   
   MOV RAX,r11
   MOV RDX, 0400h

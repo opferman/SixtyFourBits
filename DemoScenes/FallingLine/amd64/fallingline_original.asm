@@ -73,10 +73,6 @@ MAX_FRAMES EQU <2000>
    PrevFrameCounter dd ?
    GlobalRDIOffset dq ?
    ColorValue dd ?
-   X_offset dq ?
-   Y_offset dq ?
-   xDirection dd ?
-   yDirection dd ?
 
 .CODE
 
@@ -99,10 +95,6 @@ NESTED_ENTRY Fallingline_Init, _TEXT$00
   MOV [PrevFrameCounter], 0
   MOV [GlobalRDIOffset], 0
   MOV [ColorValue], 0FF0000h
-  MOV [X_offset], 0200h
-  MOV [y_offset], 0120h
-  MOV [xDirection], 1
-  MOV [yDirection], 1
   ;
   ; Initialize Random Numbers
   ;
@@ -141,6 +133,11 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
 
 .ENDPROLOG 
   
+  MOV r11, 05000000h
+  @DelayLoop:
+  DEC r11
+  JNZ @DelayLoop
+  
   
   MOV RSI, RCX
 
@@ -149,60 +146,75 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   ;  
   
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  
+  MOV r10, [GlobalRDIOffset]
+  MOV RAX, R10
+  MUL [PrevFrameCounter]
+  MOV R10, RAX
+  ADD RDI, r10
+  MOV RAX, [GlobalRDIOffset]
+  SHR RAX, 2
+  MUL MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  MOV R11, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  ADD R11, RAX
+  MOV RAX, [GlobalRDIOffset]
+  SHR RAX, 2
+  SUB r11, RAX
+  CMP RDI, r11
+  JA @DemoEnd
+  MOV RAX, 0
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
 
-
-
-  MOV r11, [X_offset]
-  MOV r12, [Y_offset] 
-
- @PlotRandomInternal:  
-
-  CMP [xDirection], 0
-  JE @DecrementX
-  INC r11
-  JMP @YCompare
-  @DecrementX:
-  DEC r11
-  
-  @Ycompare:
-  CMP [yDirection], 0
-  JE  @DecrementY
-  INC r12
-  JMP @StartBoundCheck
-  @DecrementY:
-  DEC r12
-  
-  
-  @StartBoundCheck:
-  ;check left
-  CMP r11, 0180h
-  JBE @ChangeLeft
-  
-  ;check right 
-  CMP r11, 0280h
-  JAE @ChangeRight
-  
-  ;check top
-  CMP r12, 0200h
-  JAE @ChangeTop
-  
-  ;check Bottom
-  CMP r12, 0100h
-  JBE @ChangeBottom
   
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  MOV RCX, RSI
-  MOV RDX, r11
-  MOV r8,  r12
-  CALL Fallingline_PlotLocation
-  ADD RDI, RAX
-  MOV EAX, 0FFFFFFh
-  MOV [RDI], RAX
+  MOV r10, [GlobalRDIOffset]
+  MOV RAX, R10
+  MUL [FrameCounter]
+  MOV R10, RAX
+  ADD RDI, r10
+  MOV RAX, [GlobalRDIOffset]
+  SHR RAX, 2
+  MUL MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  MOV R11, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  ADD R11, RAX
+  MOV RAX, [GlobalRDIOffset]
+  SHR RAX, 2
+  SUB r11, RAX
+  CMP RDI, r11
+  JA @DemoEnd
   
-  MOV [X_offset], r11
-  MOV [Y_offset] , r12
-
+  SHR [ColorValue], 16
+  DEC [ColorValue]
+  JNZ @SetColor
+  MOV [ColorValue], 0FFh
+  @SetColor:
+  SHL [ColorValue], 16
+  MOV EAX, [ColorValue]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
+  
+  
+  CMP [GlobalRDIOffset],0
+  JNZ @Terminate1
+  ;
+  ; Wrap to the next line by adjusting for stride
+  ;
+  MOV EBX, MASTER_DEMO_STRUCT.Pitch[RSI]
+  MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R8, 2
+  SUB RBX, R8
+  ADD RDI, RBX
+  MOV R8,MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  SUB RDI, R8
+  SHL RDI, 2
+  MOV [GlobalRDIOffset], RDI
+  
+  @Terminate1:
+  XOR EAX, EAX
+  MOV r10d, [FrameCounter]
+  MOV [PrevFrameCounter], r10d
+  INC [FrameCounter]
+  MOV AL, 1
   
  @Terminate:
   MOV rdi, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
@@ -217,92 +229,37 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   ADD RSP, SIZE FALLINGLINE_FUNCTION_STRUCT
   RET
   
-  @ChangeLeft:
-  CMP [xDirection], 0
-  JNE @PlotRandomInternal
-  INC [xDirection]
-  CALL rand
-  MOV r13,10h
-  DIV r13
-  ADD r11, RDX
-  JMP @PlotRandomInternal
+  @DemoEnd:  
+  ;
+  ; Generate new random color
+  ;
+  MOV [ColorValue], 0FFh
+  MOV [FrameCounter], 0
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  @ClearLoop:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV RAX,0
+  REP STOSD
   
-  @ChangeRight:
-  CMP [xDirection], 1
-  JNE @PlotRandomInternal
-  DEC [xDirection]
-  CALL rand
-  MOV r13,09h
-  DIV r13
-  SUB r11, RDX
-  JMP @PlotRandomInternal
-  
-  @ChangeTop:
-  CMP [yDirection], 1
-  JNE @PlotRandomInternal
-  DEC [yDirection]
-  
-  CALL rand
-  MOV r13,20h
-  DIV r13
-  SUB r12, RDX
-  JMP @PlotRandomInternal
-  
-  @ChangeBottom:
-  CMP [yDirection], 0
-  JNE @PlotRandomInternal
-  INC [yDirection]
-  
-  CALL rand
-  MOV r13,0fh
-  DIV r13
-  ADD r12, RDX
-  JMP @PlotRandomInternal
+  ;
+  ; Wrap to the next line by adjusting for stride
+  ;
+  MOV EBX, MASTER_DEMO_STRUCT.Pitch[RSI]
+  MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R8, 2
+  SUB RBX, R8
+  ADD RDI, RBX 
+  ;
+  ; Decrement for the next line
+  ;
+  DEC RDX
+  JNZ @ClearLoop
+  MOV AL, 1
+  JMP @Terminate
 NESTED_END Fallingline_Demo, _TEXT$00
 
 
-
-
-NESTED_ENTRY Fallingline_PlotLocation, _TEXT$00
- alloc_stack(SIZEOF FALLINGLINE_FUNCTION_STRUCT)
- save_reg rdi, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRdi
- save_reg rsi, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRsi
- save_reg rbx, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRbx
- save_reg r10, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR10
- save_reg r11, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR11
- save_reg r12, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR12
- save_reg r13, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR13
-
-.ENDPROLOG 
-
-  MOV RSI, RCX
-  MOV r11, RDX
-  MOV r12, R8
-  
-  SHL r11,2
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  SHL RAX,2
-  MUL r12
-  ADD RAX, r11
-  ;
-  ; Get the Video Buffer
-  ;  
-  
-  
-  
- @Terminate:
-  MOV rdi, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
-  MOV rsi, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
-  MOV rbx, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
-
-  MOV r10, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR10[RSP]
-  MOV r11, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR11[RSP]
-  MOV r12, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR12[RSP]
-  MOV r13, FALLINGLINE_FUNCTION_STRUCT.SaveFrame.SaveR13[RSP]
-
-  ADD RSP, SIZE FALLINGLINE_FUNCTION_STRUCT
-  RET
-NESTED_END Fallingline_PlotLocation, _TEXT$00
 
 ;*********************************************************
 ;  Fallingline_Free
