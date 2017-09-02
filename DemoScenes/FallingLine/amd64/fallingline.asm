@@ -197,7 +197,7 @@ NESTED_ENTRY Fallingline_Demo, _TEXT$00
   MOV r8,  r12
   CALL Fallingline_PlotLocation
   ADD RDI, RAX
-  MOV EAX, 0FFFFFFh
+  MOV EAX, 0FF0000h
   MOV [RDI], RAX
   
   MOV [X_offset], r11

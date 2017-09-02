@@ -79,6 +79,7 @@ MAX_FRAMES EQU <2000>
    Brownian_InitFlag dd ?
    xDirection dd ?
    yDirection dd ?
+   FirstChance dd ?
 
 .CODE
 
@@ -104,6 +105,7 @@ NESTED_ENTRY Brownian_Init, _TEXT$00
   MOV [Brownian_InitFlag], 0h
   MOV [xDirection], 01h
   MOV [yDirection], 01h
+  MOV [FirstChance], 0h
   ;
   ; Initialize Random Numbers
   ;
@@ -180,93 +182,27 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   ADD RAX, [X_offset]
   MOV r10, PlotBuffer
   ADD r10,RAX
-  MOV RDX,1
-  MOV [r10], RDX
-  ;MOV [X_offset], 0
-  ;MOV [Y_offset], 0
-  ;@FillBuffer:
-  ;MOV RAX,[Y_offset]
-  ;MOV RDX, 0400h
-  ;MUL RDX
-  ;ADD RAX, [X_offset]
-  ;MOV r10, PlotBuffer
-  ;ADD r10,RAX
-  ;MOV RDX,1
-  ;MOV [r10], RDX
-  ;INC X_offset
-  ;CMP X_offset, 0400h
-  ;JB @FillBuffer
-  ;INC Y_offset
-  ;MOV [X_offset], 0
-  ;CMP Y_offset, 02FFh
-  ;JBE @FillBuffer 
-  
-  
-  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  MOV RCX, RSI
-  MOV RDX, [X_offset]
-  MOV r8, [Y_offset]
-  CALL Brownian_PlotLocation
-  ADD RDI, RAX
-  MOV EAX, 0D0D0D0h
-  MOV [RDI], RAX
+  MOV AL,1
+  MOV [r10], AL  
   MOV [Brownian_InitFlag], 1
+ 
   
   
-  
-  @PlotRandom:
-  ;XOR r10, r10
-  ;XOR r13, r13
-  
-  ;CALL rand
-  ;MOV r10,03FEh
-  ;DIV r10
-  ;ADD RDX, 01h ;0180h
-  ;MOV [X_offset],RDX
-  
-  ;CALL rand
-  ;MOV r13,02FEh
-  ;DIV r13
-  ;ADD RDX, 01h ;0100h
-  ;MOV [Y_offset],RDX
-  ;MOV RCX, [X_offset]
-  ;MOV RDX, [Y_offset]
-  ;CALL CheckBrownian_Bounds
-  ;CMP RAX, 0
-  ;JE @PlotRandom
-  
- ; MOV RAX,[Y_offset]
- ; MOV RDX, 0400h
- ; MUL RDX
- ; ADD RAX, [X_offset]
- ; MOV r10, PlotBuffer
- ; ADD r10,RAX
- ; MOV RDX,1
- ; MOV [r10], RDX
- ; 
-  ;MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
-  ;MOV RCX, RSI
-  ;MOV RDX, [X_offset]
-  ;MOV r8, [Y_offset]
-  ;CALL Brownian_PlotLocation
-  ;ADD RDI, RAX
-  ;MOV EAX, 0FF0000h
-  ;MOV [RDI], RAX
-  
-
+  @PlotRandom: 
+ 
   XOR r10, r10
   XOR r13, r13
   
   CALL rand
-  MOV r10,0FFh
+  MOV r10,0200h
   DIV r10
-  ADD RDX, 0280h
+  ADD RDX, 0150h
   MOV [X_offset],RDX
   
   CALL rand
-  MOV r13,0FFh
+  MOV r13,0150h
   DIV r13
-  ADD RDX, 0200h
+  ADD RDX, 0100h
   MOV [Y_offset],RDX
   
   MOV r11, [X_offset]
@@ -292,19 +228,19 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   
   @StartBoundCheck:
   ;check left
-  CMP r11, 0180h
+  CMP r11, 017Fh
   JBE @ChangeLeft
   
   ;check right 
-  CMP r11, 0350h
+  CMP r11, 034Fh
   JAE @ChangeRight
   
   ;check top
-  CMP r12, 0250h
+  CMP r12, 024Fh
   JAE @ChangeTop
   
   ;check Bottom
-  CMP r12, 0100h
+  CMP r12, 0FFh
   JBE @ChangeBottom
   
   MOV RCX, r11
@@ -319,8 +255,8 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   ADD RAX, r11
   MOV r10, PlotBuffer
   ADD r10,RAX
-  MOV RDX,1
-  MOV [r10], RDX
+  MOV DL,01h
+  MOV [r10], DL
   
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
   MOV RCX, RSI
@@ -328,11 +264,13 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   MOV r8,  r12
   CALL Brownian_PlotLocation
   ADD RDI, RAX
-  MOV EAX, 0FFFFFFh
-  MOV [RDI], RAX
+  MOV EAX, 0FF0000h
+  MOV [RDI], EAX
+
   
   
  @Terminate:
+  MOV RAX, 01h  
   MOV rdi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
   MOV rsi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
   MOV rbx, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
@@ -416,8 +354,8 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   ADD RAX, RSI
   MOV r10, PlotBuffer
   ADD r10,RAX
-  MOV RDX, [r10]
-  CMP RDX, 1
+  MOV DL, [r10]
+  CMP DL, 1
   JE @FoundPixel
   
   ADD RSI, 2  ; Check Right
@@ -430,11 +368,11 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   ADD RAX, RSI
   MOV r10, PlotBuffer
   ADD r10,RAX
-  MOV RDX, [r10]
-  CMP RDX, 1
+  MOV DL, [r10]
+  CMP DL, 1
   JE @FoundPixel
   
-  SUB RSI, 1   ;Check Top
+  SUB RSI, 1   ;Check Bottom
   ADD r11, 1
   ;CMP r11, 02FEh
   ;JAE @FoundPixel
@@ -445,11 +383,11 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   ADD RAX, RSI
   MOV r10, PlotBuffer
   ADD r10,RAX
-  MOV RDX, [r10]
-  CMP RDX, 1
+  MOV DL, [r10]
+  CMP DL, 1
   JE @FoundPixel
   
-  SUB r11, 2 ;Check Bottom
+  SUB r11, 2 ;Check Top
   ;CMP r11, 1
   ;JBE @FoundPixel
   
@@ -459,8 +397,8 @@ NESTED_ENTRY CheckBrownian_Bounds, _TEXT$00
   ADD RAX, RSI
   MOV r10, PlotBuffer
   ADD r10,RAX
-  MOV RDX, [r10]
-  CMP RDX, 1
+  MOV DL, [r10]
+  CMP DL, 1
   JE @FoundPixel
   MOV RAX, 0
   
@@ -506,9 +444,17 @@ NESTED_ENTRY Brownian_PlotLocation, _TEXT$00
   MOV r11, RDX
   MOV r12, R8
   
+  
+  MOV EBX, MASTER_DEMO_STRUCT.Pitch[RSI]
+  ADD RDI, RBX
+  
+  
+  
   SHL r11,2
   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   SHL RAX,2
+  SUB RBX, RAX
+  ADD RAX, RBX
   MUL r12
   ADD RAX, r11
   ;
