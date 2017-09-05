@@ -3,4 +3,5 @@ WindowTest \
 FireTest \
 PalTest \
 WormTest \
-BubbleTest
+BubbleTest \
+PlasmaTest
