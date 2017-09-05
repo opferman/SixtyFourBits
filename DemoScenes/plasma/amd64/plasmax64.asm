@@ -353,7 +353,7 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
   MOV RCX,  RDI
   CALL PlasmaDemo_PerformPlasma
 
-  MOV RDX, 1
+  MOV RDX, 5
   MOV RCX,  [VirtualPallete]
   call VPal_Rotate
 
