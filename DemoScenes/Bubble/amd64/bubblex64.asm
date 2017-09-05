@@ -498,7 +498,7 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
       ;
       XOR EDX, EDX
       MOV DX, WORD PTR [r13] ; Get Virtual Pallete Index
-	  MOV WORD PTR [r13], 0  ; Clear Screen
+	;  MOV WORD PTR [r13], 0  ; Clear Screen
 	  XOR EAX, EAX
 	  CMP DX, 0
 	  JE @PlotAsZero
@@ -549,7 +549,7 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
   MOV RDX, BUBBLE_MOVER.Radius[R10]
   ADD RDX, BUBBLE_MOVER.X[R10]
 
-  CMP RDX, 1000
+  CMP RDX, 1022
   JL @NextTest
 
   MOV RDX, 990
@@ -579,7 +579,7 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
   MOV RDX, BUBBLE_MOVER.Radius[R10]
   ADD RDX, BUBBLE_MOVER.Y[R10]
 
-  CMP RDX, 700
+  CMP RDX, 766
   JL @NextY_Test
 
   MOV RDX, 690
