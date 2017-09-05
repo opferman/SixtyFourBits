@@ -440,7 +440,7 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable2]
        CALL cos
-       ADDSD xmm6, xmm0
+       ADDSD xmm6, xmm0 
 
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [Variable1]
