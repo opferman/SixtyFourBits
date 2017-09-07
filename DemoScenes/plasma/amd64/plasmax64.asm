@@ -429,18 +429,26 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
        cvtsi2sd xmm1,R13 
        MULSD xmm0, xmm1
        MOVSD [RadiansX], xmm0
+
+  	   CMP [FrameCountDown], 3000
+	   JB @SkipNextCondition
               
   	   CMP [FrameCountDown], 4500
 	   JB @NewPath2
 
+@SkipNextCondition:
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [Variable2]
        CALL cos
        MOVSD xmm6, xmm0
 
+  	   CMP [FrameCountDown], 2000
+	   JB @SkipNextCondition2
+
 	   CMP [FrameCountDown], 5000
 	   JB @NewPath2
 
+@SkipNextCondition2:
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable1]
        CALL sin
@@ -456,9 +464,13 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
        CALL sin
        ADDSD xmm6, xmm0
 
+  	   CMP [FrameCountDown], 1000
+	   JB @SkipNextCondition3
+
 	   CMP [FrameCountDown], 6500
 	   JB @NewPath
 
+@SkipNextCondition3:
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable1]
        CALL cos
@@ -501,8 +513,25 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 @Skip_Update:
 
 	   cvttsd2si RAX, xmm6
-       ADD [RSI], AX
 
+
+  	   CMP [FrameCountDown], 3000
+	   JE @PlainPlot
+
+  	   CMP [FrameCountDown], 4500
+	   JE @PlainPlot
+
+  	   CMP [FrameCountDown], 5000
+	   JE @PlainPlot
+
+  	   CMP [FrameCountDown], 1800
+	   JE @PlainPlot
+
+       ADD [RSI], AX
+	   JMP @ContinuePlasma
+
+@PlainPlot:
+      MOV [RSI], AX
 @ContinuePlasma:
        ADD RSI, 2
           
