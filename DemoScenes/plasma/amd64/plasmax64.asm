@@ -82,9 +82,12 @@ public PlasmaDemo_Init
 public PlasmaDemo_Demo
 public PlasmaDemo_Free
 
+
+
 extern time:proc
 extern srand:proc
 extern rand:proc
+extern sqrt:proc
 
 MAX_COLORS equ <65536>
 EVAL_NEW_VELOCITY  equ <256>
@@ -353,7 +356,7 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
   MOV RCX,  RDI
   CALL PlasmaDemo_PerformPlasma
 
-  MOV RDX, 5
+  MOV RDX, 10
   MOV RCX,  [VirtualPallete]
   call VPal_Rotate
 
@@ -421,16 +424,22 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
     
    @Plasma_LoopForWidth:
 
+
        MOVSD xmm0, [AngleToRaidans]  
        cvtsi2sd xmm1,R13 
        MULSD xmm0, xmm1
        MOVSD [RadiansX], xmm0
               
-       
+  	   CMP [FrameCountDown], 4500
+	   JB @NewPath2
+
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [Variable2]
        CALL cos
        MOVSD xmm6, xmm0
+
+	   CMP [FrameCountDown], 5000
+	   JB @NewPath2
 
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable1]
@@ -447,6 +456,9 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
        CALL sin
        ADDSD xmm6, xmm0
 
+	   CMP [FrameCountDown], 6500
+	   JB @NewPath
+
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable1]
        CALL cos
@@ -462,8 +474,33 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
        CALL cos
        ADDSD xmm6, xmm0
 
-       cvttsd2si RAX, xmm6
 
+	   JMP @Skip_Update
+
+@NewPath2:
+      MOVSD xmm0, [RadiansY]
+	  ADDSD xmm0, [Variable1]
+	  CALL sin
+	  MULSD xmm0, [RadiansX]
+	  ADDSD xmm6, xmm0
+
+      MOVSD xmm0, [RadiansX]
+	  ADDSD xmm0, [Variable2]
+	  CALL cos
+	  MULSD xmm0, [RadiansY]
+	  ADDSD xmm6, xmm0
+	  	   JMP @Skip_Update
+@NewPath:
+
+       MOVSD xmm0, [RadiansY]
+	   ADDSD xmm0, [RadiansX]
+       CALL cos
+       ADDSD xmm6, xmm0
+
+
+@Skip_Update:
+
+	   cvttsd2si RAX, xmm6
        ADD [RSI], AX
 
 @ContinuePlasma:
@@ -495,9 +532,30 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
    MOVSD [Variable2Inc], xmm1
    MOVSD [Variable1Inc], xmm0
 
+   MOV EAX,[FrameCountDown]
+   AND EAX, 0FFh
+   CMP EAX, 0
+   JNE @NoUpate
+   cvttsd2si RAX, [Variable2Inc]
+   cvtsi2sd xmm0, RAX
+   MOVSD xmm1, [Variable2Inc]
+   SUBSD xmm1, xmm0
+   MOVSD [Variable2Inc], xmm1
+
+   cvttsd2si RAX, [Variable1Inc]
+   cvtsi2sd xmm0, RAX
+   MOVSD xmm1, [Variable1Inc]
+   SUBSD xmm1, xmm0
+   MOVSD [Variable1Inc], xmm1
+
+   NEG  [Variable2Inc]
+   NEG  [Variable1Inc]
+
+@NoUpate:
+
    MOV rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+   MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+   MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
    MOV r10, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
    MOV r11, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
