@@ -514,24 +514,68 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 
 	   cvttsd2si RAX, xmm6
 
-
-  	   CMP [FrameCountDown], 3000
-	   JE @PlainPlot
-
-  	   CMP [FrameCountDown], 4500
-	   JE @PlainPlot
-
   	   CMP [FrameCountDown], 5000
 	   JE @PlainPlot
 
-  	   CMP [FrameCountDown], 1800
+  	   CMP [FrameCountDown], 2999
 	   JE @PlainPlot
 
+  	   CMP [FrameCountDown], 4499
+	   JE @PlainPlot
+
+  	   CMP [FrameCountDown], 1999
+	   JE @PlainPlot
+
+  	   CMP [FrameCountDown], 4499
+	   JAE @NormalPlot
+	   
+	   CMP [FrameCountDown], 3000
+	   JAE @NoPlot
+	   
+	   CMP [FrameCountDown], 3000
+	   JB @NormalPlot
+
+	   CMP R13, 0
+	   JE @NormalPlot
+
+	   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+	   DEC RCX
+	   CMP R13, RCX
+	   JE  @NormalPlot
+
+	   CMP R12, 0
+	   JE @NormalPlot
+
+	   MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+	   DEC RCX
+	   CMP R12, RCX
+	   JE @NormalPlot
+	   XOR RCX, RCX
+	   XOR RDX, RDX
+	   XOR R8, R8
+	   MOV CX, [RSI-2]
+	   MOV DX, [RSI+2]
+	   ADD RCX, RDX
+	   ADD RAX, RCX
+	   XOR RCX, RCX
+	   XOR RDX, RDX
+  	   MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+	   MOV CX, [RSI + R8]
+	   ;MOV DX, [RSI - R8]
+	   ADD RCX, RDX
+	   ADD RAX, RCX
+	   SHR RAX, 2
+	   MOV [RSI], AX
+
+	   JMP @ContinuePlasma
+
+@NormalPlot:
        ADD [RSI], AX
 	   JMP @ContinuePlasma
 
 @PlainPlot:
       MOV [RSI], AX
+@NoPlot:
 @ContinuePlasma:
        ADD RSI, 2
           
