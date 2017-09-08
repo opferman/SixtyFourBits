@@ -4,4 +4,5 @@ dirs=DDraw \
      Window \
      Vpal \
      Font \
-     Init
+     Init \
+     Soft3D

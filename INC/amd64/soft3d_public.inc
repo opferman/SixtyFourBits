@@ -6,6 +6,8 @@
 ;
 ;****************************************
 
+SOFT3D_FLAG_ZBUFFER EQU <1>
+
 ; Structures
 TD_ROTATION STRUCT
     x   dq ?
