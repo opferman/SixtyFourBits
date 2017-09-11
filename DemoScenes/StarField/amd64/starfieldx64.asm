@@ -24,7 +24,7 @@ include font_public.inc
 include soft3d_public.inc
 include soft3d_funcs.inc
 
-
+extern Sleep:proc
 extern LocalAlloc:proc
 extern LocalFree:proc
 
@@ -268,6 +268,10 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
 
    MOV RCX, RDI
    CALL StarDemo_PlotStars
+
+   XOR RDX, RDX
+   MOV RCX,15
+   CALL Sleep
     
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -462,9 +466,10 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   CALL rand
   MOV STAR_FIELD_ENTRY.Color[RDI], AL
 
-  CALL rand
-  AND RAX, 3
-  INC RAX
+  ;CALL rand
+  ;AND RAX, 3
+  ;INC RAX
+  MOV RAX, 1
   cvtsi2sd xmm0, rax
   MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
 
