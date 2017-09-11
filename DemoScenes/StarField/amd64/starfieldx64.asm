@@ -21,6 +21,9 @@ include demovariables.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
+include soft3d_public.inc
+include soft3d_funcs.inc
+
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -55,6 +58,13 @@ FUNC_PARAMS struct
     Param7         dq ?
 FUNC_PARAMS ends
 
+STAR_FIELD_ENTRY struct
+   Location       TD_POINT <?>
+   Velocity       mmword    ?  
+   StarOnScreen   dq        ?
+   Color          db        ?
+STAR_FIELD_ENTRY ends
+
 STAR_DEMO_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
@@ -76,12 +86,14 @@ extern rand:proc
 
 
 .DATA
-
-			   
-  DoubleBuffer   dq  ?
+  DoubleBuffer   dq ?
   VirtualPallete dq ?
   FrameCountDown dd 7000
-
+  StarEntry      STAR_FIELD_ENTRY 1000 DUP(<>)
+  Soft3D         dq ?
+  TwoDPlot        TD_POINT_2D <?>
+  WorldLocation   TD_POINT    <?>
+  View_Distance   mmword   256.0
 .CODE
 
 ;*********************************************************
@@ -118,8 +130,30 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   CALL VPal_Create
   TEST RAX, RAX
   JZ @StarInit_Failed
-
   MOV [VirtualPallete], RAX
+  
+
+  XOR R8, R8
+  XOR RDX, RDX
+  MOV RCX, RSI
+  CALL Soft3D_Init
+  MOV [Soft3D], RAX
+  TEST RAX, RAX
+  JZ @StarInit_Failed
+
+
+  LEA RCX, [WorldLocation]
+  MOV TD_POINT.x[RCX], 0
+  MOV TD_POINT.y[RCX], 0
+  MOV TD_POINT.z[RCX], 0
+
+
+  MOVSD xmm0, [View_Distance]
+  MOVSD xmm1, xmm0
+  MOV RCX, [SOft3D]
+  CALL Soft3D_SetViewDistance
+
+
 
   XOR R12, R12
 
@@ -138,7 +172,9 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   CMP R12, 256
   JB @PopulatePallete
 
-  
+  MOV RCX, RSI
+  CALL StarDemo_CreateStars
+    
   MOV RSI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
@@ -196,6 +232,7 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
       ;
       XOR EDX, EDX
       MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
       MOV RCX, [VirtualPallete]
       CALL VPal_GetColorIndex 
 
@@ -226,7 +263,11 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
+   MOV RCX, RDI
+   CALL StarDemo_MoveStars
 
+   MOV RCX, RDI
+   CALL StarDemo_PlotStars
     
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -280,12 +321,221 @@ NESTED_ENTRY StarDemo_Free, _TEXT$00
 NESTED_END StarDemo_Free, _TEXT$00
 
 
+;*********************************************************
+;  StarDemo_CreateStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
+ alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+ save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
+.ENDPROLOG 
+  MOV RBX, RCX
+  LEA RDI, [StarEntry]
+  XOR RSI, RSI
+
+@Initialize_Stars:
+
+  CALL rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm0
+  
+  CALL rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm0
+  
+  CALL rand
+  AND RAX, 0FFh
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
+
+  CALL rand
+  MOV STAR_FIELD_ENTRY.Color[RDI], AL
+
+  CALL rand
+  AND RAX, 3
+  INC RAX
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
+
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, 1000
+  JB @Initialize_Stars
+  
+  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+
+  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  RET
+NESTED_END StarDemo_CreateStars, _TEXT$00
 
 
 
+;*********************************************************
+;  StarDemo_MoveStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
+ alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+ save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
+.ENDPROLOG 
+   
+  LEA RDI, [StarEntry]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Move_Stars:
+  CMP STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_OFF_SCREEN
+  JE @CreateNewStar
 
+  MOVSD xmm0, STAR_FIELD_ENTRY.Velocity[RDI]
+  MOVSD xmm1, STAR_FIELD_ENTRY.Location.z[RDI]
+  SUBSD xmm1, xmm0
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm1
 
+  CMP STAR_FIELD_ENTRY.Color[RDI], 255
+  JE @SkipIncrementColor
 
+  INC STAR_FIELD_ENTRY.Color[RDI]
+ @SkipIncrementColor:
+
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, 1000
+  JB @Move_Stars
+  JMP @StarMoveComplete
+
+@CreateNewStar:
+  CALL rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm0
+  
+  CALL rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[R12]
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm0
+  
+  CALL rand
+  AND RAX, 0FFh
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
+
+  CALL rand
+  MOV STAR_FIELD_ENTRY.Color[RDI], AL
+
+  CALL rand
+  AND RAX, 3
+  INC RAX
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
+
+  JMP  @SkipIncrementColor
+@StarMoveComplete:
+   
+  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  RET
+NESTED_END StarDemo_MoveStars, _TEXT$00
+
+;*********************************************************
+;  StarDemo_PlotStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
+ alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+ save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
+.ENDPROLOG 
+   
+  LEA RDI, [StarEntry]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Plot_Stars:
+  MOV STAR_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 0
+  LEA R9, [TwoDPlot]
+  LEA R8, [WorldLocation]
+  LEA RDX, STAR_FIELD_ENTRY.Location[RDI]
+  MOV RCX, [SOft3D]
+  CALL Soft3D_Convert3Dto2D
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], RAX
+  CMP RAX, SOFT3D_PIXEL_OFF_SCREEN
+  JE @SkipPixelPlot
+  
+  MOV RBX, [DoubleBuffer]
+  LEA R9, [TwoDPlot]
+
+  MOV RCX, TD_POINT_2D.y[R9]
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  MUL RCX
+  ADD RBX, RAX
+  ADD RBX, TD_POINT_2D.x[R9]
+  
+  MOV AL, STAR_FIELD_ENTRY.Color[RDI]
+  MOV [RBX], AL
+
+ @SkipPixelPlot:
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, 1000
+  JB @Plot_Stars
+  
+  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  RET
+NESTED_END StarDemo_PlotStars, _TEXT$00
 
 
 

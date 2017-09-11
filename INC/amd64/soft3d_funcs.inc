@@ -11,3 +11,4 @@ extern Soft3D_SetAspectRatio:proc
 
 extern Soft3D_DrawLine:proc
 extern Soft3D_PlotPixel:proc
+extern Soft3D_Convert3Dto2D:proc
