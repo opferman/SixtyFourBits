@@ -108,6 +108,49 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   StartY          mmword   10.0
   StartZ          mmword   100.0
   VelZ            mmword   0.005
+  VelY            mmword   -5.0 ; 1 
+                  mmword   -3.0 ; 2
+				  mmword    0.0 ; 3 
+				  mmword    3.0 ; 4
+                  mmword    5.0 ; 5
+				  mmword    5.0 ; 6
+				  mmword    5.0 ; 7
+				  mmword    5.0 ; 8
+				  mmword    5.0 ; 9
+				  mmword    3.0 ; 10
+				  mmword    0.0 ; 11
+				  mmword    -3.0 ; 12
+				  mmword    -5.0 ; 13
+				  mmword    -5.0 ; 14
+				  mmword    -5.0 ; 15
+				  mmword    -5.0 ; 16
+				  mmword    -5.0 ; 17
+				  mmword    -5.0 ; 18
+				 
+
+  VelX            mmword   -5.0 ; 1
+                  mmword   -5.0 ; 2
+				  mmword   -5.0 ; 3
+				  mmword   -5.0 ; 4 
+                  mmword   -5.0 ; 5 
+				  mmword   -3.0 ; 6 
+				  mmword    0.0 ; 7
+				  mmword    3.0 ; 8
+				  mmword    5.0 ; 9
+				  mmword    5.0 ; 10
+				  mmword    5.0 ; 11
+				  mmword    5.0 ; 12
+				  mmword    5.0 ; 13
+				  mmword    5.0 ; 14
+				  mmword    3.0 ; 15
+				  mmword    0.0 ; 16
+				  mmword    -3.0 ; 17
+				  mmword    -5.0 ; 18
+				 
+
+
+
+
   VelZMoving      mmword   -0.05
   View_Distance   mmword   256.0
   VelocityRadians mmword   0.0872222222     ; 10.0*(3.14/180.0)
@@ -545,6 +588,26 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   MULSD xmm0, xmm7
   ADDSD xmm0, xmm9
   MOVSD xmm7, xmm0
+
+  ; Moving needs work
+  MOV EAX, [FrameCountDown]
+  SHR EAX, 2
+  MOV ECX, 18
+  XOR EDX, EDX
+  DIV ECX
+  MOV EAX, EDX
+  SHL EAX, 3
+
+  LEA RDX, [VelY]
+  ADD RDX, RAX
+  MOVSD xmm0, mmword ptr [RDX]
+  ADDSD xmm7, xmm0
+
+  LEA RDX, [VelX]
+  ADD RDX, RAX
+  MOVSD xmm0, mmword ptr [RDX]
+  ADDSD xmm6, xmm0
+
 
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.x[RDI], xmm6
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.y[RDI], xmm7
