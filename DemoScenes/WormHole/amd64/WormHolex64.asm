@@ -92,13 +92,15 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
-NUMBER_STARS EQU <6000>
+NUMBER_STARS EQU <18000>
+NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
 
 .DATA
   DoubleBuffer   dq ?
   VirtualPallete dq ?
   FrameCountDown dd 7000
-  StarEntry      STAR_FIELD_ENTRY NUMBER_STARS DUP(<>)
+;  StarEntry      STAR_FIELD_ENTRY NUMBER_STARS DUP(<>)
+  StarEntryPtr    dq ?
   Soft3D          dq ?
   TwoDPlot        TD_POINT_2D <?>
   WorldLocation   TD_POINT    <?>
@@ -111,7 +113,7 @@ NUMBER_STARS EQU <6000>
   CurrentRadians  mmword   0.0
   RadianIncrement mmword   0.00872222222  ; 0.5*(3.14/180.0)
   CurrentColor      db   255
-  StarsPerColorDec  dq  24
+  StarsPerColorDec  dq  72
   DoublePi        mmword  6.28
 .CODE
 
@@ -142,6 +144,13 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOV ECX, 040h ; LMEM_ZEROINIT
   CALL LocalAlloc
   MOV [DoubleBuffer], RAX
+  TEST RAX, RAX
+  JZ @WormInit_Failed
+
+  MOV RDX, NUMBER_STARS_SIZE
+  MOV ECX, 040h ; LMEM_ZEROINIT
+  CALL LocalAlloc
+  MOV [StarEntryPtr], RAX
   TEST RAX, RAX
   JZ @WormInit_Failed
 
@@ -364,7 +373,8 @@ NESTED_ENTRY WormHole_CreateStars, _TEXT$00
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
 .ENDPROLOG 
   MOV RBX, RCX
-  LEA RDI, [StarEntry]
+  ;LEA RDI, [StarEntry]
+  MOV RDI, [StarEntryPtr]
   XOR RSI, RSI
 
   MOVSD xmm6, [StartX]
@@ -489,7 +499,8 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
 .ENDPROLOG 
    
-  LEA RDI, [StarEntry]
+  ;LEA RDI, [StarEntry]
+  MOV RDI, [StarEntryPtr]
   XOR RSI, RSI
   MOV R12, RCX
   
@@ -584,7 +595,8 @@ NESTED_ENTRY WormHole_PlotStars, _TEXT$00
  save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
    
-  LEA RDI, [StarEntry]
+  ;LEA RDI, [StarEntry]
+  MOV RDI, [StarEntryPtr]
   XOR RSI, RSI
   MOV R12, RCX
   
