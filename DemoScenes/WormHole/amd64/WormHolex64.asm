@@ -106,8 +106,9 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   WorldLocation   TD_POINT    <?>
   StartX          mmword   10.0
   StartY          mmword   10.0
-  StartZ          mmword   10.0
+  StartZ          mmword   100.0
   VelZ            mmword   0.005
+  VelZMoving      mmword   -0.05
   View_Distance   mmword   256.0
   VelocityRadians mmword   0.0872222222     ; 10.0*(3.14/180.0)
   CurrentRadians  mmword   0.0
@@ -512,6 +513,9 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   MOVSD xmm7, STAR_FIELD_ENTRY.Location.y[RDI]
   MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.z[RDI], xmm0
+  MOVSD xmm1, [VelZMoving]
+  ADDSD XMM0, XMM1
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
 
   ;
   ; cos(r)*x - sin(r)*y
