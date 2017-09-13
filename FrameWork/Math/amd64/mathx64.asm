@@ -38,7 +38,8 @@ MATH_INIT_LOCALS ends
 extern srand:proc
 extern time:proc
 extern rand:proc
-
+.DATA 
+  RdRandSupported dd 0
 .CODE
 
 ;*********************************************************
@@ -61,12 +62,46 @@ NESTED_ENTRY Math_Init, _TEXT$00
   MOV RCX, RAX
   CALL srand
   
+  MOV EAX, 1
+  CPUID
+  TEST ECX, 040000000h
+  JZ @NoRdRand
+  MOV [RdRandSupported], 1
+ @NoRdRand:  
   MOV RDI, MATH_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
   ADD RSP, SIZE MATH_INIT_LOCALS
   
   RET
 
 NESTED_END Math_Init, _TEXT$00
+
+;*********************************************************
+;   
+;   Math_Rand
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Math_Rand, _TEXT$00
+  alloc_stack(SIZEOF MATH_INIT_LOCALS)
+.ENDPROLOG 
+  
+  CMP [RdRandSupported], 1
+  JE @PerformRdRand
+  CALL rand
+  ADD RSP, SIZE MATH_INIT_LOCALS
+  RET
+    
+@PerformRdRand:
+  ; db 0fh, 0c7h, 0f0h  Faster RDRAND EAX random number generator.
+  
+  ADD RSP, SIZE MATH_INIT_LOCALS
+  RET
+
+NESTED_END Math_Rand, _TEXT$00
 
 
 

@@ -15,5 +15,6 @@ extern DDrawx64_LockSurfaceBuffer:proc
 extern DDrawx64_UnLockSurfaceAndFlip:proc
 extern DDrawx64_GetScreenRes:proc
 extern Math_Init:proc
+extern Math_Rand:proc
 extern DDrawx64_PixelPlot:proc
 extern DDrawx64_RestoreSurfacesIfNeeded:proc

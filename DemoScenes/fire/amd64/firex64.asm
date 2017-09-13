@@ -20,6 +20,7 @@
 ;*********************************************************
 include ksamd64.inc
 include demovariables.inc
+include demoprocs.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
