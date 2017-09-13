@@ -345,26 +345,10 @@ FRAME_TEXT EQU <150>
                             db "Pure", 0
                             dd 250, 625 
                             db "x86-64", 0
-                            dd 75, 625
+                            dd 77, 625
                             db "Assembly", 0
                             dd 75, 625
                             db 1,1,1,1,1,1,1,1, 0
-                            dd 150, 625
-                            db  "Simple", 0
-                            dd  350, 625 
-                            db "Fire", 0
-                            dd 150, 625
-                            db  "Blinking", 0
-                            dd 350, 625 
-                            db  "Stars", 0
-                            dd 75, 625
-                            db  "DEC AL", 0
-                            dd 300, 625 
-                            db  "Flying", 0
-                            dd 300, 625 
-                            db  "Comets", 0
-                            dd 75, 625
-                            db  "DEC RCX", 0
                             dd 10, 625
                             db  "JMP @Text", 0
                             ; ; Add more text
@@ -512,11 +496,11 @@ NESTED_ENTRY Fire_Init, _TEXT$00
 
 @PlotStars:
   
-  CALL rand
+  CALL Math_Rand
 
   CMP AX, 25
   JA @NoStarPlot
-  CALL rand
+  CALL Math_Rand
   MOV [R13], AL
  @NoStarPlot:
   INC R13
@@ -845,7 +829,7 @@ NESTED_ENTRY Fire_RandomFillBottom, _TEXT$00
   JBE @BlackOut
 
 @FillBottomRow:
-  CALL rand
+  CALL Math_Rand
   MOV RCX, 256
   DIV RCX
   
@@ -981,7 +965,7 @@ NESTED_ENTRY Fire_HandleComets, _TEXT$00
 .ENDPROLOG 
   MOV RDI, RCX
 
-  CALL rand
+  CALL Math_Rand
   MOV EBX, EAX
   AND EBX, 3h
   INC EBX
@@ -1135,13 +1119,13 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
 
 @MoveFireUp:
       XOR RDX, RDX
-      CALL rand
+      CALL Math_Rand
       MOV RCX, 3
       DIV RCX
 
       MOV [TopWind], DL
       
-      CALL rand
+      CALL Math_Rand
       MOV RCX, 3
       DIV RCX
 
