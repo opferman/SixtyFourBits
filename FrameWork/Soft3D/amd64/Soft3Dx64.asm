@@ -310,7 +310,7 @@ NESTED_END Soft3D_GetAspectRatio, _TEXT$00
 ;  Soft3D_DrawLine
 ;
 ;        Parameters: 
-;
+;           3D Handle, PTD_POINT pTdPointA, PTD_POINT pTdPointB, Pixel Color, PTD_POINT pPixelWorld
 ;       
 ;
 ;
@@ -325,6 +325,7 @@ NESTED_END Soft3D_DrawLine, _TEXT$00
 ;  Soft3D_PlotPixel
 ;
 ;        Parameters: 
+;           3D Handle, PTD_POINT pTdPoint, Pixel Color, PTD_POINT pPixelWorld
 ;
 ;       
 ;
@@ -514,7 +515,7 @@ NESTED_ENTRY Soft3D_Convert3Dto2D, _TEXT$00
   UCOMISD xmm0,  mmword ptr [ConstantOne]
   JG @AdjustAspect_X
 
-  MULSD xmm2, xmm0
+;  MULSD xmm2, xmm0  Ignore the aspect ratio for now it was creating an off center.
   cvttsd2si  RAX, xmm2
   MOV TD_POINT_2D.y[RSI], RAX
   cvttsd2si  RAX, xmm1
@@ -523,7 +524,7 @@ NESTED_ENTRY Soft3D_Convert3Dto2D, _TEXT$00
   JMP @DoneAdjustAspect
 @AdjustAspect_X:
 
-  DIVSD xmm1, xmm0
+;  DIVSD xmm1, xmm0  Ignore the aspect ratio for now it was creating an off center.
   cvttsd2si  RAX, xmm2
   MOV TD_POINT_2D.y[RSI], RAX
   cvttsd2si  RAX, xmm1

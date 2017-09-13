@@ -1,5 +1,5 @@
 ;*********************************************************
-; Wormhole Demo 
+; Worm Hole Demo
 ;
 ;  Written in Assembly x64
 ; 
@@ -21,9 +21,14 @@ include demovariables.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
+include soft3d_public.inc
+include soft3d_funcs.inc
 
+extern Sleep:proc
 extern LocalAlloc:proc
 extern LocalFree:proc
+extern cos:proc
+extern sin:proc
 
 PARAMFRAME struct
     Param1         dq ?
@@ -41,6 +46,10 @@ SAVEREGSFRAME struct
     SaveR10        dq ?
     SaveR11        dq ?
     SaveR12        dq ?
+	SaveXmm6       xmmword ?
+	SaveXmm7       xmmword ?
+	SaveXmm8       xmmword ?
+	SaveXmm9       xmmword ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
 
@@ -55,16 +64,25 @@ FUNC_PARAMS struct
     Param7         dq ?
 FUNC_PARAMS ends
 
-WH_DEMO_STRUCTURE struct
+STAR_FIELD_ENTRY struct
+   Location        TD_POINT <?>
+   RotatedLocation TD_POINT <?>
+   NewRadians      mmword    ?
+   Velocity        mmword    ?  
+   StarOnScreen    dq        ?
+   Color           db        ?
+STAR_FIELD_ENTRY ends
+
+WORM_HOLE_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
-WH_DEMO_STRUCTURE ends
+WORM_HOLE_STRUCTURE ends
 
-WH_DEMO_STRUCTURE_FUNC struct
+WORM_HOLE_STRUCTURE_FUNC struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
    FuncParams     FUNC_PARAMS     <?>
-WH_DEMO_STRUCTURE_FUNC ends
+WORM_HOLE_STRUCTURE_FUNC ends
 
 public WormHole_Init
 public WormHole_Demo
@@ -74,18 +92,27 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
-MAX_COLORS EQU <256+256+256+256+256+256>
+NUMBER_STARS EQU <6000>
+
 .DATA
-
-DoubleBuffer   dq ?
-VirtualPallete dq ?
-FrameCountDown dd 4000
-Red            db 0h
-Blue           db 0h
-Green          db 0h
-ColorInc       dw 1h
-ColorOffset    dw 0
-
+  DoubleBuffer   dq ?
+  VirtualPallete dq ?
+  FrameCountDown dd 7000
+  StarEntry      STAR_FIELD_ENTRY NUMBER_STARS DUP(<>)
+  Soft3D          dq ?
+  TwoDPlot        TD_POINT_2D <?>
+  WorldLocation   TD_POINT    <?>
+  StartX          mmword   10.0
+  StartY          mmword   10.0
+  StartZ          mmword   10.0
+  VelZ            mmword   0.005
+  View_Distance   mmword   256.0
+  VelocityRadians mmword   0.0872222222     ; 10.0*(3.14/180.0)
+  CurrentRadians  mmword   0.0
+  RadianIncrement mmword   0.00872222222  ; 0.5*(3.14/180.0)
+  CurrentColor      db   255
+  StarsPerColorDec  dq  24
+  DoublePi        mmword  6.28
 .CODE
 
 ;*********************************************************
@@ -98,11 +125,11 @@ ColorOffset    dw 0
 ;
 ;*********************************************************  
 NESTED_ENTRY WormHole_Init, _TEXT$00
- alloc_stack(SIZEOF WH_DEMO_STRUCTURE)
- save_reg rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12
+ alloc_stack(SIZEOF WORM_HOLE_STRUCTURE)
+ save_reg rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
+ save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
+ save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
   MOV RSI, RCX
 
@@ -112,269 +139,76 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MUL R9
   MOV RDX, RAX
-  SHL RDX, 1    ; Turn Buffer into WORD values
   MOV ECX, 040h ; LMEM_ZEROINIT
   CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
-  JZ @PalInit_Failed
+  JZ @WormInit_Failed
 
-  MOV RCX, MAX_COLORS
+  MOV RCX, 256
   CALL VPal_Create
   TEST RAX, RAX
-  JZ @PalInit_Failed
-
+  JZ @WormInit_Failed
   MOV [VirtualPallete], RAX
+  
+
+  XOR R8, R8
+  XOR RDX, RDX
+  MOV RCX, RSI
+  CALL Soft3D_Init
+  MOV [Soft3D], RAX
+  TEST RAX, RAX
+  JZ @WormInit_Failed
+
+
+  LEA RCX, [WorldLocation]
+  MOV TD_POINT.x[RCX], 0
+  MOV TD_POINT.y[RCX], 0
+  MOV TD_POINT.z[RCX], 0
+
+
+  MOVSD xmm0, [View_Distance]
+  MOVSD xmm1, xmm0
+  MOV RCX, [SOft3D]
+  CALL Soft3D_SetViewDistance
+
+
 
   XOR R12, R12
 
 @PopulatePallete:
-
-  XOR EAX, EAX
-
- ; Red
-  MOV AL, BYTE PTR [Red]  
-  SHL EAX, 16
-
-  ; Green
-  MOV AL, BYTE PTR [Green]
-  SHL AX, 8
-
-  ; Blue
-  MOV AL, BYTE PTR [Blue]
+  MOV RAX, R12
+  MOV AH, AL
+  SHL RAX, 8
+  MOV AL, AH
 
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
   CALL VPal_SetColorIndex
-
-  INC [Blue]
 
   INC R12
   CMP R12, 256
   JB @PopulatePallete
 
-  DEC [Blue]
-
-@PopulatePallete2:
-
-  XOR EAX, EAX
-
- ; Red
-  MOV AL, BYTE PTR [Red]  
-  SHL EAX, 16
-
-  ; Green
-  MOV AL, BYTE PTR [Green]
-  SHL AX, 8
-
-  ; Blue
-  MOV AL, BYTE PTR [Blue]
-
-  MOV R8, RAX
-  MOV RDX, R12
-  MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
-
-  INC [Red]
-
-  INC R12
-  CMP R12, 256+256
-  JB @PopulatePallete2
-
-  DEC [RED]
-  @PopulatePallete3:
-
-  XOR EAX, EAX
-
- ; Red
-  MOV AL, BYTE PTR [Red]  
-  SHL EAX, 16
-
-  ; Green
-  MOV AL, BYTE PTR [Green]
-  SHL AX, 8
-
-  ; Blue
-  MOV AL, BYTE PTR [Blue]
-
-  MOV R8, RAX
-  MOV RDX, R12
-  MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
-
-  INC [Green]
-
-  INC R12
-  CMP R12, 256+256+256
-  JB @PopulatePallete3
-
-  DEC [Green]
-
- @PopulatePallete4:
-
-  XOR EAX, EAX
-
- ; Red
-  MOV AL, BYTE PTR [Red]  
-  SHL EAX, 16
-
-  ; Green
-  MOV AL, BYTE PTR [Green]
-  SHL AX, 8
-
-  ; Blue
-  MOV AL, BYTE PTR [Blue]
-
-  MOV R8, RAX
-  MOV RDX, R12
-  MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
-
-  DEC [Blue]
-
-  INC R12
-  CMP R12, 256+256+256+256
-  JB @PopulatePallete4
-  MOV [Blue], 0
- @PopulatePallete5:
-
-  XOR EAX, EAX
-
- ; Red
-  MOV AL, BYTE PTR [Red]  
-  SHL EAX, 16
-
-  ; Green
-  MOV AL, BYTE PTR [Green]
-  SHL AX, 8
-
-  ; Blue
-  MOV AL, BYTE PTR [Blue]
-
-  MOV R8, RAX
-  MOV RDX, R12
-  MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
-
-  DEC [Red]
-
-  INC R12
-  CMP R12, 256+256+256+256+256
-  JB @PopulatePallete5
-
-  MOV [Red], 0
-
- @PopulatePallete6:
-
-  XOR EAX, EAX
-
- ; Red
-  MOV AL, BYTE PTR [Red]  
-  SHL EAX, 16
-
-  ; Green
-  MOV AL, BYTE PTR [Green]
-  SHL AX, 8
-
-  ; Blue
-  MOV AL, BYTE PTR [Blue]
-
-  MOV R8, RAX
-  MOV RDX, R12
-  MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
-
-  DEC [Green]
-  INC [Red]
-
-  INC R12
-  CMP R12, 256+256+256+256+256+256
-  JB @PopulatePallete6
-
-  MOV R12, 1024-51
-  MOV R10, 1
-
-@PlotCircles:
-  MOV R9, R10
-  MOV R8, 768/2
-  MOV RDX, 1024/2
   MOV RCX, RSI
-  CALL WormHole_DrawCircle   
-  INC R10
-
-@skipit:
-  CMP R10, 768/2 - 10
-  JB @PlotCircles
-
-  MOV r10, [DoubleBuffer]
-  XOR R12, r12
-  XOR R9, R9
-
- @FillScreenInit:
-
-      CMP WORD PTR [r10], 0
-	  JNE @SkipPixel
-
-	  CMP WORD PTR [R10+2], 0
-	  JNE @FillPixel
-
-	  MOV CX, [ColorInc]
-	  MOV WORD PTR [r10], CX
-
-	  INC [ColorInc]
-      CMP  [ColorInc], MAX_COLORS
-      JB @SkipPixel
-      MOV [ColorInc], 1
-	  JMP @SkipPixel
-@FillPixel:
-      MOV CX, [R10+2]
-	  MOV [R10], CX
-
-
-@SkipPixel:
-      Add r10, 2
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-      JB @FillScreenInit
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC R9
-
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-   JB @FillScreenInit
-
-;@PlotCircles2:
-;  MOV R9, R12
-;  MOV R8, 350
-;  MOV RDX, 500
-;  MOV RCX, RSI
-;  CALL WormHole_DrawCircle   
-;  INC R12
-
-;  CMP R12, 100
-  ;JB @PlotCircles2
- 
-  
-  MOV RSI, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE WH_DEMO_STRUCTURE
+  CALL WormHole_CreateStars
+    
+  MOV RSI, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV RDI, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
   MOV EAX, 1
   RET
 
-@PalInit_Failed:
-  MOV RSI, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE WH_DEMO_STRUCTURE
-  XOR RAX, RAX
+@WormInit_Failed:
+  MOV RSI, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV RDI, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
+  XOR EAX, EAX
   RET
 NESTED_END WormHole_Init, _TEXT$00
 
@@ -390,14 +224,14 @@ NESTED_END WormHole_Init, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY WormHole_Demo, _TEXT$00
- alloc_stack(SIZEOF WH_DEMO_STRUCTURE)
- save_reg rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, WH_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, WH_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, WH_DEMO_STRUCTURE.SaveFrame.SaveR13
+ alloc_stack(SIZEOF WORM_HOLE_STRUCTURE)
+ save_reg rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r10, WORM_HOLE_STRUCTURE.SaveFrame.SaveR10
+ save_reg r11, WORM_HOLE_STRUCTURE.SaveFrame.SaveR11
+ save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, WORM_HOLE_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
   MOV RDI, RCX
@@ -416,7 +250,8 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
       ; Get the Virtual Pallete Index for the pixel on the screen
       ;
       XOR EDX, EDX
-      MOV DX, WORD PTR [r13] ; Get Virtual Pallete Index
+      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
       MOV RCX, [VirtualPallete]
       CALL VPal_GetColorIndex 
 
@@ -425,7 +260,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
 
       ; Increment to the next location
       ADD RSI, 4
-      Add R13, 2
+      INC r13
   
       INC r12
 
@@ -447,27 +282,30 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
-   ;
-   ; Rotate the pallete by 1.  This is the only animation being performed.
-   ;
-   MOV RDX, 1
-   MOV RCX, [VirtualPallete]
-   CALL  VPal_Rotate
+   MOV RCX, RDI
+   CALL WormHole_MoveStars
+
+   MOV RCX, RDI
+   CALL WormHole_PlotStars
+
+   XOR RDX, RDX
+   MOV RCX,15
+   CALL Sleep
     
-   MOV rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-   MOV rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-   MOV rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-   MOV r10, WH_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-   MOV r11, WH_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-   MOV r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-   MOV r13, WH_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  MOV r10, WORM_HOLE_STRUCTURE.SaveFrame.SaveR10[RSP]
+  MOV r11, WORM_HOLE_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, WORM_HOLE_STRUCTURE.SaveFrame.SaveR13[RSP]
 
-   ADD RSP, SIZE WH_DEMO_STRUCTURE
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
   
-   DEC [FrameCountDown]
-   MOV EAX, [FrameCountDown]
-   RET
+  DEC [FrameCountDown]
+  MOV EAX, [FrameCountDown]
+  RET
 NESTED_END WormHole_Demo, _TEXT$00
 
 
@@ -482,10 +320,10 @@ NESTED_END WormHole_Demo, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY WormHole_Free, _TEXT$00
- alloc_stack(SIZEOF WH_DEMO_STRUCTURE)
- save_reg rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ alloc_stack(SIZEOF WORM_HOLE_STRUCTURE)
+ save_reg rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
 
  MOV RCX, [VirtualPallete]
@@ -497,564 +335,295 @@ NESTED_ENTRY WormHole_Free, _TEXT$00
 
   CALL LocalFree
  @SkipFreeingMem:
-  MOV rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-  ADD RSP, SIZE WH_DEMO_STRUCTURE
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
   RET
 NESTED_END WormHole_Free, _TEXT$00
 
 
-
-
-
-
 ;*********************************************************
-;  WormHole_DrawCircle
+;  WormHole_CreateStars
 ;
-;        Parameters: Master Context, X, Y, Radius
+;        Parameters: Master Context
 ;
 ;       
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY WormHole_DrawCircle, _TEXT$00
- alloc_stack(SIZEOF WH_DEMO_STRUCTURE)
- save_reg rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, WH_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, WH_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, WH_DEMO_STRUCTURE.SaveFrame.SaveR13
+NESTED_ENTRY WormHole_CreateStars, _TEXT$00
+ alloc_stack(SIZEOF WORM_HOLE_STRUCTURE)
+ save_reg rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm6[RSP], xmm6
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP], xmm7
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
 .ENDPROLOG 
+  MOV RBX, RCX
+  LEA RDI, [StarEntry]
+  XOR RSI, RSI
 
-MOV  [ColorOffset], 0
- 
- MOV RSI, RCX
- MOV R10, R9 ; Radius
- MOV R11, R8  ; Y Center
- MOV R12, RDX ; X Center
- 
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
+  MOVSD xmm6, [StartX]
+  MOVSD xmm7, [StartY]
+  MOVSD xmm8, [StartZ]
 
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
+@Initialize_Stars:
 
- ;
- ; Quadrant 1.1
- ; 
-
-@PlotQudrant_1_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  ADD RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  INC  [ColorOffset]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_1_1
-  MOV [ColorInc], 0
-@NoColorRest_1_1:
-
-  CMP R13, 0
-  JG @Check_Second_Error_1_1
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
+  MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm6
+  MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm7
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm8
   
- @Check_Second_Error_1_1:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_1_1
-
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  SHL RAX, 1
-  NEG RAX
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
+ ; MOVSD STAR_FIELD_ENTRY.RotatedLocation.x[RDI], xmm6
+ ; MOVSD STAR_FIELD_ENTRY.RotatedLocation.y[RDI], xmm7
+ ; MOVSD STAR_FIELD_ENTRY.RotatedLocation.z[RDI], xmm8
   
-
-@Check_Loop_Condition_1_1:
-  CMP RBX, RDI
-  JGE @PlotQudrant_1_1_Pixel
-
-;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
-
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
-
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
- ;
- ; Quadrant 1.2
- ; 
- @PlotQudrant_1_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RBX
-  MUL RCX
-
-  ADD RAX, R12
-  ADD RAX, RDI
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  DEC  [ColorInc]
-  CMP  [ColorInc], 0
-  JNE @NoColorRest_1_2
-  MOV [ColorInc], 1
-@NoColorRest_1_2:
+  MOVSD xmm0, [VelZ]
+  ADDSD xmm8, xmm0
 
 
-  CMP R13, 0
-  JG @Check_Second_Error_1_2
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
-  
- @Check_Second_Error_1_2:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_1_2
-
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
-  
-
-@Check_Loop_Condition_1_2:
-  CMP RBX, RDI
-  JGE @PlotQudrant_1_2_Pixel
   ;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
+  ; cos(r)*x - sin(r)*y
+  ;
+  MOVSD xmm0, [CurrentRadians]
+  CALL Cos
+  MULSD xmm0, xmm6
+  MOVSD xmm9, xmm0
 
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
+  MOVSD xmm0, [CurrentRadians]
+  CALL Sin
+  MULSD xmm0, xmm7
 
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
- ;
- ; Quadrant 2.1
- ; 
- @PlotQudrant_2_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RBX
-  MUL RCX
+  SUBSD xmm9, xmm0
 
-  ADD RAX, R12
-  SUB RAX, RDI
-  SHL RAX, 1
+  ;
+  ; (sin(r)*x + cos(r)*y)
+  ;
+  MOVSD xmm0, [CurrentRadians]
+  CALL Sin
+  MULSD xmm0, xmm6
+  MOVSD xmm6, xmm9
+  MOVSD xmm9, xmm0
 
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest2_1
-  MOV [ColorInc], 0
-@NoColorRest2_1:
-
-  CMP R13, 0
-  JG @Check_Second_Error_2_1
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
+  MOVSD xmm0, [CurrentRadians]
+  CALL Cos
+  MULSD xmm0, xmm7
+  ADDSD xmm0, xmm9
+  MOVSD xmm7, xmm0
   
- @Check_Second_Error_2_1:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_2_1
+  MOVSD xmm0, [RadianIncrement]
+  MOVSD xmm1, [CurrentRadians]
+  ADDSD XMM0, XMM1
+  MOVSD  [CurrentRadians], xmm0
 
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
+  UCOMISD xmm0,  mmword ptr [DoublePi]
+  JL @SkipUpdateRadians1
   
+  MOVSD xmm1, mmword ptr [DoublePi]
+  SUBSD XMM0, XMM1
+  MOVSD [CurrentRadians], xmm0
 
-@Check_Loop_Condition_2_1:
-  CMP RBX, RDI
-  JGE @PlotQudrant_2_1_Pixel
+@SkipUpdateRadians1:
 
-;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
 
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
 
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
+  MOVSD xmm0, [VelocityRadians]
+  MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
+  MOVSD STAR_FIELD_ENTRY.NewRadians[RDI], xmm0
 
- ;
- ; Quadrant 2.2
- ; 
- @PlotQudrant_2_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  SUB RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  DEC  [ColorInc]
-  CMP  [ColorInc], 0
-  JNE @NoColorRest_2_2
-  MOV [ColorInc], 1
-@NoColorRest_2_2:
-
-  CMP R13, 0
-  JG @Check_Second_Error_2_2
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
+  MOV AL, [CurrentColor]
+  MOV STAR_FIELD_ENTRY.Color[RDI], AL
   
- @Check_Second_Error_2_2:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_2_2
-
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
+  XOR RDX, RDX
+  MOV RAX, RSI
+  MOV RCX, [StarsPerColorDec]
+  DIV RCX
   
-
-@Check_Loop_Condition_2_2:
-  CMP RBX, RDI
-  JGE @PlotQudrant_2_2_Pixel
-
-;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
-
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
- ;
- ; Quadrant 3.1
- ; 
- @PlotQudrant_3_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  SUB RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_3_1
-  MOV [ColorInc], 0
-@NoColorRest_3_1:
-
-  CMP R13, 0
-  JG @Check_Second_Error_3_1
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
+  CMP RDX, 0
+  JNE @NextStar
   
- @Check_Second_Error_3_1:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_3_1
+  DEC [CurrentColor]
+@NextStar:
 
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, NUMBER_STARS
+  JB @Initialize_Stars
   
+   MOVAPS xmm6,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm6[RSP]
+ MOVAPS xmm7,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP]
+ MOVAPS xmm8,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP]
+ MOVAPS xmm9,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP]
+  MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-@Check_Loop_Condition_3_1:
-  CMP RBX, RDI
-  JGE @PlotQudrant_3_1_Pixel
-
-;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
-
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
-
- ;
- ; Quadrant 3.2
- ; 
- @PlotQudrant_3_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RBX
-  MUL RCX
-
-  ADD RAX, R12
-  SUB RAX, RDI
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  DEC  [ColorInc]
-  CMP  [ColorInc], 0
-  JNE @NoColorRest_3_2
-  MOV [ColorInc], 1
-@NoColorRest_3_2:
-
-  CMP R13, 0
-  JG @Check_Second_Error_3_2
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
-  
- @Check_Second_Error_3_2:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_3_2
-
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
-  
-
-@Check_Loop_Condition_3_2:
-  CMP RBX, RDI
-  JGE @PlotQudrant_3_2_Pixel
-
-;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
-
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
-
-
- ;
- ; Quadrant 4.1
- ; 
- @PlotQudrant_4_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RBX
-  MUL RCX
-
-  ADD RAX, R12
-  ADD RAX, RDI
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  INC  [ColorInc]
-  CMP  [ColorInc], MAX_COLORS
-  JB @NoColorRest_4_1
-  MOV [ColorInc], 0
-@NoColorRest_4_1:
-
-  CMP R13, 0
-  JG @Check_Second_Error_4_1
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
-  
- @Check_Second_Error_4_1:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_4_1
-
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
-  
-
-@Check_Loop_Condition_4_1:
-  CMP RBX, RDI
-  JGE @PlotQudrant_4_1_Pixel
-
-;
-; Re-Init
-;
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
-
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
- SHL RAX, 1
- SUB R13, RAX   ; Error Correction
-
- MOV CX, [ColorOffset]
- ADD [ColorInc], CX
-
- ;
- ; Quadrant 4.2
- ; 
-  @PlotQudrant_4_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  ADD RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV CX, [ColorInc]
-  MOV WORD PTR [RAX], CX
-  DEC  [ColorInc]
-  CMP  [ColorInc], 0
-  JNE @NoColorRest_4_2
-  MOV [ColorInc], 1
-@NoColorRest_4_2:
-
-  CMP R13, 0
-  JG @Check_Second_Error_4_2
-
-  INC RDI
-  ADD R13, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
-  
- @Check_Second_Error_4_2:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition_4_2
-
-  DEC RBX
-  ADD WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  NEG RAX
-  SHL RAX, 1
-  ADD RAX, WH_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
-  
-
-@Check_Loop_Condition_4_2:
-  CMP RBX, RDI
-  JGE @PlotQudrant_4_2_Pixel
-
-
-
-
-  MOV rdi, WH_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, WH_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, WH_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, WH_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, WH_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-  MOV r12, WH_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, WH_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE WH_DEMO_STRUCTURE
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
   RET
-NESTED_END WormHole_DrawCircle, _TEXT$00
+NESTED_END WormHole_CreateStars, _TEXT$00
 
 
+
+;*********************************************************
+;  WormHole_MoveStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY WormHole_MoveStars, _TEXT$00
+ alloc_stack(SIZEOF WORM_HOLE_STRUCTURE)
+ save_reg rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm6[RSP], xmm6
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP], xmm7
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
+.ENDPROLOG 
+   
+  LEA RDI, [StarEntry]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Move_Stars:
+  
+
+
+  MOVSD xmm6, STAR_FIELD_ENTRY.Location.x[RDI]
+  MOVSD xmm7, STAR_FIELD_ENTRY.Location.y[RDI]
+  MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
+  MOVSD STAR_FIELD_ENTRY.RotatedLocation.z[RDI], xmm0
+
+  ;
+  ; cos(r)*x - sin(r)*y
+  ;
+  MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
+  CALL Cos
+  MULSD xmm0, xmm6
+  MOVSD xmm9, xmm0
+
+  MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
+  CALL Sin
+  MULSD xmm0, xmm7
+
+  SUBSD xmm9, xmm0
+
+  ;
+  ; (sin(r)*x + cos(r)*y)
+  ;
+  MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
+  CALL Sin
+  MULSD xmm0, xmm6
+  MOVSD xmm6, xmm9
+  MOVSD xmm9, xmm0
+
+  MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
+  CALL Cos
+  MULSD xmm0, xmm7
+  ADDSD xmm0, xmm9
+  MOVSD xmm7, xmm0
+
+  MOVSD STAR_FIELD_ENTRY.RotatedLocation.x[RDI], xmm6
+  MOVSD STAR_FIELD_ENTRY.RotatedLocation.y[RDI], xmm7
+
+  MOVSD xmm1, STAR_FIELD_ENTRY.Velocity[RDI]
+  MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
+  ADDSD xmm0, xmm1
+  UCOMISD xmm0,  mmword ptr [DoublePi]
+  JL @SkipAdjustRadians
+  
+  MOVSD xmm1, mmword ptr [DoublePi]
+  SUBSD XMM0, XMM1
+
+@SkipAdjustRadians:
+  MOVSD STAR_FIELD_ENTRY.NewRadians[RDI], xmm0
+
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, NUMBER_STARS
+  JB @Move_Stars
+@StarMoveComplete:
+   
+
+  
+ MOVAPS xmm6,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm6[RSP]
+ MOVAPS xmm7,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP]
+ MOVAPS xmm8,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP]
+ MOVAPS xmm9,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP]
+
+  MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
+  RET
+NESTED_END WormHole_MoveStars, _TEXT$00
+
+;*********************************************************
+;  WormHole_PlotStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY WormHole_PlotStars, _TEXT$00
+ alloc_stack(SIZEOF WORM_HOLE_STRUCTURE)
+ save_reg rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
+.ENDPROLOG 
+   
+  LEA RDI, [StarEntry]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Plot_Stars:
+  MOV WORM_HOLE_STRUCTURE.ParameterFrame.Param5[RSP], 0
+  LEA R9, [TwoDPlot]
+  LEA R8, [WorldLocation]
+  LEA RDX, STAR_FIELD_ENTRY.RotatedLocation[RDI]
+  MOV RCX, [SOft3D]
+  CALL Soft3D_Convert3Dto2D
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], RAX
+  CMP RAX, SOFT3D_PIXEL_OFF_SCREEN
+  JE @SkipPixelPlot
+  
+  MOV RBX, [DoubleBuffer]
+  LEA R9, [TwoDPlot]
+
+  MOV RCX, TD_POINT_2D.y[R9]
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  MUL RCX
+  ADD RBX, RAX
+  ADD RBX, TD_POINT_2D.x[R9]
+  
+  MOV AL, STAR_FIELD_ENTRY.Color[RDI]
+  MOV [RBX], AL
+
+ @SkipPixelPlot:
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, NUMBER_STARS
+  JB @Plot_Stars
+  
+  MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE WORM_HOLE_STRUCTURE
+  RET
+NESTED_END WormHole_PlotStars, _TEXT$00
 
 
 

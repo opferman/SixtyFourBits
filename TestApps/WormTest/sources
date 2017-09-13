@@ -28,5 +28,6 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
              $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
              $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
-             $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib 
+             $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Soft3D\$O\Soft3Dx64.lib
 
