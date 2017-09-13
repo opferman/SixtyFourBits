@@ -88,7 +88,7 @@ extern rand:proc
 .DATA
   DoubleBuffer   dq ?
   VirtualPallete dq ?
-  FrameCountDown dd 7000
+  FrameCountDown dd 2800
   StarEntry      STAR_FIELD_ENTRY 1000 DUP(<>)
   Soft3D         dq ?
   TwoDPlot        TD_POINT_2D <?>

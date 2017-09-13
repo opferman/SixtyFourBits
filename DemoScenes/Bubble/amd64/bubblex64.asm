@@ -89,7 +89,7 @@ MAX_COLORS EQU <256+256+256+256+256+256>
 
 DoubleBuffer   dq ?
 VirtualPallete dq ?
-FrameCountDown dd 7000
+FrameCountDown dd 2800
 Red            db 0h
 Blue           db 0h
 Green          db 0h

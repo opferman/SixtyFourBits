@@ -98,7 +98,7 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
 .DATA
   DoubleBuffer   dq ?
   VirtualPallete dq ?
-  FrameCountDown dd 7000
+  FrameCountDown dd 2800
 ;  StarEntry      STAR_FIELD_ENTRY NUMBER_STARS DUP(<>)
   StarEntryPtr    dq ?
   Soft3D          dq ?
