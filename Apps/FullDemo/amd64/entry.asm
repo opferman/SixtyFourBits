@@ -13,8 +13,12 @@
 ; Included Files
 ;*********************************************************
 include ksamd64.inc
-include template_public.inc
 include init_public.inc
+include worm_public.inc
+include star_public.inc
+include plasma_public.inc
+include Fire_public.inc
+include  bubble_public.inc
 
 extern ExitProcess:proc
 
@@ -41,9 +45,25 @@ WINMAIN_FRAME ends
 ; Global Data
 ;*********************************************************
 
-GlobalDemoStructure  dq Template_Init 
-                     dq Template_Demo
-                     dq Template_Free
+GlobalDemoStructure  dq Fire_Init
+                     dq Fire_Demo
+                     dq Fire_Free
+
+                     dq StarDemo_Init
+                     dq StarDemo_Demo
+                     dq StarDemo_Free
+
+                     dq WormHole_Init
+                     dq WormHole_Demo
+                     dq WormHole_Free
+
+					 dq Bubble_Init
+                     dq Bubble_Demo
+                     dq Bubble_Free
+
+                     dq PlasmaDemo_Init
+                     dq PlasmaDemo_Demo
+                     dq PlasmaDemo_Free
 ;
 ; End Tag
 ;
@@ -54,7 +74,7 @@ GlobalDemoStructure  dq Template_Init
 pszWindowClass       db 'TemplateClassWindow', 0
 pszWindowTitle       db 'Template Demo', 0
 
-pszMsgCpt       db 'Template Demo', 0
+pszMsgCpt       db 'x64 Assembly Demo', 0
 pszMsgTxt       db 'Do you want to view in full screen?', 0
 
 .CODE

@@ -24,7 +24,13 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
              $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
              $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \
-             $(OBJ_PATH)\..\..\DemoScenes\Template\$O\Template.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\Fire\$O\Firex64.lib \
              $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
-             $(OBJ_PATH)\..\..\Framework\Init\$O\Initx64.lib 
-
+             $(OBJ_PATH)\..\..\DemoScenes\Bubble\$O\Bubblex64.lib \
+             $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
+             $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Init\$O\Initx64.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\Plasma\$O\PlasmaDemox64.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\starfield\$O\starfieldx64.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\WormHole\$O\WormHolex64.lib \
+             $(OBJ_PATH)\..\..\Framework\Soft3D\$O\Soft3Dx64.lib 

@@ -62,12 +62,14 @@ NESTED_ENTRY Math_Init, _TEXT$00
   MOV RCX, RAX
   CALL srand
   
-  MOV EAX, 1
-  CPUID
-  TEST ECX, 040000000h
-  JZ @NoRdRand
-  MOV [RdRandSupported], 1
- @NoRdRand:  
+;  MOV EAX, 1
+;  CPUID
+;  TEST ECX, 040000000h
+;  JZ @NoRdRand
+;  MOV [RdRandSupported], 1
+; @NoRdRand:  
+;
+
   MOV RDI, MATH_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
   ADD RSP, SIZE MATH_INIT_LOCALS
   
@@ -96,7 +98,7 @@ NESTED_ENTRY Math_Rand, _TEXT$00
   RET
     
 @PerformRdRand:
-  ; db 0fh, 0c7h, 0f0h  Faster RDRAND EAX random number generator.
+  db 0fh, 0c7h, 0f0h  ; RDRAND EAX
   
   ADD RSP, SIZE MATH_INIT_LOCALS
   RET
