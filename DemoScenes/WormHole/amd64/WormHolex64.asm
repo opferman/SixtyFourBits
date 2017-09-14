@@ -92,7 +92,7 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
-NUMBER_STARS EQU <18000>
+NUMBER_STARS EQU <32000>
 NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
 
 .DATA
@@ -106,7 +106,7 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   WorldLocation   TD_POINT    <5.0, 5.0, 0.0>
   StartX          mmword   10.0
   StartY          mmword   10.0
-  StartZ          mmword   100.0
+  StartZ          mmword   9.0
   VelZ            mmword   0.005
   RotationZ       mmword   0.0
   RotationRadians mmword   0.0472222222
@@ -116,9 +116,10 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   CurrentRadians  mmword   0.0
   RadianIncrement mmword   0.00872222222  ; 0.5*(3.14/180.0)
   ConstantZero    mmword   0.0
-  CurrentColor      db   255
-  StarsPerColorDec  dq  72
+  CurrentColor          db   255
+  StarsPerColorDec      dq   150
   DoublePi        mmword  6.28
+  StopAdvancing   dq       0
 .CODE
 
 ;*********************************************************
@@ -259,6 +260,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
       XOR EDX, EDX
       MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
 	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
+
       MOV RCX, [VirtualPallete]
       CALL VPal_GetColorIndex 
 
@@ -298,6 +300,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    XOR RDX, RDX
    MOV RCX,15
    CALL Sleep
+
     
   MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -510,10 +513,13 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   MOVSD xmm7, STAR_FIELD_ENTRY.Location.y[RDI]
   MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.z[RDI], xmm0
+
+  CMP [StopAdvancing], 1
+  JE @SkipUpdateZ
   MOVSD xmm1, [VelZMoving]
   ADDSD XMM0, XMM1
   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
-
+@SkipUpdateZ:
   ;
   ; cos(r)*x - sin(r)*y
   ;
@@ -554,9 +560,10 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   
   MOVSD xmm1, mmword ptr [DoublePi]
   SUBSD XMM0, XMM1
+  MOVSD STAR_FIELD_ENTRY.NewRadians[RDI], xmm0
 
 @SkipAdjustRadians:
-  MOVSD STAR_FIELD_ENTRY.NewRadians[RDI], xmm0
+
 
   ADD RDI, SIZE STAR_FIELD_ENTRY
   INC RSI
@@ -638,9 +645,9 @@ NESTED_ENTRY WormHole_PlotStars, _TEXT$00
    MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
    UCOMISD xmm0,  mmword ptr [ConstantZero]
    JA @SkipUpdateZ
-
-   MOVSD xmm0, [StartZ]
-   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+   MOV [StopAdvancing], 1
+   ;MOVSD xmm0, [StartZ]
+   ;MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
 @SkipUpdateZ:
   ADD RDI, SIZE STAR_FIELD_ENTRY
   INC RSI
