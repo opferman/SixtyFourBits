@@ -430,20 +430,20 @@ NESTED_ENTRY Soft3D_Convert3Dto2D, _TEXT$00
   MULSD xmm0, xmm6
   MOVSD xmm9, xmm0
 
-  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RDI]
+  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraY_Radians[RDI]
   CALL Sin
   MULSD xmm0, xmm8
 
   SUBSD xmm9, xmm0
 
   ; (sin(r)*x + cos(r)*z)
-  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RDI]
+  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraY_Radians[RDI]
   CALL Sin
   MULSD xmm0, xmm6
   MOVSD xmm6, xmm9
   MOVSD xmm9, xmm0
 
-  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RDI]
+  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraY_Radians[RDI]
   CALL Cos
   MULSD xmm0, xmm8
   ADDSD xmm0, xmm9
@@ -463,20 +463,20 @@ NESTED_ENTRY Soft3D_Convert3Dto2D, _TEXT$00
   MULSD xmm0, xmm6
   MOVSD xmm9, xmm0
 
-  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RDI]
+  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraZ_Radians[RDI]
   CALL Sin
   MULSD xmm0, xmm7
 
   SUBSD xmm9, xmm0
 
   ; (sin(r)*x + cos(r)*y)
-  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RDI]
+  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraZ_Radians[RDI]
   CALL Sin
   MULSD xmm0, xmm6
   MOVSD xmm6, xmm9
   MOVSD xmm9, xmm0
 
-  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraX_Radians[RDI]
+  MOVSD xmm0, SOFT3D_INTERNAL_CONTEXT.CameraZ_Radians[RDI]
   CALL Cos
   MULSD xmm0, xmm7
   ADDSD xmm0, xmm9

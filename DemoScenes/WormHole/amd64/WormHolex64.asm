@@ -103,59 +103,19 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   StarEntryPtr    dq ?
   Soft3D          dq ?
   TwoDPlot        TD_POINT_2D <?>
-  WorldLocation   TD_POINT    <?>
+  WorldLocation   TD_POINT    <5.0, 5.0, 0.0>
   StartX          mmword   10.0
   StartY          mmword   10.0
   StartZ          mmword   100.0
   VelZ            mmword   0.005
-  VelY            mmword   -5.0 ; 1 
-                  mmword   -3.0 ; 2
-				  mmword    0.0 ; 3 
-				  mmword    3.0 ; 4
-                  mmword    5.0 ; 5
-				  mmword    5.0 ; 6
-				  mmword    5.0 ; 7
-				  mmword    5.0 ; 8
-				  mmword    5.0 ; 9
-				  mmword    3.0 ; 10
-				  mmword    0.0 ; 11
-				  mmword    -3.0 ; 12
-				  mmword    -5.0 ; 13
-				  mmword    -5.0 ; 14
-				  mmword    -5.0 ; 15
-				  mmword    -5.0 ; 16
-				  mmword    -5.0 ; 17
-				  mmword    -5.0 ; 18
-				 
-
-  VelX            mmword   -5.0 ; 1
-                  mmword   -5.0 ; 2
-				  mmword   -5.0 ; 3
-				  mmword   -5.0 ; 4 
-                  mmword   -5.0 ; 5 
-				  mmword   -3.0 ; 6 
-				  mmword    0.0 ; 7
-				  mmword    3.0 ; 8
-				  mmword    5.0 ; 9
-				  mmword    5.0 ; 10
-				  mmword    5.0 ; 11
-				  mmword    5.0 ; 12
-				  mmword    5.0 ; 13
-				  mmword    5.0 ; 14
-				  mmword    3.0 ; 15
-				  mmword    0.0 ; 16
-				  mmword    -3.0 ; 17
-				  mmword    -5.0 ; 18
-				 
-
-
-
-
+  RotationZ       mmword   0.0
+  RotationRadians mmword   0.0472222222
   VelZMoving      mmword   -0.05
   View_Distance   mmword   256.0
   VelocityRadians mmword   0.0872222222     ; 10.0*(3.14/180.0)
   CurrentRadians  mmword   0.0
   RadianIncrement mmword   0.00872222222  ; 0.5*(3.14/180.0)
+  ConstantZero    mmword   0.0
   CurrentColor      db   255
   StarsPerColorDec  dq  72
   DoublePi        mmword  6.28
@@ -212,12 +172,6 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOV [Soft3D], RAX
   TEST RAX, RAX
   JZ @WormInit_Failed
-
-
-  LEA RCX, [WorldLocation]
-  MOV TD_POINT.x[RCX], 0
-  MOV TD_POINT.y[RCX], 0
-  MOV TD_POINT.z[RCX], 0
 
 
   MOVSD xmm0, [View_Distance]
@@ -589,26 +543,6 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   ADDSD xmm0, xmm9
   MOVSD xmm7, xmm0
 
-  ; Moving needs work
-  MOV EAX, [FrameCountDown]
-  SHR EAX, 2
-  MOV ECX, 18
-  XOR EDX, EDX
-  DIV ECX
-  MOV EAX, EDX
-  SHL EAX, 3
-
-  LEA RDX, [VelY]
-  ADD RDX, RAX
-  MOVSD xmm0, mmword ptr [RDX]
-  ADDSD xmm7, xmm0
-
-  LEA RDX, [VelX]
-  ADD RDX, RAX
-  MOVSD xmm0, mmword ptr [RDX]
-  ADDSD xmm6, xmm0
-
-
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.x[RDI], xmm6
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.y[RDI], xmm7
 
@@ -629,6 +563,16 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   CMP RSI, NUMBER_STARS
   JB @Move_Stars
 @StarMoveComplete:
+ PXOR xmm1, xmm1
+ PXOR xmm2, xmm2
+ MOVSD xmm3, [RotationZ]
+ MOV RCX, [SOft3D]
+ CALL Soft3D_SetCameraRotation
+
+ MOVSD xmm0, [RotationRadians]
+ MOVSD xmm1, [RotationZ]
+ ADDSD xmm1, xmm0
+ MOVSD [RotationZ], xmm1
    
 
   
@@ -690,7 +634,14 @@ NESTED_ENTRY WormHole_PlotStars, _TEXT$00
   MOV AL, STAR_FIELD_ENTRY.Color[RDI]
   MOV [RBX], AL
 
- @SkipPixelPlot:
+@SkipPixelPlot:
+   MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
+   UCOMISD xmm0,  mmword ptr [ConstantZero]
+   JA @SkipUpdateZ
+
+   MOVSD xmm0, [StartZ]
+   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+@SkipUpdateZ:
   ADD RDI, SIZE STAR_FIELD_ENTRY
   INC RSI
   CMP RSI, NUMBER_STARS
