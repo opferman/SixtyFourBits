@@ -38,6 +38,17 @@ PARAMFRAME struct
     Param4         dq ?
 PARAMFRAME ends
 
+BALL_INFO struct
+    X              dq ?
+    Y              dq ?
+    Radius         dq ?
+    Color          dq ?
+    Bounciness     dq ?
+    Z              dq ?
+    VelocityX      dq ?
+    VelocityY      dq ?
+BALL_INFO ends
+
 SAVEREGSFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
@@ -60,14 +71,34 @@ public Ball_Init
 public Ball_Demo
 public Ball_Free
 
-MAX_FRAMES EQU <2000>
+MAX_FRAMES     EQU <180000>
+UPDATE_DIVISOR EQU <100>
+GRAVITY        EQU <1>
+GRAV_DIVISOR   EQU <1>
+NUM_BALLS      EQU <6>
+MAX_BOUNCINESS EQU <70>
 
 ;*********************************************************
 ; Data Segment
 ;*********************************************************
-.DATA
 
-   FrameCounter   dd ?
+.CONST
+   BackgroundColor dd 00FFFFFFh;
+
+.DATA
+                 ;   x,    y, radius,      color, bounce,    z,  VelocityX,  VelocityY 
+   BallArray  dq    70,   20,     20,   0BB22DDh,     50,    1,          0,        -4 ;
+              dq   340,  140,     70,   01122DDh,     40,    2,          0,        -1 ;
+              dq   540,  160,     10,   0BB2211h,     50,    3,         -1,         0 ;
+              dq   190,  310,      8,   0118811h,     50,    4,          0,         0 ;
+              dq   540,  160,     10,   0B1A2D1h,     50,    5,          2,         0 ;
+              dq   540,  160,     10,   0BB8888h,     50,    6,          1,         0 ;
+
+
+   BgColorIsSet    db 0
+   FrameCounter    dd ?
+   GravCounter     db 0
+   UpdateCounter   db 0
 
 .CODE
 
@@ -125,7 +156,8 @@ NESTED_ENTRY Ball_DrawBoxXYR, _TEXT$00
 
   ; Check if our right edge is completely off the left side of the window
   ADD RAX, R9
-  JO @DrawBoxXYR_Finish  ; overflow is bad.
+  CMP RAX, 0
+  JL @DrawBoxXYR_Finish  ; overflow is bad.
 
   ; Now lets just make sure our left edge isn't off the right side of the window
   SUB RAX, R9
@@ -143,14 +175,14 @@ NESTED_ENTRY Ball_DrawBoxXYR, _TEXT$00
   ; Next set up the y coordinates
   ;
   MOV RBX, R8
-  ADD RBX, R9
-  CMP RBX, 0
-  JLE @DrawBoxXYR_Finish  ; if bottom of box is less than zero, we give up.  Quit now!
-  SHL R9, 1
   SUB RBX, R9
+  CMP RBX, 0
+  JL  @DrawBoxXYR_Finish  ; if bottom of box is less than zero, we give up.  Quit now!
+  SHL R9, 1
+  ADD RBX, R9
   MOV RDI, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   CMP RBX, RDI ; If top of box is greater than the height, we give up. Quit now!
-  JAE @DrawBoxXYR_Finish
+  JGE @DrawBoxXYR_Finish
 
   ; Make sure we start at y=0 if the box's top edge is out of bounds
   CMP RBX, R12
@@ -268,6 +300,250 @@ NESTED_ENTRY Ball_DrawBoxXYR, _TEXT$00
   ADD RSP, SIZE TEMPLATE_FUNCTION_STRUCT
   RET
 NESTED_END Ball_DrawBoxXYR, _TEXT$00
+
+;*********************************************************
+;   Ball_BounceCorrect
+;
+;        Parameters: Pointer to BALL_INFO
+;                    Velocity to change (0 for x, 1 for y)
+;
+;        Return Value: garbage
+;
+;
+;*********************************************************  
+NESTED_ENTRY Ball_BounceCorrect, _TEXT$00
+ save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
+ save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
+ save_reg rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx
+.ENDPROLOG
+
+  MOV RDI, RCX  ; RDI <- BALL_INFO
+  MOV RBX, RDX  ; RDX <- X or Y
+
+  ; RSI shall hold Velocity
+  MOV RSI, BALL_INFO.VelocityX[RDI]
+  CMP RBX, 1
+  JNE @Ball_BounceCorrect_GotVelocity
+  MOV RSI, BALL_INFO.VelocityY[RDI]
+
+@Ball_BounceCorrect_GotVelocity:
+
+  ; Try to factor in bounce
+  PUSH RBX
+  XOR EDX, EDX
+  MOV RAX, BALL_INFO.Bounciness[RDI]
+  IMUL RAX, RSI ; EAX <- Bounciness * Velocity
+  MOV RBX, MAX_BOUNCINESS ; 100
+  DIV RBX
+  MOV RSI, RAX
+  POP RBX
+  ; END factoring in bounce
+
+  ; Reverse the velocity
+  NEG RSI
+
+  CMP RBX, 1
+  JE @Ball_BounceCorrect_WriteVelocityY
+  MOV BALL_INFO.VelocityX[RDI], RSI
+  ADD BALL_INFO.X[RDI], RSI
+  JMP @Ball_BounceCorrect_WroteVelocity
+
+@Ball_BounceCorrect_WriteVelocityY:
+  MOV BALL_INFO.VelocityY[RDI], RSI
+  ADD BALL_INFO.Y[RDI], RSI
+
+@Ball_BounceCorrect_WroteVelocity:
+
+
+  MOV rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
+  MOV rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
+  MOV rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
+  RET
+NESTED_END Ball_BounceCorrect, _TEXT$00
+
+;*********************************************************
+;   Ball_UpdateBallPositions
+;
+;        Parameters: context
+;                    array address
+;                    number of balls in array
+;
+;        Return Value: TRUE / FALSE.  FALSE only if nothing
+;                could be drawn to the screen.
+;
+;
+;*********************************************************  
+NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
+ alloc_stack(SIZEOF TEMPLATE_FUNCTION_STRUCT)
+ save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
+ save_reg r10, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR10
+ save_reg r11, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR11
+ save_reg r12, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR12
+ save_reg r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13
+.ENDPROLOG 
+
+  MOV R10, RCX   ; R10 <- Context
+  MOV R11, RDX   ; R11 <- ArrayAddress
+  MOV R12, R8    ; R12 <- ArrayCount
+
+  ;
+  ; 1. Loop through entire array, undrawing balls
+  ;
+
+  MOV RDI, R11   ; Start of our array
+  MOV R13, R12   ; R13 <- LoopCount (number of balls)
+
+@UpdateBallPositions_UndrawABall:
+ 
+  XOR RCX, RCX
+  MOV ECX, [BackgroundColor]
+  PUSH RCX
+  MOV RCX, R10
+  MOV RDX, BALL_INFO.X[RDI]
+  MOV R8, BALL_INFO.Y[RDI]
+  MOV R9, BALL_INFO.Radius[RDI]
+  CALL Ball_DrawBoxXYR
+  ADD RSP, 8
+
+  ADD RDI, SIZEOF BALL_INFO
+  DEC R13
+  JNZ @UpdateBallPositions_UndrawABall
+
+
+  ;
+  ; 2. Update positions for each ball.
+  ;
+
+  MOV RDI, R11   ; Start of our array
+  MOV R13, R12   ; R13 <- LoopCount (number of balls)
+
+@UpdateBallPositions_UpdateABallPositionData:
+
+  MOV RDX, BALL_INFO.X[RDI]
+  MOV R8, BALL_INFO.Y[RDI]
+  MOV R9, BALL_INFO.Radius[RDI]
+
+  ;
+  ; First update all coordinates
+  ;
+  ADD RDX, BALL_INFO.VelocityX[RDI]
+  MOV BALL_INFO.X[RDI], RDX
+
+  MOV RDX, BALL_INFO.VelocityY[RDI]
+
+  ; Update gravity
+  ADD [GravCounter], 1
+  CMP [GravCounter], GRAV_DIVISOR
+  JL @UpdateBallPositions_GravityCalculationDone
+  ADD RDX, GRAVITY
+  MOV [GravCounter], 0
+  MOV BALL_INFO.VelocityY[RDI], RDX
+
+  ; Update Y position
+@UpdateBallPositions_GravityCalculationDone:
+  ADD R8, RDX
+  MOV BALL_INFO.Y[RDI], R8
+
+  ;
+  ; Check coordinates now.
+  ; If Y - Radius is less than zero, we bounced off the top
+  ; 
+
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[R10]
+  SUB RCX, BALL_INFO.Y[RDI]
+  SUB RCX, R9
+  CMP RCX, 0
+  JAE @UpdateBallPositions_CheckYBottom
+
+  ; Fall through to correct bouncing off the top
+  MOV RCX, RDI
+  MOV RDX, 1
+  CALL Ball_BounceCorrect
+
+@UpdateBallPositions_CheckYBottom:
+  MOV RCX, BALL_INFO.Y[RDI]
+  ADD RCX, R9
+  CMP RCX, MASTER_DEMO_STRUCT.ScreenHeight[R10]
+  JLE @UpdateBallPositions_CheckXLeftSide
+
+  ; fall through to correct bouncing off the bottom
+  MOV RCX, RDI
+  MOV RDX, 1
+  CALL Ball_BounceCorrect
+
+@UpdateBallPositions_CheckXLeftSide:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
+  SUB RCX, BALL_INFO.X[RDI]
+  SUB RCX, R9
+  CMP RCX, 0
+  JGE @UpdateBallPositions_CheckXRightSide
+
+  MOV RCX, RDI
+  MOV RDX, 0
+  CALL Ball_BounceCorrect
+
+@UpdateBallPositions_CheckXRightSide:
+  MOV RCX, BALL_INFO.X[RDI]
+  ADD RCX, R9
+  CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
+  JLE @UpdateBallPositions_SkipCorrectionXRightSide
+
+  MOV RCX, RDI
+  MOV RDX, 0
+  CALL Ball_BounceCorrect
+
+
+@UpdateBallPositions_SkipCorrectionXRightSide:
+
+  ; Try again if there are more balls
+  ADD RDI, SIZEOF BALL_INFO
+  DEC R13
+  JNZ @UpdateBallPositions_UpdateABallPositionData
+
+
+  ;
+  ; 3. Lastly we must redraw all the balls in Z order
+  ;
+
+  MOV RDI, R11
+  MOV RAX, SIZEOF BALL_INFO
+  IMUL RAX, NUM_BALLS
+  ADD RDI, RAX
+  SUB RDI, SIZEOF BALL_INFO
+  MOV R13, R12
+
+@UpdateBallPositions_DrawABall:
+
+  ;   rcx = context
+  ;   rdx = x coord
+  ;   r8  = y coord
+  ;   r9  = 'radius'
+  ; rsp+8 = color
+  MOV RCX, BALL_INFO.Color[RDI]
+  PUSH RCX
+  MOV RCX, R10
+  MOV RDX, BALL_INFO.X[RDI]
+  MOV R8, BALL_INFO.Y[RDI]
+  MOV R9, BALL_INFO.Radius[RDI]
+  CALL Ball_DrawBoxXYR
+  ADD RSP, 8
+
+  SUB RDI, SIZEOF BALL_INFO
+  DEC R13
+  JNZ @UpdateBallPositions_DrawABall
+
+
+@UpdateBallPositions_Finish:
+  MOV rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
+  MOV r10, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR10[RSP]
+  MOV r11, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR11[RSP]
+  MOV r12, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR12[RSP]
+  MOV r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13[RSP]
+  ADD RSP, SIZE TEMPLATE_FUNCTION_STRUCT
+  RET
+
+NESTED_END Ball_UpdateBallPositions, _TEXT$00
+
 
 
 ;*********************************************************
@@ -388,33 +664,32 @@ NESTED_ENTRY Ball_Demo, _TEXT$00
   MOV RSI, RCX
 
   ;
-  ; Set background color white
+  ; Only set the background color once.
+  ; Note that we cant do this in the init function since we
+  ; dont have access to graphics yet.
   ;
-  MOV RAX, 0FFFFFFh
+  XOR RAX, RAX
+  CMP AL, [BgColorIsSet]
+  JNE @BallDemo_BgColorHasBeenSet
+  MOV EAX, [BackgroundColor]
   MOV RCX, RSI
   MOV RDX, RAX
   CALL Ball_SetBackgroundColor
+  ADD [BgColorIsSet], 1
 
-  ;
-  ; Draw a black box
-  ;
-  XOR RAX, RAX
-  PUSH rax
-  MOV RCX, RSI
-  MOV RDX, 200
-  MOV R8, 200
-  MOV R9, 35
-  CALL Ball_DrawBoxXYR
-  ADD RSP, 8
+@BallDemo_BgColorHasBeenSet:
 
-  ; Draw a red box
-  PUSH 0FF1111h
+  ADD [UpdateCounter], 1
+  CMP [UpdateCounter], UPDATE_DIVISOR
+  JLE @BallDemo_Done_Drawing_Balls
+  MOV [UpdateCounter], 0
+
   MOV RCX, RSI
-  MOV RDX, 400
-  MOV R8, 260
-  MOV R9, 10
-  call Ball_DrawBoxXYR
-  ADD RSP, 8
+  LEA RDX, [BallArray]
+  MOV R8, NUM_BALLS
+  CALL Ball_UpdateBallPositions
+
+@BallDemo_Done_Drawing_Balls:
 
   ;
   ; Update the frame counter and determine if the demo is complete.
