@@ -74,8 +74,8 @@ public Ball_Free
 MAX_FRAMES     EQU <180000>
 UPDATE_DIVISOR EQU <100>
 GRAVITY        EQU <1>
-GRAV_DIVISOR   EQU <1>
-NUM_BALLS      EQU <13>
+GRAV_DIVISOR   EQU <2>
+NUM_BALLS      EQU <14>
 MAX_BOUNCINESS EQU <70>
 
 ;*********************************************************
@@ -100,6 +100,7 @@ MAX_BOUNCINESS EQU <70>
               dq   640,  160,     17,   0CCCCCCh,     50,    5,          2,         0 ;
               dq   311,  160,     21,   0BB0848h,     52,    6,          1,         0 ;
               dq    30,  600,     14,   0EFF212h,     50,    7,          6,       -25 ;
+              dq   640,  160,     47,   0333333h,     40,    5,        -11,       -80 ;
 
    BgColorIsSet    db 0
    FrameCounter    dd ?
@@ -435,6 +436,12 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
   MOV RDI, R11   ; Start of our array
   MOV R13, R12   ; R13 <- LoopCount (number of balls)
 
+  ; Update gravity
+  ADD [GravCounter], 1
+  CMP [GravCounter], GRAV_DIVISOR
+  JL @UpdateBallPositions_UpdateABallPositionData
+  MOV [GravCounter], 0
+
 @UpdateBallPositions_UpdateABallPositionData:
 
   MOV RDX, BALL_INFO.X[RDI]
@@ -449,12 +456,9 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
 
   MOV RDX, BALL_INFO.VelocityY[RDI]
 
-  ; Update gravity
-  ADD [GravCounter], 1
-  CMP [GravCounter], GRAV_DIVISOR
+  CMP [GravCounter], 0
   JL @UpdateBallPositions_GravityCalculationDone
   ADD RDX, GRAVITY
-  MOV [GravCounter], 0
   MOV BALL_INFO.VelocityY[RDI], RDX
 
   ; Update Y position
