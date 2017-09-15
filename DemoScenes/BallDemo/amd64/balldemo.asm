@@ -75,7 +75,7 @@ MAX_FRAMES     EQU <180000>
 UPDATE_DIVISOR EQU <100>
 GRAVITY        EQU <1>
 GRAV_DIVISOR   EQU <1>
-NUM_BALLS      EQU <6>
+NUM_BALLS      EQU <7>
 MAX_BOUNCINESS EQU <70>
 
 ;*********************************************************
@@ -87,12 +87,13 @@ MAX_BOUNCINESS EQU <70>
 
 .DATA
                  ;   x,    y, radius,      color, bounce,    z,  VelocityX,  VelocityY 
-   BallArray  dq    70,   20,     20,   0BB22DDh,     50,    1,          0,        -4 ;
-              dq   340,  140,     70,   01122DDh,     40,    2,          0,        -1 ;
-              dq   540,  160,     10,   0BB2211h,     50,    3,         -1,         0 ;
-              dq   190,  310,      8,   0118811h,     50,    4,          0,         0 ;
+   BallArray  dq    70,   20,     20,   0BB22DDh,     60,    1,         -8,         0 ;
+              dq   340,  140,     70,   01122DDh,     68,    2,         -3,        -1 ;
+              dq   540,  160,     10,   0BB2211h,     65,    3,         -5,         0 ;
+              dq   190,  310,      8,   0118811h,     69,    4,          0,        20 ;
               dq   540,  160,     10,   0B1A2D1h,     50,    5,          2,         0 ;
-              dq   540,  160,     10,   0BB8888h,     50,    6,          1,         0 ;
+              dq   540,  160,     10,   0BB8888h,     20,    6,          1,         0 ;
+              dq   120,  600,     30,   0B11212h,     50,    7,          6,       -25 ;
 
 
    BgColorIsSet    db 0
@@ -324,29 +325,38 @@ NESTED_ENTRY Ball_BounceCorrect, _TEXT$00
   MOV RDI, RCX  ; RDI <- BALL_INFO
   MOV R13, RDX  ; R13 <- X or Y
 
-  ; RSI shall hold Velocity
+                ; RSI <- Velocity
   MOV RSI, BALL_INFO.VelocityX[RDI]
   CMP R13, 1
-  JNE @Ball_BounceCorrect_GotVelocity
-  MOV RSI, BALL_INFO.VelocityY[RDI]
+  CMOVGE RSI, BALL_INFO.VelocityY[RDI]
 
-@Ball_BounceCorrect_GotVelocity:
+  ;
+  ; Initialize RDX to -1 if Velocity is negative, since
+  ; we will be dividing later and RDX is used as the top 64
+  ; bits of the dividend.
+  ;
+  XOR RDX, RDX
+  CMP RSI, 0
+  JGE @Ball_BounceCorrect_DoBounceMath
+  SUB RDX, 1
 
-  ; Try to factor in bounce
-  PUSH RBX
-  XOR EDX, EDX
+  ;
+  ; Do math to factor in bounce
+  ;
+
+@Ball_BounceCorrect_DoBounceMath:
   MOV RAX, BALL_INFO.Bounciness[RDI]
-  IMUL RAX, RSI ; EAX <- Bounciness * Velocity
-  MOV RBX, MAX_BOUNCINESS ; 100
-  DIV RBX
+  IMUL RAX, RSI ; RAX <- Bounciness * Velocity
+  MOV RBX, MAX_BOUNCINESS ; Used as divisor (operand to IDIV)
+  IDIV RBX
   MOV RSI, RAX
-  POP RBX
   ; END factoring in bounce
 
   ; Reverse the velocity
   NEG RSI
 
   CMP R13, 1
+@Ball_BounceCorrect_WriteVelocity:
   JE @Ball_BounceCorrect_WriteVelocityY
   MOV BALL_INFO.VelocityX[RDI], RSI
   JMP @Ball_BounceCorrect_WroteVelocity
@@ -449,27 +459,17 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
 
   ;
   ; Check coordinates now.
-  ; If Y - Radius is less than zero, we bounced off the top
-  ; 
+  ;
 
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[R10]
-  SUB RCX, BALL_INFO.Y[RDI]
-  SUB RCX, R9
-  CMP RCX, 0
-  JAE @UpdateBallPositions_CheckYBottom
-
-  ; Fall through to correct bouncing off the top
-  ; Add the amount that the ball had penetrated the ceiling
-
-  MOV RCX, RDI
-  MOV RDX, 1
-  CALL Ball_BounceCorrect
+  ;
+  ; If Y + Radius is greater than height, we bounced off the bottom
+  ;
 
 @UpdateBallPositions_CheckYBottom:
   MOV RCX, BALL_INFO.Y[RDI]
   ADD RCX, R9
   CMP RCX, MASTER_DEMO_STRUCT.ScreenHeight[R10]
-  JLE @UpdateBallPositions_CheckXLeftSide
+  JLE @UpdateBallPositions_CheckYTop
 
   ; fall through to correct bouncing off the bottom
   ; subtract out the amount that the ball had penetrated the floor
@@ -479,38 +479,63 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
   MOV RDX, 1
   CALL Ball_BounceCorrect
 
-@UpdateBallPositions_CheckXLeftSide:
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
-  SUB RCX, BALL_INFO.X[RDI]
+  ; Cant bounce off both top/bottom in a single try.  Skip other Y check.
+  JMP @UpdateBallPositions_CheckXRightSide
+
+  ;
+  ; If Y - Radius is less than zero, we bounced off the top
+  ;
+
+@UpdateBallPositions_CheckYTop:
+  MOV RCX, BALL_INFO.Y[RDI]
   SUB RCX, R9
   CMP RCX, 0
-  JAE @UpdateBallPositions_CheckXRightSide
+  JGE @UpdateBallPositions_CheckXRightSide
 
-  ; Reverse direction by amount it overflowed
+  ; Fall through to correct bouncing off the top
+  ; Add the amount that the ball had penetrated the ceiling
   NEG RCX
-  MOV BALL_INFO.X[RDI], RCX
+  MOV BALL_INFO.Y[RDI], RCX
 
   MOV RCX, RDI
-  MOV RDX, 0
+  MOV RDX, 1
   CALL Ball_BounceCorrect
 
 @UpdateBallPositions_CheckXRightSide:
   MOV RCX, BALL_INFO.X[RDI]
   ADD RCX, R9
   CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
-  JLE @UpdateBallPositions_SkipCorrectionXRightSide
+  JLE @UpdateBallPositions_CheckXLeftSide
 
   ; Reverse direction by amount it overflowed
   SUB RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
-  SHL RCX, 1
+  SHL RCX, 1 ; Double it maybe?
   SUB BALL_INFO.X[RDI], RCX
 
   MOV RCX, RDI
   MOV RDX, 0
   CALL Ball_BounceCorrect
 
+  ; Cant bounce off both sides in a single try.  Skip other X check.
+  JMP @UpdateBallPositions_UpdateLoop_TryGetNextBall
 
-@UpdateBallPositions_SkipCorrectionXRightSide:
+
+@UpdateBallPositions_CheckXLeftSide:
+  MOV RCX, BALL_INFO.X[RDI]
+  SUB RCX, R9
+  CMP RCX, 0
+  JGE @UpdateBallPositions_UpdateLoop_TryGetNextBall
+
+  ; Reverse direction by amount it overflowed
+  NEG RCX
+  SHL RCX, 1 ; Double it maybe?
+  ADD BALL_INFO.X[RDI], RCX
+
+  MOV RCX, RDI
+  MOV RDX, 0
+  CALL Ball_BounceCorrect
+
+@UpdateBallPositions_UpdateLoop_TryGetNextBall:
 
   ; Try again if there are more balls
   ADD RDI, SIZEOF BALL_INFO
