@@ -75,7 +75,7 @@ MAX_FRAMES     EQU <180000>
 UPDATE_DIVISOR EQU <100>
 GRAVITY        EQU <1>
 GRAV_DIVISOR   EQU <1>
-NUM_BALLS      EQU <7>
+NUM_BALLS      EQU <13>
 MAX_BOUNCINESS EQU <70>
 
 ;*********************************************************
@@ -88,13 +88,18 @@ MAX_BOUNCINESS EQU <70>
 .DATA
                  ;   x,    y, radius,      color, bounce,    z,  VelocityX,  VelocityY 
    BallArray  dq    70,   20,     20,   0BB22DDh,     60,    1,         -8,         0 ;
-              dq   340,  140,     70,   01122DDh,     68,    2,         -3,        -1 ;
+              dq   340,  140,     70,   01122DDh,     50,    2,         -3,        -8 ;
               dq   540,  160,     10,   0BB2211h,     65,    3,         -5,         0 ;
               dq   190,  310,      8,   0118811h,     69,    4,          0,        20 ;
               dq   540,  160,     10,   0B1A2D1h,     50,    5,          2,         0 ;
               dq   540,  160,     10,   0BB8888h,     20,    6,          1,         0 ;
               dq   120,  600,     30,   0B11212h,     50,    7,          6,       -25 ;
-
+              dq   440,  640,     50,   08E8E8Eh,     52,    2,         11,       -70 ;
+              dq   281,  460,     10,   0BB2211h,     65,    3,          9,         0 ;
+              dq   120,  310,      8,   0118811h,     59,    4,          2,        30 ;
+              dq   640,  160,     17,   0CCCCCCh,     50,    5,          2,         0 ;
+              dq   311,  160,     21,   0BB0848h,     52,    6,          1,         0 ;
+              dq    30,  600,     14,   0EFF212h,     50,    7,          6,       -25 ;
 
    BgColorIsSet    db 0
    FrameCounter    dd ?
