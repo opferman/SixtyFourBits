@@ -167,7 +167,7 @@ NESTED_ENTRY Ball_DrawBoxXYR, _TEXT$00
   JGE @DrawBoxXYR_Finish  ; error - no need to draw if we arent on screen.
 
   ; Make sure we draw at x= 0 if our left edge is out of bounds.
-  xor R12, R12
+  XOR R12, R12
   CMP RAX, R12
   CMOVLE RAX, R12
 
@@ -175,11 +175,11 @@ NESTED_ENTRY Ball_DrawBoxXYR, _TEXT$00
   ; Next set up the y coordinates
   ;
   MOV RBX, R8
-  SUB RBX, R9
+  ADD RBX, R9
   CMP RBX, 0
   JL  @DrawBoxXYR_Finish  ; if bottom of box is less than zero, we give up.  Quit now!
   SHL R9, 1
-  ADD RBX, R9
+  SUB RBX, R9
   MOV RDI, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   CMP RBX, RDI ; If top of box is greater than the height, we give up. Quit now!
   JGE @DrawBoxXYR_Finish
@@ -304,6 +304,9 @@ NESTED_END Ball_DrawBoxXYR, _TEXT$00
 ;*********************************************************
 ;   Ball_BounceCorrect
 ;
+;   Call this function when the ball bounces and it will
+;   make the appropriate velocity switch.
+;
 ;        Parameters: Pointer to BALL_INFO
 ;                    Velocity to change (0 for x, 1 for y)
 ;
@@ -315,14 +318,15 @@ NESTED_ENTRY Ball_BounceCorrect, _TEXT$00
  save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
  save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
  save_reg rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx
+ save_reg r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13
 .ENDPROLOG
 
   MOV RDI, RCX  ; RDI <- BALL_INFO
-  MOV RBX, RDX  ; RDX <- X or Y
+  MOV R13, RDX  ; R13 <- X or Y
 
   ; RSI shall hold Velocity
   MOV RSI, BALL_INFO.VelocityX[RDI]
-  CMP RBX, 1
+  CMP R13, 1
   JNE @Ball_BounceCorrect_GotVelocity
   MOV RSI, BALL_INFO.VelocityY[RDI]
 
@@ -342,15 +346,13 @@ NESTED_ENTRY Ball_BounceCorrect, _TEXT$00
   ; Reverse the velocity
   NEG RSI
 
-  CMP RBX, 1
+  CMP R13, 1
   JE @Ball_BounceCorrect_WriteVelocityY
   MOV BALL_INFO.VelocityX[RDI], RSI
-  ADD BALL_INFO.X[RDI], RSI
   JMP @Ball_BounceCorrect_WroteVelocity
 
 @Ball_BounceCorrect_WriteVelocityY:
   MOV BALL_INFO.VelocityY[RDI], RSI
-  ADD BALL_INFO.Y[RDI], RSI
 
 @Ball_BounceCorrect_WroteVelocity:
 
@@ -358,6 +360,7 @@ NESTED_ENTRY Ball_BounceCorrect, _TEXT$00
   MOV rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
   MOV rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
   MOV rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
+  MOV r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13[RSP]
   RET
 NESTED_END Ball_BounceCorrect, _TEXT$00
 
@@ -456,6 +459,8 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
   JAE @UpdateBallPositions_CheckYBottom
 
   ; Fall through to correct bouncing off the top
+  ; Add the amount that the ball had penetrated the ceiling
+
   MOV RCX, RDI
   MOV RDX, 1
   CALL Ball_BounceCorrect
@@ -467,6 +472,9 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
   JLE @UpdateBallPositions_CheckXLeftSide
 
   ; fall through to correct bouncing off the bottom
+  ; subtract out the amount that the ball had penetrated the floor
+  SUB RCX, MASTER_DEMO_STRUCT.ScreenHeight[R10]
+  SUB BALL_INFO.Y[RDI], RCX
   MOV RCX, RDI
   MOV RDX, 1
   CALL Ball_BounceCorrect
@@ -476,7 +484,11 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
   SUB RCX, BALL_INFO.X[RDI]
   SUB RCX, R9
   CMP RCX, 0
-  JGE @UpdateBallPositions_CheckXRightSide
+  JAE @UpdateBallPositions_CheckXRightSide
+
+  ; Reverse direction by amount it overflowed
+  NEG RCX
+  MOV BALL_INFO.X[RDI], RCX
 
   MOV RCX, RDI
   MOV RDX, 0
@@ -487,6 +499,11 @@ NESTED_ENTRY Ball_UpdateBallPositions, _TEXT$00
   ADD RCX, R9
   CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
   JLE @UpdateBallPositions_SkipCorrectionXRightSide
+
+  ; Reverse direction by amount it overflowed
+  SUB RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
+  SHL RCX, 1
+  SUB BALL_INFO.X[RDI], RCX
 
   MOV RCX, RDI
   MOV RDX, 0
