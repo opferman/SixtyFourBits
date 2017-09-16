@@ -72,11 +72,11 @@ public Ball_Demo
 public Ball_Free
 
 MAX_FRAMES     EQU <180000>
-UPDATE_DIVISOR EQU <80>
+UPDATE_DIVISOR EQU <120>
 GRAVITY        EQU <1>
-GRAV_DIVISOR   EQU <2>
+GRAV_DIVISOR   EQU <20>
 NUM_BALLS      EQU <15>
-MAX_BOUNCINESS EQU <70>
+MAX_BOUNCINESS EQU <100>
 
 ;*********************************************************
 ; Data Segment
@@ -87,21 +87,21 @@ MAX_BOUNCINESS EQU <70>
 
 .DATA
                  ;   x,    y, radius,      color, bounce,    z,  VelocityX,  VelocityY 
-    BallArray dq   340,  140,     20,   080BCA3h,     60,    2,         -3,        -8 ;
-              dq   540,  160,     10,   0F6F7BDh,     65,    3,         -5,         0 ;
-              dq   190,  310,      8,   0E6AC27h,     69,    4,          0,        20 ;
-              dq   540,  160,     10,   0BF4D28h,     50,    5,          2,         0 ;
-              dq   540,  160,     10,   0655643h,     28,    6,          1,      -200 ;
-              dq   120,  600,     30,   080BCA3h,     50,    7,          6,       -25 ;
-              dq   440,  640,     50,   0F6F7BDh,     52,    2,         11,       -70 ;
-              dq   281,  460,     10,   0E6AC27h,     65,    3,          9,         0 ;
-              dq   120,  310,      8,   0BF4D28h,     59,    4,          2,        30 ;
-              dq   640,  160,     17,   0655643h,     50,    5,          2,         0 ;
-              dq   311,  160,     21,   080BCA3h,     52,    6,          1,         0 ;
-              dq    30,  600,     14,   0F6F7BDh,     50,    7,          6,       -25 ;
-              dq   640,  160,     47,   0E6AC27h,     40,    5,        -11,       -80 ;
-              dq   540,  160,     27,   0BF4D28h,     50,    5,          2,      -120 ;
-              dq    70,   70,     70,   0655643h,     50,    1,         -8,         9 ;
+    BallArray dq   340,  140,     20,   080BCA3h,     80,    2,         -3,        -8 ;
+              dq   540,  160,     10,   0F6F7BDh,     95,    3,         -5,         0 ;
+              dq   190,  310,      8,   0E6AC27h,     98,    4,          0,        20 ;
+              dq   540,  160,     10,   0BF4D28h,     80,    5,          2,         0 ;
+              dq   540,  160,     10,   0655643h,     58,    6,          1,      -200 ;
+              dq   120,  600,     30,   080BCA3h,     80,    7,          6,       -25 ;
+              dq   440,  640,     50,   0F6F7BDh,     72,    2,         11,       -70 ;
+              dq   281,  460,     10,   0E6AC27h,     85,    3,          9,         0 ;
+              dq   120,  310,      8,   0BF4D28h,     97,    4,          2,        30 ;
+              dq   640,  160,     17,   0655643h,     94,    5,          2,         0 ;
+              dq   311,  160,     21,   080BCA3h,     92,    6,          1,         0 ;
+              dq    30,  600,     14,   0F6F7BDh,     89,    7,          6,       -25 ;
+              dq   640,  160,     47,   0E6AC27h,     90,    5,        -11,       -80 ;
+              dq   540,  160,     27,   0BF4D28h,     87,    5,          2,      -120 ;
+              dq    70,   70,     70,   0655643h,     92,    1,         -8,         9 ;
 
    BgColorIsSet    db 0
    FrameCounter    dd ?
