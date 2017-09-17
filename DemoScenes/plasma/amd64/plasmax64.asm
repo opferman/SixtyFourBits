@@ -18,6 +18,8 @@
 ;*********************************************************
 include ksamd64.inc
 include demovariables.inc
+include demoprocs.inc
+include debug_public.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
@@ -42,8 +44,8 @@ SAVEREGSFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
     SaveRbx        dq ?
-    SaveR10        dq ?
-    SaveR11        dq ?
+    SaveR14        dq ?
+    SaveR15        dq ?
     SaveR12        dq ?
 
     SaveXmm6       oword ? 
@@ -84,9 +86,7 @@ public PlasmaDemo_Free
 
 
 
-extern time:proc
-extern srand:proc
-extern rand:proc
+
 extern sqrt:proc
 
 MAX_COLORS equ <65536>
@@ -131,6 +131,7 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
  save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
@@ -141,13 +142,13 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
   MOV RDX, RAX
   SHL RDX, 1    ; Turn Buffer into WORD values
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @PalInit_Failed
 
   MOV RCX, MAX_COLORS
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @PalInit_Failed
 
@@ -173,7 +174,7 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   MOV RAX, EVAL_NEW_VELOCITY
   SUB RAX, 1
@@ -234,21 +235,21 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
   CMP [GreenVel], 0
   JNE @Next_loop_Check
   
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND AL, 3
   SUB AL, 1
   MOV [GreenVel], AL
    
   JMP @Next_loop_Check
 @UpdateBlue:
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND AL, 3
   SUB AL, 1
   MOV [BlueVel], AL
   JMP @CheckRedColor
 
 @UpdateRed:
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND AL, 3
   SUB AL, 1
   MOV [RedVel], AL
@@ -256,7 +257,7 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
 
 @PaleteComplete:
   MOV RCX,  RSI
-  CALL PlasmaDemo_PerformPlasma
+  DEBUG_FUNCTION_CALL PlasmaDemo_PerformPlasma
 
 
   MOV RSI, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -296,12 +297,13 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
  save_reg rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r14, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR15
  save_reg r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
   ;
@@ -310,7 +312,7 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [DoubleBuffer]
 
-  XOR R9, R9
+  XOR R14, R14
   XOR r12, r12
 
 @FillScreen:
@@ -323,7 +325,7 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
       XOR EAX, EAX
 
       MOV RCX, [VirtualPallete]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
 
@@ -348,17 +350,17 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC R14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
   MOV RCX,  RDI
-  CALL PlasmaDemo_PerformPlasma
+  DEBUG_FUNCTION_CALL PlasmaDemo_PerformPlasma
 
   MOV RDX, 10
   MOV RCX,  [VirtualPallete]
-  call VPal_Rotate
+  DEBUG_FUNCTION_CALL VPal_Rotate
 
  
 @DemoExit:
@@ -367,8 +369,8 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
    MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
    MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-   MOV r10, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-   MOV r11, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+   MOV r14, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
+   MOV r15, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
    MOV r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
    MOV r13, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
@@ -394,8 +396,8 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
  save_reg rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r14, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR15
  save_reg r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR13 
  MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm6[RSP], xmm6
@@ -405,6 +407,7 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
  MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm10[RSP], xmm10
  MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm11[RSP], xmm11
  .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
 
   MOV RDI, RCX
 
@@ -439,7 +442,7 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 @SkipNextCondition:
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [Variable2]
-       CALL cos
+       DEBUG_FUNCTION_CALL cos
        MOVSD xmm6, xmm0
 
   	   CMP [FrameCountDown], 2000
@@ -451,17 +454,17 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 @SkipNextCondition2:
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable1]
-       CALL sin
+       DEBUG_FUNCTION_CALL sin
        ADDSD xmm6, xmm0
 
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable2]
-       CALL cos
+       DEBUG_FUNCTION_CALL cos
        ADDSD xmm6, xmm0 
 
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [Variable1]
-       CALL sin
+       DEBUG_FUNCTION_CALL sin
        ADDSD xmm6, xmm0
 
   	   CMP [FrameCountDown], 1000
@@ -473,17 +476,17 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 @SkipNextCondition3:
        MOVSD xmm0, [RadiansX]
        ADDSD xmm0, [Variable1]
-       CALL cos
+       DEBUG_FUNCTION_CALL cos
        ADDSD xmm6, xmm0
 
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [Variable2]
-       CALL sin
+       DEBUG_FUNCTION_CALL sin
        ADDSD xmm6, xmm0
 
        MOVSD xmm0, [RadiansY]
        ADDSD xmm0, [RadiansX]
-       CALL cos
+       DEBUG_FUNCTION_CALL cos
        ADDSD xmm6, xmm0
 
 
@@ -492,13 +495,13 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 @NewPath2:
       MOVSD xmm0, [RadiansY]
 	  ADDSD xmm0, [Variable1]
-	  CALL sin
+	  DEBUG_FUNCTION_CALL sin
 	  MULSD xmm0, [RadiansX]
 	  ADDSD xmm6, xmm0
 
       MOVSD xmm0, [RadiansX]
 	  ADDSD xmm0, [Variable2]
-	  CALL cos
+	  DEBUG_FUNCTION_CALL cos
 	  MULSD xmm0, [RadiansY]
 	  ADDSD xmm6, xmm0
 	  	   JMP @Skip_Update
@@ -506,7 +509,7 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
 
        MOVSD xmm0, [RadiansY]
 	   ADDSD xmm0, [RadiansX]
-       CALL cos
+       DEBUG_FUNCTION_CALL cos
        ADDSD xmm6, xmm0
 
 
@@ -630,8 +633,8 @@ NESTED_ENTRY PlasmaDemo_PerformPlasma, _TEXT$00
    MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
    MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-   MOV r10, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-   MOV r11, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+   MOV r10, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
+   MOV r11, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
    MOV r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
    MOV r13, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
@@ -663,15 +666,16 @@ NESTED_ENTRY PlasmaDemo_Free, _TEXT$00
  save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
 
  MOV RCX, [VirtualPallete]
- CALL VPal_Free
+ DEBUG_FUNCTION_CALL VPal_Free
 
   MOV RCX, [DoubleBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
-  CALL LocalFree
+  DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
   MOV rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
