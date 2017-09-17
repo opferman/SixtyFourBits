@@ -24,6 +24,7 @@ include demoprocs.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
+include debug_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -39,10 +40,12 @@ SAVEREGSFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
     SaveRbx        dq ?
-    SaveR10        dq ?
-    SaveR11        dq ?
+    SaveRbp        dq ?
+    Padding        dq ?
+    SaveR14        dq ?
     SaveR12        dq ?
     SaveR13        dq ?
+    SaveR15        dq ?
 SAVEREGSFRAME ends
 
 FIRE_DEMO_STRUCTURE struct
@@ -373,6 +376,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   ;
@@ -394,7 +398,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   MUL R9
   MOV RDX, RAX
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [FireBuffer], RAX
   TEST RAX, RAX
   JZ @FireInit_Failed
@@ -407,7 +411,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   MUL R9
   MOV RDX, RAX
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [StarBuffer], RAX
   TEST RAX, RAX
   JZ @FireInit_Failed
@@ -416,7 +420,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   ; Create Virtual Palette for Stars
   ;   
   MOV RCX, 256
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @FireInit_Failed
 
@@ -430,7 +434,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   MOV R8, RAX
   MOV R12, RDX
   MOV RCX, [VirtualPalleteStars]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
   MOV EAX, [Temp]
   ADD EAX, 010101h
 
@@ -443,7 +447,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   ; Create Virtual Palette for Fire
   ; 
   MOV RCX, 256
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @FireInit_Failed
 
@@ -473,7 +477,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   MOV R8, RAX
   MOV R12, RDX
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   MOV RDX, R12
   INC RDX
@@ -485,7 +489,7 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   ; 
 
   MOV RCX, RSI
-  CALL Fire_RandomFillBottom
+  DEBUG_FUNCTION_CALL Fire_RandomFillBottom
   
   MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
@@ -496,11 +500,11 @@ NESTED_ENTRY Fire_Init, _TEXT$00
 
 @PlotStars:
   
-  CALL Math_Rand
+  DEBUG_FUNCTION_CALL Math_Rand
 
   CMP AX, 25
   JA @NoStarPlot
-  CALL Math_Rand
+  DEBUG_FUNCTION_CALL Math_Rand
   MOV [R13], AL
  @NoStarPlot:
   INC R13
@@ -542,12 +546,12 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
  save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r14, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR14
  save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
 
@@ -557,7 +561,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [StarBuffer]
 
-  XOR R9, R9
+  XOR r14, r14
   XOR r12, r12
 
 @FillScreenStars:
@@ -568,7 +572,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
       MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
 
       MOV RCX, [VirtualPalleteStars]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
@@ -592,9 +596,9 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC r14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP r14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreenStars
 
 
@@ -604,7 +608,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [FireBuffer]
 
-  XOR R9, R9
+  XOR r14, r14
   XOR r12, r12
 
 @FillScreen:
@@ -620,7 +624,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
       CMP DL, 0
       JE @SkipPlottingPixelItIszero
       MOV RCX, [VirtualPallete]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
@@ -644,19 +648,19 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC r14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP r14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
   ;
   ; Update the fire graphics
   ;      
   MOV RCX, RDI
-  CALL Fire_RandomFillBottom
+  DEBUG_FUNCTION_CALL Fire_RandomFillBottom
 
   MOV RCX, RDI
-  CALL Fire_MoveFire
+  DEBUG_FUNCTION_CALL Fire_MoveFire
 
   ;
   ; Words are displayed at certain frame intervals
@@ -699,7 +703,7 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 @UpdateNextWord:
   MOV [CurrentText], RAX
      
-  CALL Fire_PrintWord
+  DEBUG_FUNCTION_CALL Fire_PrintWord
 
 @DoneFireDemo:
  
@@ -740,14 +744,12 @@ JMP @SkipUpdateStar
   ; Update the comets
   ;
   MOV RCX, RDI
-  CALL Fire_HandleComets
+  DEBUG_FUNCTION_CALL Fire_HandleComets
  
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r14, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
   MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
@@ -775,15 +777,16 @@ NESTED_ENTRY Fire_Free, _TEXT$00
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
 
  MOV RCX, [VirtualPallete]
- CALL VPal_Free
+ DEBUG_FUNCTION_CALL VPal_Free
 
   MOV RCX, [FireBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
-  CALL LocalFree
+  DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -809,41 +812,39 @@ NESTED_ENTRY Fire_RandomFillBottom, _TEXT$00
  save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
  save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
     
-  MOV R11, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  MOV R12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
   MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
   SUB RAX, 2
-  MUL R11
-  SHL R11, 1
+  MUL R12
+  SHL R12, 1
 
-  MOV R10, [FireBuffer]
-  ADD R10, RAX
+  MOV R13, [FireBuffer]
+  ADD R13, RAX
 
   CMP [FrameCountDown], 045h
   JBE @BlackOut
 
 @FillBottomRow:
-  CALL Math_Rand
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
   MOV RCX, 256
   DIV RCX
   
-  MOV BYTE PTR [R10], DL  ; Remainder
-  INC R10
-  DEC R11
+  MOV BYTE PTR [R13], DL  ; Remainder
+  INC R13
+  DEC R12
   JNZ @FillBottomRow  
 
 @ExitFunction:
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
   MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
   ADD RSP, SIZE FIRE_DEMO_STRUCTURE
@@ -851,9 +852,9 @@ NESTED_ENTRY Fire_RandomFillBottom, _TEXT$00
 @BlackOut:
 
  
-  MOV BYTE PTR [R10], 0 ; Blackout
-  INC R10
-  DEC R11
+  MOV BYTE PTR [R13], 0 ; Blackout
+  INC R13
+  DEC R12
   JNZ @BlackOut
 
   JMP @ExitFunction
@@ -875,21 +876,22 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
  save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
  save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
+ save_reg r14, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR15
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
-  MOV R10, RDX
-  MOV R11, R8
+  MOV R14, RDX
+  MOV R15, R8
   MOV R12, R9
 
 @Fire_PrintStringLoop:
 
   XOR RCX, RCX
-  MOV CL, [R10]
-  CALL Font_GetBitFont
+  MOV CL, [R14]
+  DEBUG_FUNCTION_CALL Font_GetBitFont
   TEST RAX, RAX
   JZ @ErrorOccured
   MOV RCX, [FireBuffer]
@@ -900,7 +902,7 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
   ADD RCX, RAX
   MOV RAX, R13
   XOR RDX, RDX
-  ADD RCX, R11
+  ADD RCX, R15
   XOR R13, R13
   MOV RSI, INFALTE_FONT
 @VerticleLines:
@@ -926,19 +928,19 @@ NESTED_ENTRY Fire_PrintWord, _TEXT$00
   INC R13
   CMP R13, 8
   JB @VerticleLines
-  INC R10
-  ADD R11, INFALTE_FONT * 8 + 3
-  CMP BYTE PTR [R10], 0 
+  INC R14
+  ADD R15, INFALTE_FONT * 8 + 3
+  CMP BYTE PTR [R14], 0 
   JNE @Fire_PrintStringLoop
   MOV EAX, 1
 @ErrorOccured:
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
   MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  MOV r14, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
+  MOV r15, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
   ADD RSP, SIZE FIRE_DEMO_STRUCTURE
   RET
 NESTED_END Fire_PrintWord, _TEXT$00
@@ -958,14 +960,13 @@ NESTED_ENTRY Fire_HandleComets, _TEXT$00
  save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
  save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
-  CALL Math_Rand
+  DEBUG_FUNCTION_CALL Math_Rand
   MOV EBX, EAX
   AND EBX, 3h
   INC EBX
@@ -1068,8 +1069,6 @@ JMP @CometLoop
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
   MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
   ADD RSP, SIZE FIRE_DEMO_STRUCTURE
@@ -1091,11 +1090,12 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
  save_reg rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11
  save_reg r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13
+ save_reg r14, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR15
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
   ;
@@ -1108,25 +1108,26 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
   ;
   ; Start at the second pixel inward.
   ;
-  MOV R10, [FireBuffer]
-  ADD R10, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  INC R10
+  MOV r13, [FireBuffer]
+  ADD r13, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  INC r13
 
-  MOV R11, RAX
+  MOV r14, RAX
   MOV RBX, RCX
 
-  XOR R8, R8
+  XOR R15, R15
 
 @MoveFireUp:
-      XOR RDX, RDX
-      CALL Math_Rand
+      DEBUG_FUNCTION_CALL Math_Rand
       MOV RCX, 3
+	  XOR RDX, RDX
       DIV RCX
 
       MOV [TopWind], DL
       
-      CALL Math_Rand
+      DEBUG_FUNCTION_CALL Math_Rand
       MOV RCX, 3
+	  XOR RDX, RDX
       DIV RCX
 
       XOR ECX, ECX
@@ -1145,13 +1146,13 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
 
 
 
-      MOV CL, [R10]
+      MOV CL, [r13]
       MOV AL, CL
   
-      MOV CL, [R10+1]
+      MOV CL, [r13+1]
       ADD EAX, ECX
   
-      MOV CL, [R10-1]
+      MOV CL, [r13-1]
       ADD EAX, ECX
 
       ;
@@ -1159,7 +1160,7 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
       ;
       DEC RDX
       ADD RDX, RBX
-      MOV CL, [R10+RDX]
+      MOV CL, [r13+RDX]
 
       ADD EAX, ECX
       SHR EAX, 2
@@ -1173,7 +1174,7 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
       ;
       ; Plot New Pixel
       ;
-      MOV R12, R10
+      MOV R12, r13
       SUB R12, RBX
 
       ;
@@ -1189,22 +1190,22 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
       ;
       MOV BYTE PTR [R12], AL
 
-      INC R10
-      INC R8
+      INC r13
+      INC R15
       MOV RCX, RBX
       DEC RCX
-      CMP R8, RCX
+      CMP R15, RCX
       JB @MoveFireUp 
 
-  XOR R8, R8
+  XOR R15, R15
   ;
   ; Start at the second pixel inward.
   ;
 
   MOV RBX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  INC R10
+  INC r13
   
-  DEC R11
+  DEC r14
   JNZ  @MoveFireUp
 
 
@@ -1212,10 +1213,10 @@ NESTED_ENTRY Fire_MoveFire, _TEXT$00
   MOV rdi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, FIRE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r14, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
   MOV r12, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  MOV r15, FIRE_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
   ADD RSP, SIZE FIRE_DEMO_STRUCTURE
   RET
 NESTED_END Fire_MoveFire, _TEXT$00

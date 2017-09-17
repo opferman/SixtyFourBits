@@ -328,9 +328,6 @@ NESTED_ENTRY Engine_PreFunctionCall, _TEXT$00
  LEA RAX, [SaveRdiRegister]
  MOV [RAX + RBX], RDI
  
- LEA RAX, [SaveRbxRegister]
- MOV [RAX + RBX], RBX
- 
  LEA RAX, [SaveRbpRegister]
  MOV [RAX + RBX], RBP
  
@@ -358,8 +355,13 @@ NESTED_ENTRY Engine_PreFunctionCall, _TEXT$00
  LEA RAX, [SaveXmm15Register]
  MOVUPS [RAX + RBX], xmm15
 
- INC [NestingCounter]
+ LEA RAX, [SaveRbxRegister]
+ ADD RAX, RBX
  MOV RBX, [SpecialSaveRegister2]
+ MOV [RAX], RBX
+
+ INC [NestingCounter]
+
  MOV RAX, [SpecialSaveRegister1]
  RET
 NESTED_END Engine_PreFunctionCall, _TEXT$00
@@ -379,10 +381,11 @@ NESTED_END Engine_PreFunctionCall, _TEXT$00
 NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
 .ENDPROLOG 
  DEC [NestingCounter]
+
  MOV [RSP+8], RAX ; We can use Param1-4 in Post Function call but not in Pre.
 
- MOV RBX, [NestingCounter]
- SHL RBX, 6
+ MOV R10, [NestingCounter]
+ SHL R10, 6
 
  ;
  ; Check Non-Volatile Registers were preserved
@@ -390,47 +393,47 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
 
  MOV RAX, 12
  LEA RDX, [SaveR12Register]
- CMP [RDX + RBX], R12
+ CMP [RDX + R10], R12
  JNE @Engine_Debug_Issue
 
  MOV RAX, 13
  LEA RDX, [SaveR13Register]
- CMP [RDX + RBX], R13
+ CMP [RDX + R10], R13
  JNE @Engine_Debug_Issue
 
  MOV RAX, 14
  LEA RDX, [SaveR14Register]
- CMP [RDX + RBX], R14
+ CMP [RDX + R10], R14
  JNE @Engine_Debug_Issue
 
  MOV RAX, 15
  LEA RDX, [SaveR15Register]
- CMP [RDX + RBX], R15
+ CMP [RDX + R10], R15
  JNE @Engine_Debug_Issue
 
  MOV RAX, 1
  LEA RDX, [SaveRsiRegister]
- CMP [RDX + RBX], RSI
+ CMP [RDX + R10], RSI
  JNE @Engine_Debug_Issue
 
  MOV RAX, 2
  LEA RDX, [SaveRdiRegister]
- CMP [RDX + RBX], RDI
+ CMP [RDX + R10], RDI
  JNE @Engine_Debug_Issue
 
  MOV RAX, 3
  LEA RDX, [SaveRbxRegister]
- CMP [RDX + RBX], RBX
+ CMP [RDX + R10], RBX
  JNE @Engine_Debug_Issue
 
  MOV RAX, 4
  LEA RDX, [SaveRbpRegister]
- CMP [RDX + RBX], RBP
+ CMP [RDX + R10], RBP
  JNE @Engine_Debug_Issue
 
  MOV RAX, 5
  LEA RDX, [SaveRspRegister]
- CMP [RDX + RBX], RSP
+ CMP [RDX + R10], RSP
  JNE @Engine_Debug_Issue
 
  LEA RCX, [CompareXmmRegister]
@@ -439,7 +442,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 6
  MOVUPS [CompareXmmRegister], xmm6 
  LEA RDX, [SaveXmm6Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -450,7 +453,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 7
  MOVUPS [CompareXmmRegister], xmm7
  LEA RDX, [SaveXmm7Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -462,7 +465,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 8
  MOVUPS [CompareXmmRegister], xmm8
  LEA RDX, [SaveXmm8Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -474,7 +477,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 9
  MOVUPS [CompareXmmRegister], xmm9
  LEA RDX, [SaveXmm9Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -486,7 +489,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 10
  MOVUPS [CompareXmmRegister], xmm10
  LEA RDX, [SaveXmm10Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -498,7 +501,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 11
  MOVUPS [CompareXmmRegister], xmm11
  LEA RDX, [SaveXmm11Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -509,7 +512,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 12
  MOVUPS [CompareXmmRegister], xmm12
  LEA RDX, [SaveXmm12Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -520,7 +523,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 13
  MOVUPS [CompareXmmRegister], xmm13
  LEA RDX, [SaveXmm13Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -531,7 +534,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 14
  MOVUPS [CompareXmmRegister], xmm14
  LEA RDX, [SaveXmm14Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
@@ -542,7 +545,7 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  MOV RAX, 15
  MOVUPS [CompareXmmRegister], xmm15
  LEA RDX, [SaveXmm15Register]
- ADD RDX, RBX
+ ADD RDX, R10
  MOV R8, QWORD PTR [RDX]
  MOV R9, QWORD PTR [RDX+8]
  CMP QWORD PTR [RCX], R8
