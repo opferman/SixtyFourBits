@@ -18,11 +18,13 @@
 ;*********************************************************
 include ksamd64.inc
 include demovariables.inc
+include demoprocs.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
 include soft3d_public.inc
 include soft3d_funcs.inc
+include debug_public.inc
 
 extern Sleep:proc
 extern LocalAlloc:proc
@@ -41,8 +43,8 @@ SAVEREGSFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
     SaveRbx        dq ?
-    SaveR10        dq ?
-    SaveR11        dq ?
+    SaveR14        dq ?
+    SaveR15        dq ?
     SaveR12        dq ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
@@ -112,6 +114,7 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
  save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
@@ -121,13 +124,13 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   MUL R9
   MOV RDX, RAX
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @StarInit_Failed
 
   MOV RCX, 256
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @StarInit_Failed
   MOV [VirtualPallete], RAX
@@ -136,7 +139,7 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   XOR R8, R8
   XOR RDX, RDX
   MOV RCX, RSI
-  CALL Soft3D_Init
+  DEBUG_FUNCTION_CALL Soft3D_Init
   MOV [Soft3D], RAX
   TEST RAX, RAX
   JZ @StarInit_Failed
@@ -151,7 +154,7 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   MOVSD xmm0, [View_Distance]
   MOVSD xmm1, xmm0
   MOV RCX, [SOft3D]
-  CALL Soft3D_SetViewDistance
+  DEBUG_FUNCTION_CALL Soft3D_SetViewDistance
 
 
 
@@ -166,14 +169,14 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   INC R12
   CMP R12, 256
   JB @PopulatePallete
 
   MOV RCX, RSI
-  CALL StarDemo_CreateStars
+  DEBUG_FUNCTION_CALL StarDemo_CreateStars
     
   MOV RSI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -209,12 +212,13 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
  save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, STAR_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, STAR_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r14, STAR_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, STAR_DEMO_STRUCTURE.SaveFrame.SaveR15
  save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, STAR_DEMO_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
   ;
@@ -223,7 +227,7 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [DoubleBuffer]
 
-  XOR R9, R9
+  XOR r14, r14
   XOR r12, r12
 
 @FillScreen:
@@ -234,7 +238,7 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
       MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
 	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
       MOV RCX, [VirtualPallete]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
@@ -258,27 +262,27 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC r14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP r14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
    MOV RCX, RDI
-   CALL StarDemo_MoveStars
+   DEBUG_FUNCTION_CALL StarDemo_MoveStars
 
    MOV RCX, RDI
-   CALL StarDemo_PlotStars
+   DEBUG_FUNCTION_CALL StarDemo_PlotStars
 
    XOR RDX, RDX
    MOV RCX,15
-   CALL Sleep
+   DEBUG_FUNCTION_CALL Sleep
     
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-  MOV r10, STAR_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, STAR_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r14, STAR_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
+  MOV r15, STAR_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
   MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, STAR_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
@@ -306,15 +310,15 @@ NESTED_ENTRY StarDemo_Free, _TEXT$00
  save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
-
+ DEBUG_RSP_CHECK_MACRO
  MOV RCX, [VirtualPallete]
- CALL VPal_Free
+ DEBUG_FUNCTION_CALL VPal_Free
 
   MOV RCX, [DoubleBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
-  CALL LocalFree
+  DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -340,14 +344,16 @@ NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
  save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX
   LEA RDI, [StarEntry]
   XOR RSI, RSI
 
 @Initialize_Stars:
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  XOR RDX, RDX
   DIV RCX
   SHR RCX, 1
   SUB RDX, RCX
@@ -355,8 +361,9 @@ NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
   cvtsi2sd xmm0, RDX
   MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm0
   
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  XOR RDX, RDX
   DIV RCX
   SHR RCX, 1
   SUB RDX, RCX
@@ -364,17 +371,17 @@ NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
   cvtsi2sd xmm0, RDX
   MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm0
   
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND RAX, 0FFh
   cvtsi2sd xmm0, rax
   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
 
   MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV STAR_FIELD_ENTRY.Color[RDI], AL
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND RAX, 3
   INC RAX
   cvtsi2sd xmm0, rax
@@ -411,7 +418,7 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
  save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
  save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
-   
+  DEBUG_RSP_CHECK_MACRO
   LEA RDI, [StarEntry]
   XOR RSI, RSI
   MOV R12, RCX
@@ -438,8 +445,9 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   JMP @StarMoveComplete
 
 @CreateNewStar:
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  XOR RDX, RDX
   DIV RCX
   SHR RCX, 1
   SUB RDX, RCX
@@ -447,8 +455,9 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   cvtsi2sd xmm0, RDX
   MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm0
   
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[R12]
+  XOR RDX, RDX
   DIV RCX
   SHR RCX, 1
   SUB RDX, RCX
@@ -456,17 +465,17 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   cvtsi2sd xmm0, RDX
   MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm0
   
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND RAX, 0FFh
   cvtsi2sd xmm0, rax
   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
 
   MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV STAR_FIELD_ENTRY.Color[RDI], AL
 
-  ;CALL rand
+  ;DEBUG_FUNCTION_CALL Math_rand
   ;AND RAX, 3
   ;INC RAX
   MOV RAX, 1
@@ -500,7 +509,7 @@ NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
  save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
  save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
-   
+  DEBUG_RSP_CHECK_MACRO
   LEA RDI, [StarEntry]
   XOR RSI, RSI
   MOV R12, RCX
@@ -511,7 +520,7 @@ NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
   LEA R8, [WorldLocation]
   LEA RDX, STAR_FIELD_ENTRY.Location[RDI]
   MOV RCX, [SOft3D]
-  CALL Soft3D_Convert3Dto2D
+  DEBUG_FUNCTION_CALL Soft3D_Convert3Dto2D
   MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], RAX
   CMP RAX, SOFT3D_PIXEL_OFF_SCREEN
   JE @SkipPixelPlot
