@@ -21,6 +21,8 @@ include windowsx64.inc
 include demovariables.inc
 include ddrawx64.inc
 include init_public.inc
+include engdbg_internal.inc
+include engdbg_procs.inc
 
 FUNC_PARAMS struct
     ReturnAddress  dq ?
@@ -108,7 +110,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
  alloc_stack(SIZEOF DDRAW_INIT_LOCALS)
  save_reg rdi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV RSI, RDX
 
   MOV DDRAW_INIT_LOCALS.hWnd[RSP], RCX
@@ -118,7 +120,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   
   MOV RDX, SIZE DDRAW_INTERNAL_CONTEXT
   MOV RCX, LMEM_ZEROINIT
-  CALL LocalAlloc
+  ENGINE_DEBUG_FUNCTION_CALL LocalAlloc
   
   MOV DDRAW_INIT_LOCALS.DdrawInternalContext[RSP], RAX
 
@@ -131,7 +133,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   XOR R8, R8
   MOV RAX, DDRAW_INIT_LOCALS.DdrawInternalContext[RSP]
   LEA RDX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
-  CALL DirectDrawCreate
+  ENGINE_DEBUG_FUNCTION_CALL DirectDrawCreate
 
   TEST EAX, EAX
   JL @DDrawx64_InitExitWithFailure
@@ -140,7 +142,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   XOR RDX, RDX
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Initialize]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Initialize]
 
   CMP  DDRAW_INIT_LOCALS.FullScreenMode[RSP], 0
   JE @SetWindowModeFlags
@@ -159,7 +161,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   MOV RAX, DDRAW_INIT_LOCALS.DdrawInternalContext[RSP]
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_SetCooperativeLevel]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_SetCooperativeLevel]
 
 
   CMP  DDRAW_INIT_LOCALS.FullScreenMode[RSP], 0
@@ -187,7 +189,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   MOV RAX, DDRAW_INIT_LOCALS.DdrawInternalContext[RSP]
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_SetDisplayMode]  
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_SetDisplayMode]  
 
  
   MOV RAX, DDRAW_INIT_LOCALS.DdrawInternalContext[RSP]   
@@ -212,7 +214,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   XOR R9, R9
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_CreateSurface]      
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_CreateSurface]      
 
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
@@ -224,7 +226,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   LEA RDX, DDRAW_INTERNAL_CONTEXT.DSurfaceCaps[RAX]
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_GetAttachedSurface]     
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_GetAttachedSurface]     
   
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
@@ -261,7 +263,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   XOR R9, R9
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_CreateSurface]      
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_CreateSurface]      
 
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
@@ -280,7 +282,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   XOR R9, R9
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_CreateSurface]      
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_CreateSurface]      
 
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
@@ -290,7 +292,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   XOR RDX, RDX
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawctx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_CreateClipper]      
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_CreateClipper]      
 
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
@@ -300,7 +302,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   XOR RDX, RDX
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawClipperCtx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Clipper_SetHWnd]     
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Clipper_SetHWnd]     
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
   MOV RAX, DDRAW_INIT_LOCALS.DdrawInternalContext[RSP]
@@ -308,7 +310,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
   MOV RDX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawClipperCtx[RAX]
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RAX]
   MOV  RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_SetClipper]     
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_SetClipper]     
   CMP EAX, 0
   JL @DDrawx64_InitExitWithFailure
 
@@ -317,7 +319,7 @@ NESTED_ENTRY DDrawx64_Init, _TEXT$00
       
 @DDrawx64_InitExitWithFailure:
   MOV RCX, DDRAW_INIT_LOCALS.DdrawInternalContext[RSP]
-  CALL DDrawx64_Free
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_Free
   
 @DDrawx64_ExitWithFailureNoFree:
   XOR RAX, RAX
@@ -342,7 +344,7 @@ NESTED_ENTRY DDrawx64_Free, _TEXT$00
  alloc_stack(SIZEOF DDRAW_INIT_LOCALS)
  save_reg rdi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   MOV RAX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RDI]
   
@@ -351,7 +353,7 @@ NESTED_ENTRY DDrawx64_Free, _TEXT$00
   
   MOV RCX, RAX
   MOV RAX, [RAX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Release]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Release]
 
 @DDrawx64_Free_DirectDraw:
 
@@ -362,12 +364,12 @@ NESTED_ENTRY DDrawx64_Free, _TEXT$00
   
   MOV RCX, RAX
   MOV RAX, [RAX]
-  CALL QWORD PTR [RAX + DDRAWDD_Release]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Release]
  
 @DDrawx64_Free_Exit:
   
   MOV RCX, RDI
-  CALL LocalFree
+  ENGINE_DEBUG_FUNCTION_CALL LocalFree
   
   MOV RDI, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi[RSP]
   ADD RSP, SIZE DDRAW_INIT_LOCALS
@@ -389,7 +391,7 @@ NESTED_ENTRY DDrawx64_PixelPlot, _TEXT$00
  save_reg rsi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRsi
  save_reg r12, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveR12
 .ENDPROLOG 
-
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   MOV RCX, DDRAW_INTERNAL_CONTEXT.DdSurfaceDescription.lpSurface[RDI]
 
@@ -495,7 +497,7 @@ NESTED_ENTRY DDrawx64_LockSurfaceBuffer, _TEXT$00
  alloc_stack(SIZEOF DDRAW_INIT_LOCALS)
  save_reg rdi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-  
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV DDRAW_INIT_LOCALS_WITH_PFRAME.FunctionParams.Param1[RSP], RDX
   MOV DDRAW_INIT_LOCALS_WITH_PFRAME.FunctionParams.Param2[RSP], R8
     
@@ -511,7 +513,7 @@ NESTED_ENTRY DDrawx64_LockSurfaceBuffer, _TEXT$00
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectBackSurfacectx[RDI]
   
   MOV RAX, QWORD PTR [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Lock]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Lock]
   
   CMP EAX, 0
   JL @DDrawx64_FailedToLockSurface
@@ -558,7 +560,7 @@ NESTED_ENTRY DDrawx64_GetScreenRes, _TEXT$00
  alloc_stack(SIZEOF DDRAW_INIT_LOCALS)
  save_reg rdi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV DDRAW_INIT_LOCALS_WITH_PFRAME.FunctionParams.Param1[RSP], RDX
   MOV DDRAW_INIT_LOCALS_WITH_PFRAME.FunctionParams.Param2[RSP], R8
   MOV RDI, RCX
@@ -593,14 +595,14 @@ NESTED_ENTRY DDrawx64_UnLockSurfaceAndFlip, _TEXT$00
  alloc_stack(SIZEOF DDRAW_INIT_LOCALS)
  save_reg rdi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-  
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   XOR RDX, RDX
 
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectBackSurfacectx[RDI]
   
   MOV RAX, QWORD PTR [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Unlock]  
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Unlock]  
    
   CMP DDRAW_INTERNAL_CONTEXT.FullScreenMode[RDI], 0
   JE @UnLockSurfaceBuffer_For_WindowedMode
@@ -611,7 +613,7 @@ NESTED_ENTRY DDrawx64_UnLockSurfaceAndFlip, _TEXT$00
   XOR RDX, RDX
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RDI]
   MOV RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Flip]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Flip]
   
   TEST RAX, RAX
   JNZ SHORT @DDrawx64_UnLockSurfaceAndFlip_WaitFlip
@@ -626,16 +628,16 @@ NESTED_ENTRY DDrawx64_UnLockSurfaceAndFlip, _TEXT$00
  MOV DDRAW_INIT_LOCALS.PointLoc.y[RSP], 0
  LEA RDX, DDRAW_INIT_LOCALS.PointLoc[RSP]
  MOV RCX, DDRAW_INTERNAL_CONTEXT.hWnd[RDI]
- CALL ClientToScreen
+ ENGINE_DEBUG_FUNCTION_CALL ClientToScreen
 
  LEA RDX, DDRAW_INIT_LOCALS.DestinationRect[RSP]
  MOV RCX, DDRAW_INTERNAL_CONTEXT.hWnd[RDI]
- CALL GetClientRect
+ ENGINE_DEBUG_FUNCTION_CALL GetClientRect
 
  MOV R8D, DDRAW_INIT_LOCALS.PointLoc.y[RSP]
  MOV EDX, DDRAW_INIT_LOCALS.PointLoc.x[RSP]
  LEA RCX, DDRAW_INIT_LOCALS.DestinationRect[RSP]
- CALL OffsetRect
+ ENGINE_DEBUG_FUNCTION_CALL OffsetRect
 
  MOV DDRAW_INIT_LOCALS.Param5[RSP], 768
  MOV R9, 1024
@@ -643,7 +645,7 @@ NESTED_ENTRY DDrawx64_UnLockSurfaceAndFlip, _TEXT$00
  XOR R8, R8
  XOR RDX, RDX
  LEA RCX, DDRAW_INIT_LOCALS.SourceRect[RSP]
- CALL SetRect
+ ENGINE_DEBUG_FUNCTION_CALL SetRect
 
 ;
 ;  BltFast cannot be used when clipping is enabled.
@@ -660,7 +662,7 @@ NESTED_ENTRY DDrawx64_UnLockSurfaceAndFlip, _TEXT$00
 ;  
 ;  MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RDI]
 ;  MOV RAX, [RCX]
-;  CALL QWORD PTR [RAX + DDRAWDD_Surface_BltFast]
+;  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_BltFast]
 ;  
 
   MOV DDRAW_INIT_LOCALS.Param6[RSP], 0  
@@ -671,7 +673,7 @@ NESTED_ENTRY DDrawx64_UnLockSurfaceAndFlip, _TEXT$00
 
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RDI]
   MOV RAX, [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Blt]
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Blt]
 
   MOV RDI, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi[RSP]
   ADD RSP, SIZE DDRAW_INIT_LOCALS
@@ -693,31 +695,31 @@ NESTED_ENTRY DDrawx64_RestoreSurfacesIfNeeded, _TEXT$00
  alloc_stack(SIZEOF DDRAW_INIT_LOCALS)
  save_reg rdi, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-  
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   XOR RDX, RDX
 
 
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RDI]
   MOV RAX, QWORD PTR [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_IsLost]  
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_IsLost]  
   CMP EAX, DDERR_SURFACELOST
   JNE @PrimarySurfaceNotLost
   
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectDrawSurfacectx[RDI]
   MOV RAX, QWORD PTR [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Restore]  
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Restore]  
      
 @PrimarySurfaceNotLost:
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectBackSurfacectx[RDI]
   MOV RAX, QWORD PTR [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_IsLost]  
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_IsLost]  
   CMP EAX, DDERR_SURFACELOST
 
   JNE @BackSurfaceNotLost
   MOV RCX, DDRAW_INTERNAL_CONTEXT.lpDirectBackSurfacectx[RDI]
   MOV RAX, QWORD PTR [RCX]
-  CALL QWORD PTR [RAX + DDRAWDD_Surface_Restore]  
+  ENGINE_DEBUG_FUNCTION_CALL QWORD PTR [RAX + DDRAWDD_Surface_Restore]  
 
 @BackSurfaceNotLost:
   MOV RDI, DDRAW_INIT_LOCALS.SaveFrameCtx.SaveRdi[RSP]
