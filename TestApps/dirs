@@ -7,4 +7,5 @@ BubbleTest \
 PlasmaTest \
 StarTest \
 BallTest \
-BrownianTest
+BrownianTest \
+TemplateTest

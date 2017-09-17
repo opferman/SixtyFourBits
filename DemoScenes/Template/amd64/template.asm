@@ -18,16 +18,16 @@
 ;*********************************************************
 include ksamd64.inc
 include demovariables.inc
+include demoprocs.inc
 include master.inc
+include debug_public.inc
 
 ;*********************************************************
 ; External WIN32/C Functions
 ;*********************************************************
 extern LocalAlloc:proc
 extern LocalFree:proc
-extern time:proc
-extern srand:proc
-extern rand:proc
+
 
 ;*********************************************************
 ; Structures
@@ -43,8 +43,8 @@ SAVEREGSFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
     SaveRbx        dq ?
-    SaveR10        dq ?
-    SaveR11        dq ?
+    SaveR14        dq ?
+    SaveR15        dq ?
     SaveR12        dq ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
@@ -86,16 +86,9 @@ NESTED_ENTRY Template_Init, _TEXT$00
  save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
  save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
 
   MOV [FrameCounter], 0
-
-  ;
-  ; Initialize Random Numbers
-  ;
-  XOR ECX, ECX
-  CALL time
-  MOV ECX, EAX
-  CALL srand
 
   MOV RSI, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
   MOV RDI, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
@@ -120,13 +113,14 @@ NESTED_ENTRY Template_Demo, _TEXT$00
  save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
  save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
  save_reg rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx
- save_reg r10, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR10
- save_reg r11, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR11
+ save_reg r14, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR14
+ save_reg r15, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR15
  save_reg r12, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR12
  save_reg r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13
 
 .ENDPROLOG 
-  
+  DEBUG_RSP_CHECK_MACRO
+
   MOV RSI, RCX
 
   ;
@@ -138,7 +132,7 @@ NESTED_ENTRY Template_Demo, _TEXT$00
   ;
   ; Generate new random color
   ;
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   AND EAX, 0FFFFFFh
   MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
 
@@ -174,8 +168,8 @@ NESTED_ENTRY Template_Demo, _TEXT$00
   MOV rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
   MOV rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
 
-  MOV r10, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR10[RSP]
-  MOV r11, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR11[RSP]
+  MOV r14, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR14[RSP]
+  MOV r15, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR15[RSP]
   MOV r12, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR12[RSP]
   MOV r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13[RSP]
 
@@ -200,6 +194,7 @@ NESTED_ENTRY Template_Free, _TEXT$00
  save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
  save_reg rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx
 .ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
 
   ; Nothing to clean up
 
