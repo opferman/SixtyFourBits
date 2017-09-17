@@ -18,6 +18,8 @@
 ;*********************************************************
 include ksamd64.inc
 include demovariables.inc
+include demoprocs.inc
+include debug_public.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
@@ -38,8 +40,8 @@ SAVEREGSFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
     SaveRbx        dq ?
-    SaveR10        dq ?
-    SaveR11        dq ?
+    SaveR14        dq ?
+    SaveR15        dq ?
     SaveR12        dq ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
@@ -69,11 +71,6 @@ PAL_DEMO_STRUCTURE_FUNC ends
 public PalDemo_Init
 public PalDemo_Demo
 public PalDemo_Free
-
-extern time:proc
-extern srand:proc
-extern rand:proc
-
 
 .DATA
 
@@ -105,6 +102,7 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
  save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
@@ -114,13 +112,13 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
   MUL R9
   MOV RDX, RAX
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @PalInit_Failed
 
   MOV RCX, 256
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @PalInit_Failed
 
@@ -146,7 +144,7 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   DEC [Blue]
   
@@ -198,14 +196,14 @@ NESTED_ENTRY PalDemo_Init, _TEXT$00
   MOV RCX, RSI
   MOV R8D, 50
   MOV R9D, 200
-  CALL Pal_PrintWord
+  DEBUG_FUNCTION_CALL Pal_PrintWord
 
   MOV PAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 12
   LEA RDX, [SecondWord]
   MOV RCX, RSI
   MOV R8D, 20
   MOV R9D, 500
-  CALL Pal_PrintWord
+  DEBUG_FUNCTION_CALL Pal_PrintWord
   
   MOV RSI, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -241,12 +239,13 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
  save_reg rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r14, PAL_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, PAL_DEMO_STRUCTURE.SaveFrame.SaveR15
  save_reg r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
   ;
@@ -255,7 +254,7 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [DoubleBuffer]
 
-  XOR R9, R9
+  XOR R14, R14
   XOR r12, r12
 
 @FillScreen:
@@ -265,7 +264,7 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
       XOR EDX, EDX
       MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
       MOV RCX, [VirtualPallete]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
@@ -289,9 +288,9 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC R14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
    ;
@@ -299,14 +298,14 @@ NESTED_ENTRY PalDemo_Demo, _TEXT$00
    ;
    MOV RDX, 1
    MOV RCX, [VirtualPallete]
-   CALL  VPal_Rotate
+   DEBUG_FUNCTION_CALL  VPal_Rotate
     
   MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-  MOV r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV R15, PAL_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
+  MOV R14, PAL_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
   MOV r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
@@ -334,15 +333,16 @@ NESTED_ENTRY PalDemo_Free, _TEXT$00
  save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
 
  MOV RCX, [VirtualPallete]
- CALL VPal_Free
+ DEBUG_FUNCTION_CALL VPal_Free
 
   MOV RCX, [DoubleBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
-  CALL LocalFree
+  DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
   MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -371,21 +371,22 @@ NESTED_ENTRY Pal_PrintWord, _TEXT$00
  save_reg rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r15, PAL_DEMO_STRUCTURE.SaveFrame.SaveR15
+ save_reg r14, PAL_DEMO_STRUCTURE.SaveFrame.SaveR14
  save_reg r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
-  MOV R10, RDX
-  MOV R11, R8
+  MOV R14, RDX
+  MOV R15, R8
   MOV R12, R9
 
 @Pal_PrintStringLoop:
 
   XOR RCX, RCX
-  MOV CL, [R10]
-  CALL Font_GetBitFont
+  MOV CL, [R14]
+  DEBUG_FUNCTION_CALL Font_GetBitFont
   TEST RAX, RAX
   JZ @ErrorOccured
   MOV RCX, [DoubleBuffer]
@@ -396,7 +397,7 @@ NESTED_ENTRY Pal_PrintWord, _TEXT$00
   ADD RCX, RAX
   MOV RAX, R13
   XOR RDX, RDX
-  ADD RCX, R11
+  ADD RCX, R15
   XOR R13, R13
   MOV RSI, PAL_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
 @VerticleLines:
@@ -422,22 +423,22 @@ NESTED_ENTRY Pal_PrintWord, _TEXT$00
   INC R13
   CMP R13, 8
   JB @VerticleLines
-  INC R10
+  INC R14
 
   MOV RCX, PAL_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
   SHL RCX, 3
-  ADD R11, RCX
-  ADD R11, 3
+  ADD R15, RCX
+  ADD R15, 3
  
-  CMP BYTE PTR [R10], 0 
+  CMP BYTE PTR [R14], 0 
   JNE @Pal_PrintStringLoop
   MOV EAX, 1
 @ErrorOccured:
   MOV rdi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, PAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, PAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, PAL_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, PAL_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+  MOV r15, PAL_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
+  MOV r14, PAL_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
   MOV r12, PAL_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
   MOV r13, PAL_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
   ADD RSP, SIZE PAL_DEMO_STRUCTURE
