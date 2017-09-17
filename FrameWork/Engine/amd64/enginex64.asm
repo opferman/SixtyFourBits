@@ -106,8 +106,8 @@ GlobalDemoStructure  dq ?
  SpecialSaveRegister1    dq ?
  SpecialSaveRegister2    dq ?
 
- GarbageXmmData        dq 0FFFFFFFFFFh
-                       dq 0FFFFFFFFFFh
+ GarbageXmmData        dq 0FFFFFFFFFFFFFFFFh
+                       dq 0FFFFFFFFFFFFFFFFh
 
   NestingCounter       dq 0
 
@@ -553,12 +553,12 @@ NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
  ;
  ; Except RAX and XMM0, populate Volatile Registers with Garbage
  ;
- MOV RCX, 0FFFFFFFFh
- MOV RDX, 0FFFFFFFFh
- MOV R8,0FFFFFFFFh
- MOV R9,0FFFFFFFFh
- MOV R10,0FFFFFFFFh
- MOV R11,0FFFFFFFFh
+ MOV RCX, 0FFFFFFFFFFFFFFFFh
+ MOV RDX, 0FFFFFFFFFFFFFFFFh
+ MOV R8,0FFFFFFFFFFFFFFFFh
+ MOV R9,0FFFFFFFFFFFFFFFFh
+ MOV R10,0FFFFFFFFFFFFFFFFh
+ MOV R11,0FFFFFFFFFFFFFFFFh
 
  LEA RAX, [GarbageXmmData]
  MOVUPS xmm1, xmmword ptr [RAX]

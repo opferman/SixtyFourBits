@@ -21,6 +21,8 @@ include demovariables.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
+include debug_public.inc
+include demoprocs.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -42,6 +44,8 @@ SAVEREGSFRAME struct
     SaveR11        dq ?
     SaveR12        dq ?
     SaveR13        dq ?
+    SaveR14        dq ?
+    SaveR15        dq ?
 SAVEREGSFRAME ends
 
 FUNC_PARAMS struct
@@ -80,9 +84,7 @@ public Bubble_Init
 public Bubble_Demo
 public Bubble_Free
 
-extern time:proc
-extern srand:proc
-extern rand:proc
+
 
 MAX_COLORS EQU <256+256+256+256+256+256>
 .DATA
@@ -113,7 +115,9 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
  save_reg rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx
  save_reg rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
@@ -124,13 +128,13 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV RDX, RAX
   SHL RDX, 1    ; Turn Buffer into WORD values
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @PalInit_Failed
 
   MOV RCX, MAX_COLORS
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @PalInit_Failed
 
@@ -156,7 +160,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   INC [Blue]
 
@@ -184,7 +188,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   INC [Red]
 
@@ -211,7 +215,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   INC [Green]
 
@@ -239,7 +243,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   DEC [Blue]
 
@@ -265,7 +269,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   DEC [Red]
 
@@ -293,7 +297,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   DEC [Green]
   INC [Red]
@@ -304,13 +308,13 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
 
 
   XOR R12, R12
-  LEA R10, [Bubbles]
+  LEA r13, [Bubbles]
 @PlotCircles:
-  MOV RDX, R10
+  MOV RDX, r13
   MOV RCX, RSI
-  CALL Bubble_DrawRandomCircle
+  DEBUG_FUNCTION_CALL Bubble_DrawRandomCircle
   INC R12
-  ADD R10, SIZE BUBBLE_MOVER
+  ADD r13, SIZE BUBBLE_MOVER
   CMP R12, 100
   JB @PlotCircles
  
@@ -318,6 +322,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV RDI, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
   MOV r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
   ADD RSP, SIZE BUBBLE_DEMO_STRUCTURE
   MOV EAX, 1
   RET
@@ -327,6 +332,7 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
   MOV RDI, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
   MOV r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
   ADD RSP, SIZE BUBBLE_DEMO_STRUCTURE
   XOR RAX, RAX
   RET
@@ -338,7 +344,7 @@ NESTED_END Bubble_Init, _TEXT$00
 ;  Bubble_DrawRandomCircle
 ;
 ;        Parameters: Master Context, Bubble Structure
-;
+;u
 ;       
 ;
 ;
@@ -348,43 +354,46 @@ NESTED_ENTRY Bubble_DrawRandomCircle, _TEXT$00
  save_reg rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi
  save_reg rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi
  save_reg rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR11
+ save_reg r15, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR15
  save_reg r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13
+ save_reg r14, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR14
 .ENDPROLOG
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV RDI, RDX
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, 700
+  XOR RDX, RDX
   DIV RCX
-  MOV R10, RDX ; Y
-  ADD R10, 10
-  MOV BUBBLE_MOVER.Y[RDI], R10
+  MOV R14, RDX ; Y
+  ADD R14, 10
+  MOV BUBBLE_MOVER.Y[RDI], R14
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, 1000
+  XOR RDX, RDX
   DIV RCX
-  MOV R11, RDX ; X
-  ADD R11, 10
-  MOV BUBBLE_MOVER.X[RDI], R11
+  MOV R15, RDX ; X
+  ADD R15, 10
+  MOV BUBBLE_MOVER.X[RDI], R15
 
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
 
   MOV R13, 1024
-  SUB R13, R11
-  CMP R13, R11
+  SUB R13, R15
+  CMP R13, R15
   JB @NextCompareY
 
-  MOV R13, R11
+  MOV R13, R15
 
 @NextCompareY:
   MOV RCX, 768
-  SUB RCX, R10
-  CMP RCX, R10
+  SUB RCX, R14
+  CMP RCX, R14
   JB @NextCompareXandY
-  MOV RCX, R10
+  MOV RCX, R14
 
 @NextCompareXandY:
   CMP R13, RCX
@@ -392,11 +401,12 @@ NESTED_ENTRY Bubble_DrawRandomCircle, _TEXT$00
 
   MOV R13, RCX
 @GetRaidus:
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   CMP R13, 200
   JB @PerformRadius
   MOV R13, 200
 @PerformRadius:
+  XOR RDX, RDX
   DIV R13
   MOV R12, RDX
 
@@ -408,31 +418,34 @@ NESTED_ENTRY Bubble_DrawRandomCircle, _TEXT$00
 
 @GetColors:
   MOV BUBBLE_MOVER.Radius[RDI], R12
-  CALL rand
+  DEBUG_FUNCTION_CALL Math_rand
   MOV RCX, MAX_COLORS
+  XOR RDX, RDX
   DIV RCX
    
   MOV BUBBLE_MOVER.Color[RDI], DX
 
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
 
   MOV RCX, 2
+  XOR RDX, RDX
   DIV RCX
   INC RDX
   MOV BUBBLE_MOVER.VelX[RDI], RDX
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
   TEST RAX, 1
   JE @VelocityY
   NEG BUBBLE_MOVER.VelX[RDI]
 
 @VelocityY:
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
 
   MOV RCX, 2
+  XOR RDX, RDX
   DIV RCX
   INC RDX
   MOV BUBBLE_MOVER.VelY[RDI], RDX
-  CALL Rand
+  DEBUG_FUNCTION_CALL Math_rand
   TEST RAX, 1
   JE @DrawBubble
   NEG BUBBLE_MOVER.VelY[RDI]
@@ -442,17 +455,17 @@ NESTED_ENTRY Bubble_DrawRandomCircle, _TEXT$00
   MOV DX, BUBBLE_MOVER.Color[RDI]
   MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RDX ; Random Color
   MOV R9, R12
-  MOV R8, R10
-  MOV RDX, R11
+  MOV R8, R14
+  MOV RDX, R15
   MOV RCX, RSI
-  CALL Bubble_DrawCircle   
+  DEBUG_FUNCTION_CALL Bubble_DrawCircle   
 
    MOV rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
    MOV rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
    MOV rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
 
-   MOV r10, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-   MOV r11, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
+   MOV r15, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
+   MOV r14, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
    MOV r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
    MOV r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
 
@@ -479,8 +492,9 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
  save_reg r11, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR11
  save_reg r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13
-
+ save_reg r14, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR14
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
   ;
@@ -489,8 +503,8 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [DoubleBuffer]
 
-  XOR R9, R9
-  XOR r12, r12
+  XOR R12, R12
+  XOR r14, r14
 
 @FillScreen:
       ;
@@ -503,7 +517,7 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
 	  CMP DX, 0
 	  JE @PlotAsZero
       MOV RCX, [VirtualPallete]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 @PlotAsZero:
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
@@ -527,9 +541,9 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC r14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
    ;
@@ -537,81 +551,81 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
    ;
    MOV RDX, 5
    MOV RCX, [VirtualPallete]
-   CALL  VPal_Rotate
+   DEBUG_FUNCTION_CALL  VPal_Rotate
    
   XOR R12, R12
-  LEA R10, [Bubbles]
+  LEA R14, [Bubbles]
 
 
 @PlotCircles:
-  MOV RCX, BUBBLE_MOVER.VelX[R10]
-  ADD BUBBLE_MOVER.X[R10], RCX
-  MOV RDX, BUBBLE_MOVER.Radius[R10]
-  ADD RDX, BUBBLE_MOVER.X[R10]
+  MOV RCX, BUBBLE_MOVER.VelX[R14]
+  ADD BUBBLE_MOVER.X[R14], RCX
+  MOV RDX, BUBBLE_MOVER.Radius[R14]
+  ADD RDX, BUBBLE_MOVER.X[R14]
 
   CMP RDX, 1022
   JL @NextTest
 
   MOV RDX, 990
-  SUB RDX, BUBBLE_MOVER.Radius[R10]
-  MOV BUBBLE_MOVER.X[R10], RDX
-  NEG BUBBLE_MOVER.VelX[R10]
+  SUB RDX, BUBBLE_MOVER.Radius[R14]
+  MOV BUBBLE_MOVER.X[R14], RDX
+  NEG BUBBLE_MOVER.VelX[R14]
   JMP @NextTest_Y
 
 @NextTest:
-  MOV RDX, BUBBLE_MOVER.X[R10]
-  SUB RDX, BUBBLE_MOVER.Radius[R10]
+  MOV RDX, BUBBLE_MOVER.X[R14]
+  SUB RDX, BUBBLE_MOVER.Radius[R14]
 
   CMP RDX, 10
   JG @NextTest_Y
   
-  MOV RDX, BUBBLE_MOVER.Radius[R10]
+  MOV RDX, BUBBLE_MOVER.Radius[R14]
   ADD RDX, 20
-  MOV BUBBLE_MOVER.X[R10], RDX
-  NEG BUBBLE_MOVER.VelX[R10]
+  MOV BUBBLE_MOVER.X[R14], RDX
+  NEG BUBBLE_MOVER.VelX[R14]
   
 
 @NextTest_Y:
 
 
-  MOV RCX, BUBBLE_MOVER.VelY[R10]
-  ADD BUBBLE_MOVER.Y[R10], RCX
-  MOV RDX, BUBBLE_MOVER.Radius[R10]
-  ADD RDX, BUBBLE_MOVER.Y[R10]
+  MOV RCX, BUBBLE_MOVER.VelY[R14]
+  ADD BUBBLE_MOVER.Y[R14], RCX
+  MOV RDX, BUBBLE_MOVER.Radius[R14]
+  ADD RDX, BUBBLE_MOVER.Y[R14]
 
   CMP RDX, 766
   JL @NextY_Test
 
   MOV RDX, 690
-  SUB RDX, BUBBLE_MOVER.Radius[R10]
-  MOV BUBBLE_MOVER.Y[R10], RDX
-  NEG BUBBLE_MOVER.VelY[R10]
+  SUB RDX, BUBBLE_MOVER.Radius[R14]
+  MOV BUBBLE_MOVER.Y[R14], RDX
+  NEG BUBBLE_MOVER.VelY[R14]
 
   JMP @DoneTesting
 @NextY_Test:
-  MOV RDX, BUBBLE_MOVER.Y[R10]
-  SUB RDX, BUBBLE_MOVER.Radius[R10]
+  MOV RDX, BUBBLE_MOVER.Y[R14]
+  SUB RDX, BUBBLE_MOVER.Radius[R14]
 
   CMP RDX, 10
   JG @DoneTesting
 
-  MOV RDX, BUBBLE_MOVER.Radius[R10]
+  MOV RDX, BUBBLE_MOVER.Radius[R14]
   ADD RDX, 20
-  MOV BUBBLE_MOVER.Y[R10], RDX
-  NEG BUBBLE_MOVER.VelY[R10]
+  MOV BUBBLE_MOVER.Y[R14], RDX
+  NEG BUBBLE_MOVER.VelY[R14]
 
 @DoneTesting:
 
-  MOV DX, BUBBLE_MOVER.Color[R10]
+  MOV DX, BUBBLE_MOVER.Color[R14]
   MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RDX 
-  MOV R9, BUBBLE_MOVER.Radius[R10]
-  MOV R8, BUBBLE_MOVER.Y[R10]
-  MOV RDX, BUBBLE_MOVER.X[R10]
+  MOV R9, BUBBLE_MOVER.Radius[R14]
+  MOV R8, BUBBLE_MOVER.Y[R14]
+  MOV RDX, BUBBLE_MOVER.X[R14]
   MOV RCX, RDI
-  CALL Bubble_DrawCircle   
+  DEBUG_FUNCTION_CALL Bubble_DrawCircle   
 
   INC R12
-  ADD R10, SIZE BUBBLE_MOVER
+  ADD R14, SIZE BUBBLE_MOVER
   CMP R12, 100
   JB @PlotCircles
 
@@ -625,7 +639,7 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
    MOV r11, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
    MOV r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
    MOV r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-
+   MOV r14, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
    ADD RSP, SIZE BUBBLE_DEMO_STRUCTURE
   
    DEC [FrameCountDown]
@@ -650,15 +664,16 @@ NESTED_ENTRY Bubble_Free, _TEXT$00
  save_reg rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
 
  MOV RCX, [VirtualPallete]
- CALL VPal_Free
+ DEBUG_FUNCTION_CALL VPal_Free
 
   MOV RCX, [DoubleBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
-  CALL LocalFree
+  DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
   MOV rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -692,7 +707,8 @@ NESTED_ENTRY Bubble_DrawCircle, _TEXT$00
  save_reg r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12
  save_reg r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
- 
+ DEBUG_RSP_CHECK_MACRO
+
  MOV RSI, RCX
  MOV R10, R9 ; Radius
  MOV R11, R8  ; Y Center
