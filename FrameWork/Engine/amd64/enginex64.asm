@@ -75,11 +75,41 @@ ENGINE_INIT_LOCALS struct
 ENGINE_INIT_LOCALS ends
 
 
+NESTED_FUNCTIONS_FOR_DEBUG EQU <10>
 
 .DATA
 
 GlobalDemoStructure  dq ?
+ 
+ SaveR12Register      dq NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveR13Register      dq NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveR14Register      dq NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveR15Register      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
 
+ SaveRsiRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveRdiRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveRbxRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveRbpRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveRspRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+
+ SaveXmm6Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm7Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm8Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm9Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm10Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm11Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm12Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm13Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm14Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm15Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ CompareXmmRegister    xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SpecialSaveRegister1    dq ?
+ SpecialSaveRegister2    dq ?
+
+ GarbageXmmData        dq 0FFFFFFFFFFh
+                       dq 0FFFFFFFFFFh
+
+  NestingCounter       dq 0
 
 .CODE
   
@@ -256,5 +286,292 @@ NESTED_ENTRY Engine_Loop, _TEXT$00
 NESTED_END Engine_Loop, _TEXT$00
 
 
+;*********************************************************
+;  Engine_PreFunctionCall
+;
+;        Parameters: None
+;
+;          This is a single threaded test function that will
+;        save the Non-Volatile registers.  The purpose is to 
+;        use this before a function call and then use 
+;        "Engine_PostFunctionCall" to verify the integrity
+;        of your function.
+;
+;*********************************************************  
+NESTED_ENTRY Engine_PreFunctionCall, _TEXT$00
+.ENDPROLOG 
+ CMP [NestingCounter], NESTED_FUNCTIONS_FOR_DEBUG
+ JB @ValidNesting
+ INT 3
+
+@ValidNesting:
+ MOV [SpecialSaveRegister1], RAX
+ MOV [SpecialSaveRegister2], RBX
+ MOV RBX, [NestingCounter]
+ SHL RBX, 6
+
+ LEA RAX, [SaveR12Register]
+ MOV [RAX + RBX], R12
+
+ LEA RAX, [SaveR13Register]
+ MOV [RAX + RBX], R13
+
+ LEA RAX, [SaveR14Register]
+ MOV [RAX + RBX], R14
+
+ LEA RAX, [SaveR15Register]
+ MOV [RAX + RBX], R15
+
+ LEA RAX, [SaveRsiRegister]
+ MOV [RAX + RBX], RSI
+
+ LEA RAX, [SaveRdiRegister]
+ MOV [RAX + RBX], RDI
+ 
+ LEA RAX, [SaveRbxRegister]
+ MOV [RAX + RBX], RBX
+ 
+ LEA RAX, [SaveRbpRegister]
+ MOV [RAX + RBX], RBP
+ 
+ LEA RAX, [SaveRspRegister]
+ MOV [RAX + RBX], RSP
+ 
+ LEA RAX, [SaveXmm6Register]
+ MOVUPS [RAX + RBX], xmm6 
+ LEA RAX, [SaveXmm7Register]
+ MOVUPS [RAX + RBX], xmm7
+ LEA RAX, [SaveXmm8Register]
+ MOVUPS [RAX + RBX], xmm8
+ LEA RAX, [SaveXmm9Register]
+ MOVUPS [RAX + RBX], xmm9
+ LEA RAX, [SaveXmm10Register]
+ MOVUPS [RAX + RBX], xmm10
+ LEA RAX, [SaveXmm11Register]
+ MOVUPS [RAX + RBX], xmm11
+ LEA RAX, [SaveXmm12Register]
+ MOVUPS [RAX + RBX], xmm12
+ LEA RAX, [SaveXmm13Register]
+ MOVUPS [RAX + RBX], xmm13
+ LEA RAX, [SaveXmm14Register]
+ MOVUPS [RAX + RBX], xmm14
+ LEA RAX, [SaveXmm15Register]
+ MOVUPS [RAX + RBX], xmm15
+
+ INC [NestingCounter]
+ MOV RBX, [SpecialSaveRegister2]
+ MOV RAX, [SpecialSaveRegister1]
+ RET
+NESTED_END Engine_PreFunctionCall, _TEXT$00
+
+;*********************************************************
+;  Engine_PostFunctionCall
+;
+;        Parameters: None
+;
+;          This is a single threaded test function that will
+;        save the Non-Volatile registers.  The purpose is to 
+;        use this before a function call and then use 
+;        "Engine_PostFunctionCall" to verify the integrity
+;        of your function.
+;
+;*********************************************************  
+NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
+.ENDPROLOG 
+ DEC [NestingCounter]
+ MOV [RSP+8], RAX ; We can use Param1-4 in Post Function call but not in Pre.
+
+ MOV RBX, [NestingCounter]
+ SHL RBX, 6
+
+ ;
+ ; Check Non-Volatile Registers were preserved
+ ;
+
+ MOV RAX, 12
+ LEA RDX, [SaveR12Register]
+ CMP [RDX + RBX], R12
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 13
+ LEA RDX, [SaveR13Register]
+ CMP [RDX + RBX], R13
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 14
+ LEA RDX, [SaveR14Register]
+ CMP [RDX + RBX], R14
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 15
+ LEA RDX, [SaveR15Register]
+ CMP [RDX + RBX], R15
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 1
+ LEA RDX, [SaveRsiRegister]
+ CMP [RDX + RBX], RSI
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 2
+ LEA RDX, [SaveRdiRegister]
+ CMP [RDX + RBX], RDI
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 3
+ LEA RDX, [SaveRbxRegister]
+ CMP [RDX + RBX], RBX
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 4
+ LEA RDX, [SaveRbpRegister]
+ CMP [RDX + RBX], RBP
+ JNE @Engine_Debug_Issue
+
+ MOV RAX, 5
+ LEA RDX, [SaveRspRegister]
+ CMP [RDX + RBX], RSP
+ JNE @Engine_Debug_Issue
+
+ LEA RCX, [CompareXmmRegister]
+
+
+ MOV RAX, 6
+ MOVUPS [CompareXmmRegister], xmm6 
+ LEA RDX, [SaveXmm6Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+ MOV RAX, 7
+ MOVUPS [CompareXmmRegister], xmm7
+ LEA RDX, [SaveXmm7Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+
+ MOV RAX, 8
+ MOVUPS [CompareXmmRegister], xmm8
+ LEA RDX, [SaveXmm8Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+
+ MOV RAX, 9
+ MOVUPS [CompareXmmRegister], xmm9
+ LEA RDX, [SaveXmm9Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+
+ MOV RAX, 10
+ MOVUPS [CompareXmmRegister], xmm10
+ LEA RDX, [SaveXmm10Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+
+ MOV RAX, 11
+ MOVUPS [CompareXmmRegister], xmm11
+ LEA RDX, [SaveXmm11Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+ MOV RAX, 12
+ MOVUPS [CompareXmmRegister], xmm12
+ LEA RDX, [SaveXmm12Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+ MOV RAX, 13
+ MOVUPS [CompareXmmRegister], xmm13
+ LEA RDX, [SaveXmm13Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+ MOV RAX, 14
+ MOVUPS [CompareXmmRegister], xmm14
+ LEA RDX, [SaveXmm14Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+ MOV RAX, 15
+ MOVUPS [CompareXmmRegister], xmm15
+ LEA RDX, [SaveXmm15Register]
+ ADD RDX, RBX
+ MOV R8, QWORD PTR [RDX]
+ MOV R9, QWORD PTR [RDX+8]
+ CMP QWORD PTR [RCX], R8
+ JNE  @Engine_Debug_Issue
+ CMP QWORD PTR [RCX+8], R9
+ JNE  @Engine_Debug_Issue
+
+ ;
+ ; Except RAX and XMM0, populate Volatile Registers with Garbage
+ ;
+ MOV RCX, 0FFFFFFFFh
+ MOV RDX, 0FFFFFFFFh
+ MOV R8,0FFFFFFFFh
+ MOV R9,0FFFFFFFFh
+ MOV R10,0FFFFFFFFh
+ MOV R11,0FFFFFFFFh
+
+ LEA RAX, [GarbageXmmData]
+ MOVUPS xmm1, xmmword ptr [RAX]
+ MOVUPS xmm2,xmm1
+ MOVUPS xmm3,xmm1
+ MOVUPS xmm4,xmm1
+ MOVUPS xmm5,xmm1
+ 
+ MOV RAX, [RSP+8]
+ RET  
+@Engine_Debug_Issue:
+ INT 3
+ RET  
+NESTED_END Engine_PostFunctionCall, _TEXT$00
 
 END

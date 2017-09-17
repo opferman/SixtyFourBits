@@ -23,6 +23,7 @@ include vpal_public.inc
 include font_public.inc
 include soft3d_public.inc
 include soft3d_funcs.inc
+include debug_public.inc
 
 extern Sleep:proc
 extern LocalAlloc:proc
@@ -66,6 +67,12 @@ FUNC_PARAMS struct
     Param7         dq ?
 FUNC_PARAMS ends
 
+LOCAL_VARS struct
+    LocalVar1  dq ?
+	LocalVar2  dq ?
+LOCAL_VARS ends
+
+
 STAR_FIELD_ENTRY struct
    Location        TD_POINT <?>
    RotatedLocation TD_POINT <?>
@@ -78,11 +85,13 @@ STAR_FIELD_ENTRY ends
 WORM_HOLE_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
+   LocalVariables LOCAL_VARS      <?>
 WORM_HOLE_STRUCTURE ends
 
 WORM_HOLE_STRUCTURE_FUNC struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
+   LocalVariables LOCAL_VARS      <?>
    FuncParams     FUNC_PARAMS     <?>
 WORM_HOLE_STRUCTURE_FUNC ends
 
@@ -156,6 +165,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
  save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
  save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
@@ -165,20 +175,20 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MUL R9
   MOV RDX, RAX
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @WormInit_Failed
 
   MOV RDX, NUMBER_STARS_SIZE
   MOV ECX, 040h ; LMEM_ZEROINIT
-  CALL LocalAlloc
+  DEBUG_FUNCTION_CALL LocalAlloc
   MOV [StarEntryPtr], RAX
   TEST RAX, RAX
   JZ @WormInit_Failed
 
   MOV RCX, 256
-  CALL VPal_Create
+  DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @WormInit_Failed
   MOV [VirtualPallete], RAX
@@ -187,7 +197,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   XOR R8, R8
   XOR RDX, RDX
   MOV RCX, RSI
-  CALL Soft3D_Init
+  DEBUG_FUNCTION_CALL Soft3D_Init
   MOV [Soft3D], RAX
   TEST RAX, RAX
   JZ @WormInit_Failed
@@ -196,7 +206,7 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOVSD xmm0, [View_Distance]
   MOVSD xmm1, xmm0
   MOV RCX, [SOft3D]
-  CALL Soft3D_SetViewDistance
+  DEBUG_FUNCTION_CALL Soft3D_SetViewDistance
 
 
 
@@ -211,14 +221,14 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOV R8, RAX
   MOV RDX, R12
   MOV RCX, [VirtualPallete]
-  CALL VPal_SetColorIndex
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   INC R12
   CMP R12, 256
   JB @PopulatePallete
 
   MOV RCX, RSI
-  CALL WormHole_CreateStars
+  DEBUG_FUNCTION_CALL WormHole_CreateStars
     
   MOV RSI, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -260,6 +270,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
  save_reg r13, WORM_HOLE_STRUCTURE.SaveFrame.SaveR13
 
 .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
   ;
@@ -268,7 +279,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
   MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   MOV r13, [DoubleBuffer]
 
-  XOR R9, R9
+  XOR R14, R14
   XOR r12, r12
 
 @FillScreen:
@@ -280,7 +291,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
 	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
 
       MOV RCX, [VirtualPallete]
-      CALL VPal_GetColorIndex 
+      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 
       ; Plot Pixel
       MOV DWORD PTR [RSI], EAX
@@ -304,16 +315,16 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    ; Screen Height Increment
 
    XOR r12, r12
-   INC R9
+   INC R14
 
-   CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
    JB @FillScreen
 
    MOV RCX, RDI
-   CALL WormHole_MoveStars
+   DEBUG_FUNCTION_CALL WormHole_MoveStars
 
    MOV RCX, RDI
-   CALL WormHole_PlotStars
+   DEBUG_FUNCTION_CALL WormHole_PlotStars
 
 
    ; Parameters: Master Context, String, X, Y, Font Size, Radians
@@ -325,7 +336,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    MOV R8D, [WormHoleX]
    LEA RDX, [WormholeString]
    MOV RCX, RDI
-   CALL WormHole_PrintWord
+   DEBUG_FUNCTION_CALL WormHole_PrintWord
 
    MOV EAX, [WormHoleYVel]
    ADD [WormHoleY], EAX
@@ -368,7 +379,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
  @Done_SLeep:
    XOR RDX, RDX
    MOV RCX,15
-   CALL Sleep
+   DEBUG_FUNCTION_CALL Sleep
 
     
   MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -404,15 +415,16 @@ NESTED_ENTRY WormHole_Free, _TEXT$00
  save_reg rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi
   save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
 .ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
 
  MOV RCX, [VirtualPallete]
- CALL VPal_Free
+ DEBUG_FUNCTION_CALL VPal_Free
 
   MOV RCX, [DoubleBuffer]
   TEST RCX, RCX
   JZ @SkipFreeingMem
 
-  CALL LocalFree
+  DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
   MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -441,7 +453,8 @@ NESTED_ENTRY WormHole_CreateStars, _TEXT$00
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP], xmm7
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
-.ENDPROLOG 
+.ENDPROLOG
+ DEBUG_RSP_CHECK_MACRO 
   MOV RBX, RCX
   ;LEA RDI, [StarEntry]
   MOV RDI, [StarEntryPtr]
@@ -469,12 +482,12 @@ NESTED_ENTRY WormHole_CreateStars, _TEXT$00
   ; cos(r)*x - sin(r)*y
   ;
   MOVSD xmm0, [CurrentRadians]
-  CALL Cos
+  DEBUG_FUNCTION_CALL Cos
   MULSD xmm0, xmm6
   MOVSD xmm9, xmm0
 
   MOVSD xmm0, [CurrentRadians]
-  CALL Sin
+  DEBUG_FUNCTION_CALL Sin
   MULSD xmm0, xmm7
 
   SUBSD xmm9, xmm0
@@ -483,13 +496,13 @@ NESTED_ENTRY WormHole_CreateStars, _TEXT$00
   ; (sin(r)*x + cos(r)*y)
   ;
   MOVSD xmm0, [CurrentRadians]
-  CALL Sin
+  DEBUG_FUNCTION_CALL Sin
   MULSD xmm0, xmm6
   MOVSD xmm6, xmm9
   MOVSD xmm9, xmm0
 
   MOVSD xmm0, [CurrentRadians]
-  CALL Cos
+  DEBUG_FUNCTION_CALL Cos
   MULSD xmm0, xmm7
   ADDSD xmm0, xmm9
   MOVSD xmm7, xmm0
@@ -568,7 +581,7 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
 .ENDPROLOG 
-   
+ DEBUG_RSP_CHECK_MACRO
   ;LEA RDI, [StarEntry]
   MOV RDI, [StarEntryPtr]
   XOR RSI, RSI
@@ -593,12 +606,12 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   ; cos(r)*x - sin(r)*y
   ;
   MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
-  CALL Cos
+  DEBUG_FUNCTION_CALL Cos
   MULSD xmm0, xmm6
   MOVSD xmm9, xmm0
 
   MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
-  CALL Sin
+  DEBUG_FUNCTION_CALL Sin
   MULSD xmm0, xmm7
 
   SUBSD xmm9, xmm0
@@ -607,13 +620,13 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   ; (sin(r)*x + cos(r)*y)
   ;
   MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
-  CALL Sin
+  DEBUG_FUNCTION_CALL Sin
   MULSD xmm0, xmm6
   MOVSD xmm6, xmm9
   MOVSD xmm9, xmm0
 
   MOVSD xmm0, STAR_FIELD_ENTRY.NewRadians[RDI]
-  CALL Cos
+  DEBUG_FUNCTION_CALL Cos
   MULSD xmm0, xmm7
   ADDSD xmm0, xmm9
   MOVSD xmm7, xmm0
@@ -643,7 +656,7 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
  PXOR xmm2, xmm2
  MOVSD xmm3, [RotationZ]
  MOV RCX, [SOft3D]
- CALL Soft3D_SetCameraRotation
+ DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
 
  MOVSD xmm0, [RotationRadians]
  MOVSD xmm1, [RotationZ]
@@ -681,7 +694,8 @@ NESTED_ENTRY WormHole_PlotStars, _TEXT$00
  save_reg rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx
  save_reg r12, WORM_HOLE_STRUCTURE.SaveFrame.SaveR12
 .ENDPROLOG 
-   
+ DEBUG_RSP_CHECK_MACRO
+
   ;LEA RDI, [StarEntry]
   MOV RDI, [StarEntryPtr]
   XOR RSI, RSI
@@ -693,7 +707,7 @@ NESTED_ENTRY WormHole_PlotStars, _TEXT$00
   LEA R8, [WorldLocation]
   LEA RDX, STAR_FIELD_ENTRY.RotatedLocation[RDI]
   MOV RCX, [SOft3D]
-  CALL Soft3D_Convert3Dto2D
+  DEBUG_FUNCTION_CALL Soft3D_Convert3Dto2D
   MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], RAX
   CMP RAX, SOFT3D_PIXEL_OFF_SCREEN
   JE @SkipPixelPlot
@@ -755,7 +769,7 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
 .ENDPROLOG 
-
+ DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX ; Master Context
   MOV R15, RDX ; String
   MOV R14, R8  ; X Location
@@ -768,7 +782,7 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
   ;
   XOR RCX, RCX
   MOV CL, [R15]
-  CALL Font_GetBitFont
+  DEBUG_FUNCTION_CALL Font_GetBitFont
   TEST RAX, RAX
   JZ @ErrorOccured
 
@@ -785,13 +799,17 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
            MOV RAX, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param1[RSP]
            TEST BL, [RAX]
            JZ @NoPixelToPlot
+		   
+		   MOV  WORM_HOLE_STRUCTURE_FUNC.LocalVariables.LocalVar1[RSP], RBX
 
            ;
            ; Let's get the Font Size in R9
            ;
            MOV R9, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+		   
 
 @PlotRotatedPixel:
+              MOV  WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param4[RSP], R9
 			  ;
 			  ; Rotate
 			  ;
@@ -812,12 +830,12 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 			  SUBSD xmm6, xmm0
 
 			  MOVSD xmm0, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param6[RSP]
-			  CALL Cos
+			  DEBUG_FUNCTION_CALL Cos
 			  MULSD xmm0, xmm6
 			  MOVSD xmm9, xmm0
 
 			  MOVSD xmm0, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param6[RSP]
-			  CALL Sin
+			  DEBUG_FUNCTION_CALL Sin
 			  MULSD xmm0, xmm7
 			  SUBSD xmm9, xmm0
 
@@ -825,13 +843,13 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 			  ; (sin(r)*x + cos(r)*y)
 			  ;
 			  MOVSD xmm0, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param6[RSP]
-			  CALL Sin
+			  DEBUG_FUNCTION_CALL Sin
 			  MULSD xmm0, xmm6
 			  MOVSD xmm6, xmm9
 			  MOVSD xmm9, xmm0
 
 			  MOVSD xmm0, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param6[RSP]
-			  CALL Cos
+			  DEBUG_FUNCTION_CALL Cos
 			  MULSD xmm0, xmm7
 			  ADDSD xmm0, xmm9
 			  MOVSD xmm7, xmm0
@@ -865,6 +883,8 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 
 @PixelOffScreen:
 			INC R14
+			MOV  RBX, WORM_HOLE_STRUCTURE_FUNC.LocalVariables.LocalVar1[RSP]
+			MOV  R9, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param4[RSP]
 			DEC R9
 			JNZ @PlotRotatedPixel
 			JMP @DonePlottingPixel
