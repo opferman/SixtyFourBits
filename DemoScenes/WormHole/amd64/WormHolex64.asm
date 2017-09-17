@@ -25,7 +25,6 @@ include soft3d_public.inc
 include soft3d_funcs.inc
 include debug_public.inc
 
-extern Sleep:proc
 extern LocalAlloc:proc
 extern LocalFree:proc
 extern cos:proc
@@ -354,7 +353,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
 
    MOV EAX, [WormHoleXVel]
    ADD [WormHoleX], EAX
-   JMP  @Done_SLeep
+   JMP   @FrameDone
 @FontSize:
 
    CMP [WormFontSize], 1
@@ -376,11 +375,7 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
   MOVSD [WormHoleRadians], xmm0
 
 
- @Done_SLeep:
-   XOR RDX, RDX
-   MOV RCX,15
-   DEBUG_FUNCTION_CALL Sleep
-
+ @FrameDone:
     
   MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]

@@ -23,9 +23,12 @@ include windowsx64.inc
 include demovariables.inc
 include init_vars.inc
 
+WM_TIMER EQU <0113h>
+TIMER_EMULATE_VRTRACE EQU <1>
 
 extern AdjustWindowRectEx:proc
 extern ValidateRect:proc
+extern SetTimer:proc
 
 ;*********************************************************
 ; Assembly Options
@@ -77,8 +80,8 @@ W_SETUP_PARAMS ends
 .DATA
  pszWindowClass  dq ?
  pszWindowTitle  dq ?
- FullScreenMode    dq ?
-
+ FullScreenMode  dq ?
+ EmulateVRTrace  dq ?
 .CODE
 
 ;*********************************************************
@@ -95,7 +98,7 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
  alloc_stack(SIZEOF W_SETUP_PARAMS)
  save_reg rdi, W_SETUP_PARAMS.SaveRegsStruct.SaveRdi
 .ENDPROLOG 
-
+  MOV [EmulateVRTrace], 0
   MOV RDI, RCX
   MOV RCX, INIT_DEMO_STRUCT.pszWindowClass[RdI]
   MOV [pszWindowClass], RCX
@@ -164,8 +167,8 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   MOV W_SETUP_PARAMS.Param5[RSP], 0
   MOV W_SETUP_PARAMS.Param6[RSP], 0
   
-  MOV RDI, [FullScreenMode]
-  TEST RDI, RDI
+  MOV R8, [FullScreenMode]
+  TEST R8, R8
   JZ @WindowedMode
   MOV R9, WS_POPUP
   JMP @SkipToMyLoo
@@ -180,6 +183,23 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   MOV RCX, 8 ; WS_EX_TOPMOST  
   CALL CreateWindowExA
 
+  TEST EAX, EAX
+  JZ @FailedToCreateWindow
+
+  CMP INIT_DEMO_STRUCT.EmulateVRTrace[RdI], 0
+  JE @SkipVRTraceEmulate
+  MOV [EmulateVRTrace], 1
+
+  XOR R9, R9
+  MOV R8, INIT_DEMO_STRUCT.EmulateVRTrace[RdI]
+  MOV RDX, TIMER_EMULATE_VRTRACE
+  MOV RDI, RAX
+  MOV RCX, RAX
+  CALL SetTimer
+  MOV RAX, RDI
+
+@SkipVRTraceEmulate:
+@FailedToCreateWindow:
   MOV rdi, W_SETUP_PARAMS.SaveRegsStruct.SaveRdi[RSP]
   ADD RSP, SIZE W_SETUP_PARAMS
   RET
@@ -212,7 +232,11 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
   
         TEST RAX, RAX
         JNZ SHORT @Windowx64_DeliverMessage
-        
+
+		CMP [EmulateVRTrace], 0
+		JNE @Windowx64_MessageLoop
+
+ @Windowx64_EngineDrawFrame:        
         ADD RSP, SIZEOF LOOP_STACK_FRAME
         XOR RAX, RAX
         RET
@@ -221,8 +245,21 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
 
   CMP LOOP_STACK_FRAME.Message.message[RSP], WM_QUIT
   JE SHORT @Windowx64_ReturnExitCode
-               
 
+  CMP [EmulateVRTrace], 0
+  JE @SkipEmulateVRTrace
+
+  CMP LOOP_STACK_FRAME.Message.message[RSP], WM_TIMER
+  JNE SHORT @SkipEmulateVRTrace
+
+  LEA RCX, LOOP_STACK_FRAME.Message[RSP]
+  CALL TranslateMessage
+  
+  LEA RCX, LOOP_STACK_FRAME.Message[RSP]
+  CALL DispatchMessageA
+  JMP @Windowx64_EngineDrawFrame
+
+@SkipEmulateVRTrace:
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
   CALL TranslateMessage
   

@@ -26,7 +26,6 @@ include soft3d_public.inc
 include soft3d_funcs.inc
 include debug_public.inc
 
-extern Sleep:proc
 extern LocalAlloc:proc
 extern LocalFree:proc
 
@@ -273,9 +272,6 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL StarDemo_PlotStars
 
-   XOR RDX, RDX
-   MOV RCX,15
-   DEBUG_FUNCTION_CALL Sleep
     
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]

@@ -19,6 +19,8 @@ INIT_DEMO_STRUCT struct
 	  pszWindowClass        dq ?
       GlobalDemoStructure   dq ?
 	  FullScreen            dq ? 
+	  EmulateVRTrace        dq ?
+	  PaddingReserved       dq ?
 INIT_DEMO_STRUCT ends
 
 
