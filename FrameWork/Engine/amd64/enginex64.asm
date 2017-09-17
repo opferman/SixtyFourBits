@@ -22,6 +22,7 @@ include demovariables.inc
 include demoprocs.inc
 include ddrawx64.inc
 include master.inc
+include engdbg_internal.inc
 
 extern LocalAlloc:proc
 
@@ -127,11 +128,12 @@ NESTED_ENTRY Engine_Init, _TEXT$00
  save_reg rdi, ENGINE_INIT_LOCALS.SaveFrameCtx.SaveRdi
  save_reg rsi, ENGINE_INIT_LOCALS.SaveFrameCtx.SaveRsi
 .ENDPROLOG 
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV [GlobalDemoStructure], RDX
   MOV RDI, RCX
   MOV RDX, SIZE MASTER_DEMO_STRUCT
   MOV RCX, LMEM_ZEROINIT
-  CALL LocalAlloc
+  ENGINE_DEBUG_FUNCTION_CALL LocalAlloc
   
   TEST RAX, RAX
   JZ @Engine_Init_Failure
@@ -146,16 +148,16 @@ NESTED_ENTRY Engine_Init, _TEXT$00
   LEA RDX, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   LEA R8, MASTER_DEMO_STRUCT.Pitch[RDI]
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]  
-  CALL DDrawx64_LockSurfaceBuffer  
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_LockSurfaceBuffer  
 
   LEA R9, MASTER_DEMO_STRUCT.BitsPerPixel[RDI]
   LEA RDX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
   LEA R8, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]  
-  CALL DDrawx64_GetScreenRes
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_GetScreenRes
 
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]
-  CALL DDrawx64_UnLockSurfaceAndFlip
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_UnLockSurfaceAndFlip
 
 @Engine_Init_loop:  
   XOR RAX, RAX
@@ -164,7 +166,7 @@ NESTED_ENTRY Engine_Init, _TEXT$00
   
   MOV RAX, DEMO_STRUCT.InitFunction[RSI]
   MOV RCX, RDI
-  CALL RAX
+  ENGINE_DEBUG_FUNCTION_CALL RAX
   
   ;
   ; TODO: Check Return Value
@@ -200,7 +202,7 @@ NESTED_ENTRY Engine_Free, _TEXT$00
  alloc_stack(SIZEOF ENGINE_FREE_LOCALS)
  save_reg rdi, ENGINE_FREE_LOCALS.SaveFrameCtx.SaveRdi
 .ENDPROLOG 
-  
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   
   MOV RDI, ENGINE_FREE_LOCALS.SaveFrameCtx.SaveRdi[RSP]
   ADD RSP, SIZEOF ENGINE_FREE_LOCALS
@@ -223,15 +225,16 @@ NESTED_ENTRY Engine_Loop, _TEXT$00
  save_reg rdi, ENGINE_LOOP_LOCALS.SaveFrameCtx.SaveRdi
  save_reg rsi, ENGINE_LOOP_LOCALS.SaveFrameCtx.SaveRsi
 .ENDPROLOG 
+  ENGINE_DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]  
-  CALL DDrawx64_RestoreSurfacesIfNeeded
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_RestoreSurfacesIfNeeded
 
   LEA RDX, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
   LEA R8, MASTER_DEMO_STRUCT.Pitch[RDI]
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]  
-  CALL DDrawx64_LockSurfaceBuffer
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_LockSurfaceBuffer
 
   TEST RAX, RAX
   JZ @Engine_Loop_Exit
@@ -241,7 +244,7 @@ NESTED_ENTRY Engine_Loop, _TEXT$00
   LEA R9, MASTER_DEMO_STRUCT.BitsPerPixel[RDI]
 
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]  
-  CALL DDrawx64_GetScreenRes
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_GetScreenRes
   
   TEST RAX, RAX
   JZ @Engine_Loop_ExitFailure
@@ -250,7 +253,7 @@ NESTED_ENTRY Engine_Loop, _TEXT$00
   
   MOV RCX, RDI
   MOV RAX, DEMO_STRUCT.DemoFunction[RSI]
-  CALL RAX
+  ENGINE_DEBUG_FUNCTION_CALL RAX
   
   TEST RAX, RAX  
   JNZ @Engine_FlipSurface
@@ -264,7 +267,7 @@ NESTED_ENTRY Engine_Loop, _TEXT$00
   JMP @Engine_Loop_Demo_Complete
 @Engine_FlipSurface:
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]
-  CALL DDrawx64_UnLockSurfaceAndFlip
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_UnLockSurfaceAndFlip
   
 @Engine_Loop_Exit:
   MOV RAX, 1
@@ -274,7 +277,7 @@ NESTED_ENTRY Engine_Loop, _TEXT$00
   RET
 @Engine_Loop_Demo_Complete:
   MOV RCX, MASTER_DEMO_STRUCT.DirectDrawCtx[RDI]
-  CALL DDrawx64_UnLockSurfaceAndFlip
+  ENGINE_DEBUG_FUNCTION_CALL DDrawx64_UnLockSurfaceAndFlip
     
 @Engine_Loop_ExitFailure:
   XOR RAX, RAX
