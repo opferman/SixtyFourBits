@@ -5,4 +5,5 @@ dirs=DDraw \
      Vpal \
      Font \
      Init \
-     Soft3D
+     Soft3D \
+	 Brownian

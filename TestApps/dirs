@@ -6,4 +6,5 @@ WormTest \
 BubbleTest \
 PlasmaTest \
 StarTest \
-BallTest
+BallTest \
+BrownianTest
