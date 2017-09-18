@@ -47,6 +47,8 @@ SAVEREGSFRAME struct
     SaveR14        dq ?
     SaveR15        dq ?
     SaveR12        dq ?
+    SaveRbp        dq ?
+	Padding        dq ?
 
     SaveXmm6       oword ? 
     SaveXmm7       oword ? 
@@ -68,14 +70,22 @@ FUNC_PARAMS struct
     Param7         dq ?
 FUNC_PARAMS ends
 
+LOCAL_VARS struct
+    LocalVar1  dq ?
+	LocalVar2  dq ?
+LOCAL_VARS ends
+
+
 PLASMA_DEMO_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
+   LocalVariables LOCAL_VARS      <?>
 PLASMA_DEMO_STRUCTURE ends
 
 PLASMA_DEMO_STRUCTURE_FUNC struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
+   LocalVariables LOCAL_VARS      <?>
    FuncParams     FUNC_PARAMS     <?>
 PLASMA_DEMO_STRUCTURE_FUNC ends
 
@@ -88,7 +98,7 @@ public PlasmaDemo_Free
 
 
 extern sqrt:proc
-
+FONT_SIZE equ <10>
 MAX_COLORS equ <65536>
 EVAL_NEW_VELOCITY  equ <256>
 
@@ -112,7 +122,11 @@ Variable1      mmword 0.6
 Variable2      mmword 0.1
 Variable1Inc   mmword 1.34
 Variable2Inc   mmword 0.543
-
+PlasmaString   db 1, 0
+LocationX      dd 10
+LocationY      dd 20
+Velocity_X     dd 4
+Velocity_Y     dd 2
 .CODE
 
 ;*********************************************************
@@ -361,6 +375,54 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
   MOV RDX, 10
   MOV RCX,  [VirtualPallete]
   DEBUG_FUNCTION_CALL VPal_Rotate
+
+  CMP [FrameCountDown], 6500
+  JA @DemoExit
+
+  CMP [FrameCountDown], 5001
+  JB @DemoExit
+
+  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0  ; Radians
+  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], FONT_SIZE  ; Font Size
+  MOV R9D, [LocationY]
+  MOV R8D, [LocationX]
+  LEA RDX, [PlasmaString]
+  MOV RCX,  RDI
+  DEBUG_FUNCTION_CALL Plasma_PrintWord
+
+  MOV EAX, [Velocity_X]
+  ADD [LocationX], EAX
+  
+  MOV EAX, [Velocity_Y]
+  ADD [LocationY], EAX
+
+  CMP [LocationY], 0
+  JG @CheckLocationY_High
+  MOV [LocationY], 0
+  NEG [Velocity_Y]
+
+ @CheckLocationY_High:
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+  SUB RAX, FONT_SIZE - 1
+  CMP [LocationY], EAX
+  JL @CheckLocationX_Low
+
+  MOV [LocationY], EAX
+  NEG [Velocity_Y]
+
+@CheckLocationX_Low:
+  CMP [LocationX], 0
+  JG @CheckLocationX_High
+
+  MOV [LocationX], 0
+  NEG [Velocity_X]
+@CheckLocationX_High:
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+  SUB RAX, FONT_SIZE - 1
+  CMP [LocationX], EAX
+  JL @DemoExit
+  MOV [LocationX], EAX
+  NEG [Velocity_X]
 
  
 @DemoExit:
@@ -687,7 +749,207 @@ NESTED_END PlasmaDemo_Free, _TEXT$00
 
 
 
+;*********************************************************
+;  Plasma_PrintWord
+;
+;        Parameters: Master Context, String, X, Y, Font Size, Radians
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Plasma_PrintWord, _TEXT$00
+ alloc_stack(SIZEOF PLASMA_DEMO_STRUCTURE)
+ save_reg rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg rbp, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbp
+ save_reg r14, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR14
+ save_reg r15, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR15
+ save_reg r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR13
+ MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm6[RSP], xmm6
+ MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm7[RSP], xmm7
+ MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
+ MOVAPS PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+  MOV RDI, RCX ; Master Context
+  MOV R15, RDX ; String
+  MOV R14, R8  ; X Location
+  MOV R12, R9  ; Y Location
+  MOV PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param3[RSP], R12
 
+@Plasma_PrintStringLoop:
+  ;
+  ; Get the Bit Font
+  ;
+  XOR RCX, RCX
+  MOV CL, [R15]
+  DEBUG_FUNCTION_CALL Font_GetBitFont
+  TEST RAX, RAX
+  JZ @ErrorOccured
+
+  MOV PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], RAX
+  MOV RSI, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+  MOV PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 8
+
+
+@VerticleLines:
+       MOV BL, 80h
+       MOV R13, R14
+
+@HorizontalLines:
+           MOV RAX, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
+           TEST BL, [RAX]
+           JZ @NoPixelToPlot
+		   
+		   MOV  PLASMA_DEMO_STRUCTURE_FUNC.LocalVariables.LocalVar1[RSP], RBX
+
+           ;
+           ; Let's get the Font Size in R9
+           ;
+           MOV R9, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+		   
+
+@PlotRotatedPixel:
+              MOV  PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param4[RSP], R9
+
+			  MOV RAX, R14 ; X
+			  MOV  R8, R12  ; Y
+
+
+			  JMP @PlotPixel
+			  ;
+			  ; Rotate
+			  ;
+			  ;
+			  ; cos(r)*x - sin(r)*y
+			  ;
+			  CVTSI2SD xmm6, R14 ; X
+			  CVTSI2SD xmm7, R12 ; Y
+
+			  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+			  SHR RAX, 1
+			  CVTSI2SD xmm0, RAX
+			  SUBSD xmm7, xmm0
+
+			  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+			  SHR RAX, 1
+			  CVTSI2SD xmm0, RAX
+			  SUBSD xmm6, xmm0
+
+			  MOVSD xmm0, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param6[RSP]
+			  DEBUG_FUNCTION_CALL Cos
+			  MULSD xmm0, xmm6
+			  MOVSD xmm9, xmm0
+
+			  MOVSD xmm0, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param6[RSP]
+			  DEBUG_FUNCTION_CALL Sin
+			  MULSD xmm0, xmm7
+			  SUBSD xmm9, xmm0
+
+			  ;
+			  ; (sin(r)*x + cos(r)*y)
+			  ;
+			  MOVSD xmm0, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param6[RSP]
+			  DEBUG_FUNCTION_CALL Sin
+			  MULSD xmm0, xmm6
+			  MOVSD xmm6, xmm9
+			  MOVSD xmm9, xmm0
+
+			  MOVSD xmm0, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param6[RSP]
+			  DEBUG_FUNCTION_CALL Cos
+			  MULSD xmm0, xmm7
+			  ADDSD xmm0, xmm9
+			  MOVSD xmm7, xmm0
+
+			  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+			  SHR RAX, 1
+			  CVTSI2SD xmm0, RAX
+			  ADDSD xmm7, xmm0
+
+			  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+			  SHR RAX, 1
+			  CVTSI2SD xmm0, RAX
+			  ADDSD xmm6, xmm0
+
+			  CVTTSD2SI RAX, xmm6 ; X
+			  CVTTSD2SI R8, xmm7  ; Y
+
+@PlotPixel:
+
+			  CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+			  JAE @PixelOffScreen
+
+			  CMP R8, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
+			  JAE @PixelOffScreen
+
+			  MOV RCX, R8
+			  IMUL RCX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
+			  SHL RAX, 1
+			  SHL RCX, 1
+			  ADD RCX, RAX
+			  ADD RCX, [DoubleBuffer]
+			  MOV WORD PTR [RCX], 0FFh 
+
+@PixelOffScreen:
+			INC R14
+			MOV  RBX, PLASMA_DEMO_STRUCTURE_FUNC.LocalVariables.LocalVar1[RSP]
+			MOV  R9, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param4[RSP]
+			DEC R9
+			JNZ @PlotRotatedPixel
+			JMP @DonePlottingPixel
+
+@NoPixelToPlot:
+        ADD R14, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+@DonePlottingPixel:
+    SHR BL, 1
+    TEST BL, BL
+    JNZ @HorizontalLines
+
+  MOV R14, R13
+  INC R12
+  DEC RSI
+  JNZ @VerticleLines
+  
+  MOV RSI, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+  INC PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
+  DEC PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
+  CMP PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 0
+  JA @VerticleLines
+
+  MOV R12, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param3[RSP]
+  
+
+  INC R15
+
+  MOV RCX, PLASMA_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
+  SHL RCX, 3
+  ADD R14, RCX
+  ADD R14, 3
+ 
+  CMP BYTE PTR [R15], 0 
+  JNE @Plasma_PrintStringLoop
+
+
+  MOV EAX, 1
+@ErrorOccured:
+ MOVAPS xmm6,  PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm6[RSP]
+ MOVAPS xmm7,  PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm7[RSP]
+ MOVAPS xmm8,  PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm8[RSP]
+ MOVAPS xmm9,  PLASMA_DEMO_STRUCTURE.SaveFrame.SaveXmm9[RSP]
+  MOV rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rbp, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbp[RSP]
+  MOV r14, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
+  MOV r15, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
+  MOV r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  ADD RSP, SIZE PLASMA_DEMO_STRUCTURE
+  RET
+NESTED_END Plasma_PrintWord, _TEXT$00
 
 
 
