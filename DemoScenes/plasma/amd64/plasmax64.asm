@@ -75,6 +75,16 @@ LOCAL_VARS struct
 	LocalVar2  dq ?
 LOCAL_VARS ends
 
+MAX_FLYING_DOTS EQU <1000>
+
+FLYING_DOT struct
+    LocationX  dq ?
+	LocationY  dq ?
+	VelocityX  dq ?
+	VelocityY  dq ?
+	Color      dw ?
+FLYING_DOT ends
+
 
 PLASMA_DEMO_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
@@ -98,7 +108,8 @@ public PlasmaDemo_Free
 
 
 extern sqrt:proc
-FONT_SIZE equ <10>
+FONT_SIZE equ <30>
+FONT_SIZE2 equ <15>
 MAX_COLORS equ <65536>
 EVAL_NEW_VELOCITY  equ <256>
 
@@ -122,11 +133,10 @@ Variable1      mmword 0.6
 Variable2      mmword 0.1
 Variable1Inc   mmword 1.34
 Variable2Inc   mmword 0.543
-PlasmaString   db 1, 0
-LocationX      dd 10
-LocationY      dd 20
-Velocity_X     dd 4
-Velocity_Y     dd 2
+PlasmaString   db "X86", 0
+PlasmaString2   db "Assembly", 0
+
+FlyingDots   FLYING_DOT  MAX_FLYING_DOTS DUP(<?>)
 .CODE
 
 ;*********************************************************
@@ -270,6 +280,9 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
   JMP @CheckGreenColor
 
 @PaleteComplete:
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Plasma_CreateDots
+
   MOV RCX,  RSI
   DEBUG_FUNCTION_CALL PlasmaDemo_PerformPlasma
 
@@ -379,51 +392,17 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
   CMP [FrameCountDown], 6500
   JA @DemoExit
 
-  CMP [FrameCountDown], 5001
+  CMP [FrameCountDown], 5999
+  JE @DisplayWord
+
+  CMP [FrameCountDown], 6000
   JB @DemoExit
 
-  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0  ; Radians
-  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], FONT_SIZE  ; Font Size
-  MOV R9D, [LocationY]
-  MOV R8D, [LocationX]
-  LEA RDX, [PlasmaString]
   MOV RCX,  RDI
-  DEBUG_FUNCTION_CALL Plasma_PrintWord
+  DEBUG_FUNCTION_CALL Plasma_MoveDots
 
-  MOV EAX, [Velocity_X]
-  ADD [LocationX], EAX
-  
-  MOV EAX, [Velocity_Y]
-  ADD [LocationY], EAX
-
-  CMP [LocationY], 0
-  JG @CheckLocationY_High
-  MOV [LocationY], 0
-  NEG [Velocity_Y]
-
- @CheckLocationY_High:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-  SUB RAX, FONT_SIZE - 1
-  CMP [LocationY], EAX
-  JL @CheckLocationX_Low
-
-  MOV [LocationY], EAX
-  NEG [Velocity_Y]
-
-@CheckLocationX_Low:
-  CMP [LocationX], 0
-  JG @CheckLocationX_High
-
-  MOV [LocationX], 0
-  NEG [Velocity_X]
-@CheckLocationX_High:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-  SUB RAX, FONT_SIZE - 1
-  CMP [LocationX], EAX
-  JL @DemoExit
-  MOV [LocationX], EAX
-  NEG [Velocity_X]
-
+  MOV RCX,  RDI
+  DEBUG_FUNCTION_CALL Plasma_PlotDots
  
 @DemoExit:
     
@@ -441,6 +420,26 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
    DEC [FrameCountDown]
    MOV EAX, [FrameCountDown]
    RET
+
+@DisplayWord:
+  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0  ; Radians
+  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], FONT_SIZE  ; Font Size
+  MOV R9D, 100
+  MOV R8D, 130
+  LEA RDX, [PlasmaString]
+  MOV RCX,  RDI
+  DEBUG_FUNCTION_CALL Plasma_PrintWord
+
+  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0  ; Radians
+  MOV PLASMA_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], FONT_SIZE2  ; Font Size
+  MOV R9D, 400
+  MOV R8D, 77/2
+  LEA RDX, [PlasmaString2]
+  MOV RCX,  RDI
+  DEBUG_FUNCTION_CALL Plasma_PrintWord
+
+
+   JMP @DemoExit
 NESTED_END PlasmaDemo_Demo, _TEXT$00
 
 
@@ -952,6 +951,224 @@ NESTED_ENTRY Plasma_PrintWord, _TEXT$00
 NESTED_END Plasma_PrintWord, _TEXT$00
 
 
+
+
+
+
+;*********************************************************
+;  Plasma_CreateDots
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Plasma_CreateDots, _TEXT$00
+ alloc_stack(SIZEOF PLASMA_DEMO_STRUCTURE)
+ save_reg rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RCX
+  LEA RDI, [FlyingDots]
+  XOR RSI, RSI
+
+@Initialize_Dots:
+
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  XOR RDX, RDX
+  DIV RCX
+  MOV FLYING_DOT.LocationX[RDI], RDX
+  
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  XOR RDX, RDX
+  DIV RCX
+  MOV FLYING_DOT.LocationY[RDI], RDX
+  
+
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV FLYING_DOT.Color[RDI], AX
+
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 0Fh
+  SUB RAX, 8
+  MOV FLYING_DOT.VelocityX[RDI], RAX
+
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 0Fh
+  SUB RAX, 8
+  MOV FLYING_DOT.VelocityY[RDI], RAX
+
+
+  ADD RDI, SIZE FLYING_DOT
+  INC RSI
+  CMP RSI, MAX_FLYING_DOTS
+  JB @Initialize_Dots
+  
+  MOV rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+
+  ADD RSP, SIZE PLASMA_DEMO_STRUCTURE
+  RET
+NESTED_END Plasma_CreateDots, _TEXT$00
+
+
+
+;*********************************************************
+;  Plasma_MoveDots
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Plasma_MoveDots, _TEXT$00
+ alloc_stack(SIZEOF PLASMA_DEMO_STRUCTURE)
+ save_reg rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  LEA RDI, [FlyingDots]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Move_Dots:
+  MOV RDX, FLYING_DOT.VelocityY[RDI]
+  ADD FLYING_DOT.LocationY[RDI], RDX
+  
+  MOV RDX, FLYING_DOT.VelocityX[RDI]
+  ADD FLYING_DOT.LocationX[RDI], RDX
+
+  CMP FLYING_DOT.LocationX[RDI], 0
+  JG @LocationXUpperBoundsCheck
+
+  MOV FLYING_DOT.LocationX[RDI], 0
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 3h
+  INC RAX
+  MOV FLYING_DOT.VelocityX[RDI], RAX
+
+@LocationXUpperBoundsCheck:
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SUB RDX, 5
+  CMP FLYING_DOT.LocationX[RDI], RDX
+  JL @LocationYLowerBoundsCheck
+
+  DEC RDX
+  MOV FLYING_DOT.LocationX[RDI], RDX
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 3h
+  INC RAX
+  NEG RAX
+  MOV FLYING_DOT.VelocityX[RDI], RAX
+
+@LocationYLowerBoundsCheck:
+  CMP FLYING_DOT.LocationY[RDI], 0
+  JG @LocationYUpperBoundsCheck
+
+  MOV FLYING_DOT.LocationY[RDI], 0
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 3h
+  INC RAX
+  MOV FLYING_DOT.VelocityY[RDI], RAX
+
+@LocationYUpperBoundsCheck:
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[R12]
+  SUB RDX, 5
+  CMP FLYING_DOT.LocationY[RDI], RDX
+  JL @MoveNextDot
+
+  DEC RDX
+  MOV FLYING_DOT.LocationY[RDI], RDX
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 3h
+  INC RAX
+  NEG RAX
+  MOV FLYING_DOT.VelocityY[RDI], RAX
+
+
+@MoveNextDot:  
+  ADD RDI, SIZE FLYING_DOT
+  INC RSI
+  CMP RSI, MAX_FLYING_DOTS
+  JB @Move_Dots
+   
+  MOV rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE PLASMA_DEMO_STRUCTURE
+  RET
+NESTED_END Plasma_MoveDots, _TEXT$00
+
+;*********************************************************
+;  Plasma_PlotDots
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Plasma_PlotDots, _TEXT$00
+ alloc_stack(SIZEOF PLASMA_DEMO_STRUCTURE)
+ save_reg rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  LEA RDI, [FlyingDots]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Plot_Dots:
+
+  MOV RBX, [DoubleBuffer]
+  MOV RCX, FLYING_DOT.LocationY[RDI]
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  MUL RCX
+  SHL RAX, 1
+  ADD RBX, RAX
+  MOV RAX, FLYING_DOT.LocationX[RDI]
+  SHL RAX, 1
+  ADD RBX, RAX
+  MOV AX, FLYING_DOT.Color[RDI]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SHL RCX, 1
+  MOV RDX, 5
+
+@PlotRows:
+  MOV [RBX], AX
+  MOV [RBX+2], AX
+  MOV [RBX+4], AX
+  MOV [RBX+6], AX
+  MOV [RBX+8], AX
+  ADD RBX, RCX
+  DEC RDX
+  JNZ @PlotRows
+
+
+  ADD RDI, SIZE FLYING_DOT
+  INC RSI
+  CMP RSI, MAX_FLYING_DOTS
+  JB @Plot_Dots
+  
+  MOV rdi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, PLASMA_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE PLASMA_DEMO_STRUCTURE
+  RET
+NESTED_END Plasma_PlotDots, _TEXT$00
 
 
 
