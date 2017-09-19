@@ -52,6 +52,10 @@ SAVEREGSFRAME struct
 	SaveXmm7       xmmword ?
 	SaveXmm8       xmmword ?
 	SaveXmm9       xmmword ?
+	SaveXmm10      xmmword ?
+	SaveXmm11      xmmword ?
+	SaveXmm12       xmmword ?
+	SaveXmm13       xmmword ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
 
@@ -145,9 +149,9 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   WormHoleRadians  mmword 0.0
   WormHoleRadiansInc  mmword -0.0872222222
   StartZoom        dd 0
-
+  TestRadians      mmword 0.0872222
   WORD_SWITCH_Y_DIRECTION  dd 20
-
+  TestRadians_Use  mmword 0.0
 
 .CODE
 
@@ -767,7 +771,7 @@ NESTED_END WormHole_PlotStars, _TEXT$00
 ;*********************************************************
 ;  WormHole_PrintWord
 ;
-;        Parameters: Master Context, String, X, Y, Font Size, Radians
+;        Parameters: Master Context, String, X, Y, Font Size, Radians, Sine Wave Radians
 ;
 ;       
 ;
@@ -787,6 +791,10 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP], xmm7
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP], xmm8
  MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP], xmm9
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm10[RSP], xmm10
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm11[RSP], xmm11
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm12[RSP], xmm12
+ MOVAPS WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm13[RSP], xmm13
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX ; Master Context
@@ -794,7 +802,10 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
   MOV R14, R8  ; X Location
   MOV R12, R9  ; Y Location
   MOV WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param3[RSP], R12
-
+  MOVSD xmm0, [TestRadians]
+  MOVSD xmm10, [TestRadians_Use]
+  ADDSD xmm0, xmm10
+  MOVSD [TestRadians_Use], xmm0
 @WormHole_PrintStringLoop:
   ;
   ; Get the Bit Font
@@ -813,7 +824,19 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 @VerticleLines:
        MOV BL, 80h
        MOV R13, R14
+	   MOVSD xmm11, xmm10
+	   MOV RBP, R12
 @HorizontalLines:
+		   MOVSD xmm0, xmm10
+		   CALL Sin
+
+		   MOV RAX, 10
+		   CVTSI2SD xmm1, RAX
+		   MULSD xmm0, xmm1
+		   CVTSI2SD xmm1, R12
+		   ADDSD xmm1, xmm0
+		   CVTSD2SI R12, xmm1
+
            MOV RAX, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param1[RSP]
            TEST BL, [RAX]
            JZ @NoPixelToPlot
@@ -837,7 +860,8 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 			  ;
 			  CVTSI2SD xmm6, R14 ; X
 			  CVTSI2SD xmm7, R12 ; Y
-			  
+
+		  
 			  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
 			  SHR RAX, 1
 			  CVTSI2SD xmm0, RAX
@@ -911,11 +935,16 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 @NoPixelToPlot:
         ADD R14, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param5[RSP]
 @DonePlottingPixel:
+    MOVSD xmm0, [TestRadians]
+    ADDSD xmm10, xmm0
+
     SHR BL, 1
     TEST BL, BL
     JNZ @HorizontalLines
   MOV R14, R13
+  MOV R12, RBP
   INC R12
+  MOVSD xmm10, xmm11
   DEC RSI
   JNZ @VerticleLines
   
@@ -934,6 +963,11 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
   SHL RCX, 3
   ADD R14, RCX
   ADD R14, 3
+  ADD RCX, 3
+  CVTSI2SD xmm1, RCX
+  MOVSD xmm0, [TestRadians]
+  MULSD xmm0, xmm1
+  ADDSD xmm10, xmm0
    
   CMP BYTE PTR [R15], 0 
   JNE @WormHole_PrintStringLoop
@@ -945,6 +979,10 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
  MOVAPS xmm7,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP]
  MOVAPS xmm8,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm8[RSP]
  MOVAPS xmm9,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm9[RSP]
+ MOVAPS xmm10,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm10[RSP]
+ MOVAPS xmm11,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm11[RSP]
+ MOVAPS xmm12,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm12[RSP]
+ MOVAPS xmm13,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm13[RSP]
   MOV rdi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, WORM_HOLE_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, WORM_HOLE_STRUCTURE.SaveFrame.SaveRbx[RSP]
