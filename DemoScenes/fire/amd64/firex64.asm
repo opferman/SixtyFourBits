@@ -357,7 +357,7 @@ FRAME_TEXT EQU <150>
                             ; ; Add more text
                             db 0
 
-                  FrameCountDown dd 2500
+                  FrameCountDown dd 1500
 .CODE
 
 ;*********************************************************
