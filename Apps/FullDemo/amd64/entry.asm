@@ -119,7 +119,7 @@ NESTED_ENTRY WinMain, _TEXT$00
   ; If Windowed Mode, enable emulated verticle retrace
   ;
   XOR AL, 1
-  SHL RAX, 4
+  SHL RAX, 3
   MOV WINMAIN_FRAME.InitializationStruct.EmulateVRTrace[RSP], RAX
 
   LEA RCX, WINMAIN_FRAME.InitializationStruct[RSP]
