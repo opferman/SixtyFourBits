@@ -85,6 +85,8 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
+FULL_DIRECTION EQU <80>
+HALF_DIRECTION EQU <40>
 
 .DATA
   DoubleBuffer   dq ?
@@ -94,7 +96,15 @@ extern rand:proc
   Soft3D         dq ?
   TwoDPlot        TD_POINT_2D <?>
   WorldLocation   TD_POINT    <?>
-  View_Distance   mmword   256.0
+  View_Distance   mmword   1024.0
+  ConstantZero   mmword 0.0
+  CurrentVelocity  dq 1
+  CameraX       mmword 0.0
+  CameraY       mmword 0.0
+  CameraXVel       mmword 0.0
+  CameraYVel       mmword -0.00872665
+  CameraTurns     dq 0
+  ConstantNeg   mmword -1.0
 .CODE
 
 ;*********************************************************
@@ -149,13 +159,10 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   MOV TD_POINT.y[RCX], 0
   MOV TD_POINT.z[RCX], 0
 
-
   MOVSD xmm0, [View_Distance]
   MOVSD xmm1, xmm0
   MOV RCX, [SOft3D]
   DEBUG_FUNCTION_CALL Soft3D_SetViewDistance
-
-
 
   XOR R12, R12
 
@@ -235,7 +242,10 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
       ;
       XOR EDX, EDX
       MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
+	  CMP [FrameCountDown], 100
+	  JB @DontClear
 	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
+@DontClear:
       MOV RCX, [VirtualPallete]
       DEBUG_FUNCTION_CALL VPal_GetColorIndex 
 
@@ -272,7 +282,109 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL StarDemo_PlotStars
 
-    
+   CMP [FrameCountDown], 2500
+   JNE @SkipUpdateCounter
+   INC [CurrentVelocity]
+
+@SkipUpdateCounter:
+   CMP [FrameCountDown], 2490
+   JNE @SkipUpdateCounter2
+   INC [CurrentVelocity]
+
+@SkipUpdateCounter2:
+   CMP [FrameCountDown], 2487
+   JNE @SkipUpdateCounter3
+   ;INC [CurrentVelocity]
+
+@SkipUpdateCounter3:
+   CMP [FrameCountDown], 2485
+   JNE @SkipUpdateCounter4
+   ;INC [CurrentVelocity]
+
+@SkipUpdateCounter4:
+   CMP [FrameCountDown], 2480
+   JA @SkipCamera
+;   INC [CurrentVelocity]
+
+   MOVSD xmm0, [CameraXVel]
+   MOVSD xmm1, [CameraX]
+   ADDSD xmm1, xmm0
+   MOVSD [CameraX], xmm1
+
+   MOVSD xmm0, [CameraYVel]
+   MOVSD xmm2, [CameraY]
+   ADDSD xmm2, xmm0
+   MOVSD [CameraY], xmm2
+
+   PXOR xmm3, xmm3
+  MOV RCX, [SOft3D]
+  DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
+
+  INC [CameraTurns]
+
+  CMP [CameraTurns], HALF_DIRECTION
+  JNE @NextCheck
+  MOVSD xmm0, [ConstantNeg]
+  MOVSD xmm1, [CameraYVel]
+  MULSD xmm1, xmm0
+  MOVSD [CameraYVel], xmm1
+  JMP @CameraDone
+
+@NextCheck:
+  CMP [CameraTurns], HALF_DIRECTION + FULL_DIRECTION
+  JNE @NextCheck2
+  MOVSD xmm0, [ConstantNeg]
+  MOVSD xmm1, [CameraYVel]
+  MULSD xmm1, xmm0
+  MOVSD [CameraYVel], xmm1
+  JMP @CameraDone
+
+@NextCheck2:
+  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION
+  JNE @NextCheck3
+  MOVSD xmm1, [CameraYVel]
+  MOVSD [CameraXVel], xmm1
+  PXOR xmm0, xmm0
+  MOVSD [CameraYVel], xmm0
+  JMP @CameraDone
+@NextCheck3:
+  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + HALF_DIRECTION
+  JNE @NextCheck4
+  MOVSD xmm0, [ConstantNeg]
+  MOVSD xmm1, [CameraXVel]
+  MULSD xmm1, xmm0
+  MOVSD [CameraXVel], xmm1
+  JMP @CameraDone
+@NextCheck4:
+  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + FULL_DIRECTION
+  JNE @NextCheck5
+  MOVSD xmm0, [ConstantNeg]
+  MOVSD xmm1, [CameraXVel]
+  MULSD xmm1, xmm0
+  MOVSD [CameraXVel], xmm1
+  JMP @CameraDone
+@NextCheck5:
+  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + FULL_DIRECTION  + HALF_DIRECTION
+  JNE @NextCheck6
+  MOVSD xmm0, [ConstantNeg]
+  MOVSD xmm1, [CameraXVel]
+  MULSD xmm1, xmm0
+  MOVSD [CameraXVel], xmm1
+
+@NextCheck6:
+  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + FULL_DIRECTION  +  FULL_DIRECTION
+  JNE @CameraDone
+  MOV [CameraTurns], 0
+
+  MOVSD xmm1,  [CameraXVel]
+  MOVSD [CameraYVel], xmm1
+  PXOR xmm1, xmm1
+  MOVSD [CameraXVel], xmm1
+ 
+@CameraDone:
+@SkipCamera:
+
+
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
@@ -420,6 +532,13 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   MOV R12, RCX
   
 @Move_Stars:
+
+  MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
+  UCOMISD xmm0,  mmword ptr [ConstantZero]
+  JG @CheckOffScreen
+  JMP @CreateNewStar
+
+@CheckOffScreen:
   CMP STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_OFF_SCREEN
   JE @CreateNewStar
 
@@ -471,10 +590,7 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   DEBUG_FUNCTION_CALL Math_rand
   MOV STAR_FIELD_ENTRY.Color[RDI], AL
 
-  ;DEBUG_FUNCTION_CALL Math_rand
-  ;AND RAX, 3
-  ;INC RAX
-  MOV RAX, 1
+  MOV RAX, [CurrentVelocity]
   cvtsi2sd xmm0, rax
   MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
 
