@@ -79,6 +79,7 @@ STAR_FIELD_ENTRY struct
    Velocity        mmword    ?  
    StarOnScreen    dq        ?
    Color           db        ?
+   StarDead        dq        ?
 STAR_FIELD_ENTRY ends
 
 WORM_HOLE_STRUCTURE struct
@@ -110,7 +111,7 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
 .DATA
   DoubleBuffer   dq ?
   VirtualPallete dq ?
-  FrameCountDown dd 2800
+  FrameCountDown dd 2000
 ;  StarEntry      STAR_FIELD_ENTRY NUMBER_STARS DUP(<>)
   StarEntryPtr    dq ?
   Soft3D          dq ?
@@ -118,7 +119,7 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   WorldLocation   TD_POINT    <5.0, 5.0, 0.0>
   StartX          mmword   10.0
   StartY          mmword   10.0
-  StartZ          mmword   9.0
+  StartZ          mmword   5.0
   VelZ            mmword   0.005
   RotationZ       mmword   0.0
   RotationRadians mmword   0.0472222222
@@ -143,8 +144,10 @@ NUMBER_STARS_SIZE EQU <NUMBER_STARS * (SIZE STAR_FIELD_ENTRY)>
   WormFontDec      dd 0
   WormHoleRadians  mmword 0.0
   WormHoleRadiansInc  mmword -0.0872222222
+  StartZoom        dd 0
 
   WORD_SWITCH_Y_DIRECTION  dd 20
+
 
 .CODE
 
@@ -206,8 +209,6 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
   MOVSD xmm1, xmm0
   MOV RCX, [SOft3D]
   DEBUG_FUNCTION_CALL Soft3D_SetViewDistance
-
-
 
   XOR R12, R12
 
@@ -325,6 +326,8 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL WormHole_PlotStars
 
+   CMP [StartZoom], 1
+   JE @Keep_Rotating
 
    ; Parameters: Master Context, String, X, Y, Font Size, Radians
    MOVSD xmm0, [WormHoleRadians]
@@ -339,7 +342,6 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
 
    MOV EAX, [WormHoleYVel]
    ADD [WormHoleY], EAX
-
    INC [WormHoleSwitchY]
    MOV EAX, [WORD_SWITCH_Y_DIRECTION]
    CMP [WormHoleSwitchY], EAX
@@ -354,10 +356,10 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    MOV EAX, [WormHoleXVel]
    ADD [WormHoleX], EAX
    JMP   @FrameDone
-@FontSize:
+ @FontSize:
 
    CMP [WormFontSize], 1
-   JBE  @Keep_Rotating
+   JBE  @Font_Is_Done_Start_Zoom
    
   INC [WormFontDec]
   CMP [WormFontDec], WORD_FONT_DEC
@@ -367,6 +369,13 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
    DEC [WormFontSize]
    ADD [WormHoleX], 35
   ; ADD [WORD_SWITCH_Y_DIRECTION], 1
+  JMP @Keep_Rotating
+@Font_Is_Done_Start_Zoom:
+  MOV [StartZoom], 1
+  MOVSD xmm0, [VelZMoving]
+  ADDSD xmm0, xmm0
+  ADDSD xmm0, xmm0
+  MOVSD [VelZMoving], xmm0
 
 @Keep_Rotating:
   MOVSD xmm0, [WormHoleRadians]
@@ -460,7 +469,7 @@ NESTED_ENTRY WormHole_CreateStars, _TEXT$00
   MOVSD xmm8, [StartZ]
 
 @Initialize_Stars:
-
+  MOV STAR_FIELD_ENTRY.StarDead[RDI], 0
   MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm6
   MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm7
   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm8
@@ -584,18 +593,34 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   
 @Move_Stars:
   
-
+  MOV RAX, STAR_FIELD_ENTRY.StarDead[RDI]
+  CMP RAX, 1
+  JE @SkipUpdateZ
 
   MOVSD xmm6, STAR_FIELD_ENTRY.Location.x[RDI]
   MOVSD xmm7, STAR_FIELD_ENTRY.Location.y[RDI]
   MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
   MOVSD STAR_FIELD_ENTRY.RotatedLocation.z[RDI], xmm0
+  CMP [StartZoom], 1
+  JE @AdvancingStars
 
   CMP [StopAdvancing], 1
   JE @SkipUpdateZ
+
+@AdvancingStars:
+
   MOVSD xmm1, [VelZMoving]
   ADDSD XMM0, XMM1
   MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+  CMP [StartZoom], 1
+  JNE @SkipUpdateZColor
+
+  MOV AL, STAR_FIELD_ENTRY.Color[RDI]
+  CMP AL, 0FFh
+  JE @SkipUpdateZColor
+  INC STAR_FIELD_ENTRY.Color[RDI]
+
+@SkipUpdateZColor:
 @SkipUpdateZ:
   ;
   ; cos(r)*x - sin(r)*y
@@ -640,7 +665,7 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
   MOVSD STAR_FIELD_ENTRY.NewRadians[RDI], xmm0
 
 @SkipAdjustRadians:
-
+  
 
   ADD RDI, SIZE STAR_FIELD_ENTRY
   INC RSI
@@ -657,8 +682,6 @@ NESTED_ENTRY WormHole_MoveStars, _TEXT$00
  MOVSD xmm1, [RotationZ]
  ADDSD xmm1, xmm0
  MOVSD [RotationZ], xmm1
-   
-
   
  MOVAPS xmm6,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm6[RSP]
  MOVAPS xmm7,  WORM_HOLE_STRUCTURE.SaveFrame.SaveXmm7[RSP]
@@ -724,6 +747,7 @@ NESTED_ENTRY WormHole_PlotStars, _TEXT$00
    UCOMISD xmm0,  mmword ptr [ConstantZero]
    JA @SkipUpdateZ
    MOV [StopAdvancing], 1
+   MOV STAR_FIELD_ENTRY.StarDead[RDI], 1
    ;MOVSD xmm0, [StartZ]
    ;MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
 @SkipUpdateZ:
@@ -785,11 +809,10 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
   MOV RSI, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param5[RSP]
   MOV WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param2[RSP], 8
 
-
+  
 @VerticleLines:
        MOV BL, 80h
        MOV R13, R14
-
 @HorizontalLines:
            MOV RAX, WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param1[RSP]
            TEST BL, [RAX]
@@ -805,6 +828,7 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 
 @PlotRotatedPixel:
               MOV  WORM_HOLE_STRUCTURE_FUNC.FuncParams.Param4[RSP], R9
+
 			  ;
 			  ; Rotate
 			  ;
@@ -813,7 +837,7 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
 			  ;
 			  CVTSI2SD xmm6, R14 ; X
 			  CVTSI2SD xmm7, R12 ; Y
-
+			  
 			  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
 			  SHR RAX, 1
 			  CVTSI2SD xmm0, RAX
@@ -890,7 +914,6 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
     SHR BL, 1
     TEST BL, BL
     JNZ @HorizontalLines
-
   MOV R14, R13
   INC R12
   DEC RSI
@@ -911,7 +934,7 @@ NESTED_ENTRY WormHole_PrintWord, _TEXT$00
   SHL RCX, 3
   ADD R14, RCX
   ADD R14, 3
- 
+   
   CMP BYTE PTR [R15], 0 
   JNE @WormHole_PrintStringLoop
 
