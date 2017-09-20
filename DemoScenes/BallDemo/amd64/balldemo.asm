@@ -72,7 +72,7 @@ public Ball_Demo
 public Ball_Free
 
 MAX_FRAMES     EQU <180000>
-UPDATE_DIVISOR EQU <120>
+UPDATE_DIVISOR EQU <0>
 GRAVITY        EQU <1>
 GRAV_DIVISOR   EQU <20>
 NUM_BALLS      EQU <15>
@@ -721,8 +721,8 @@ NESTED_ENTRY Ball_Demo, _TEXT$00
   ; dont have access to graphics yet.
   ;
   XOR RAX, RAX
-  CMP AL, [BgColorIsSet]
-  JNE @BallDemo_BgColorHasBeenSet
+;  CMP AL, [BgColorIsSet]
+;  JNE @BallDemo_BgColorHasBeenSet
   MOV EAX, [BackgroundColor]
   MOV RCX, RSI
   MOV RDX, RAX
