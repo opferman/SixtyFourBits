@@ -6,7 +6,7 @@
 ;
 ; Set "DEBUG_IS_ENABLED" to 1 to enable debug build or 0 to disable
 ;
-DEBUG_IS_ENABLED EQU <1>
+DEBUG_IS_ENABLED EQU <0>
 
 ;
 ; Ensure RSP is aligned
