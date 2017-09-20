@@ -25,6 +25,7 @@ include font_public.inc
 include soft3d_public.inc
 include soft3d_funcs.inc
 include debug_public.inc
+include frameloop_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -85,26 +86,49 @@ extern time:proc
 extern srand:proc
 extern rand:proc
 
-FULL_DIRECTION EQU <80>
-HALF_DIRECTION EQU <40>
-
 .DATA
-  DoubleBuffer   dq ?
-  VirtualPallete dq ?
-  FrameCountDown dd 2800
-  StarEntry      STAR_FIELD_ENTRY 1000 DUP(<>)
-  Soft3D         dq ?
-  TwoDPlot        TD_POINT_2D <?>
-  WorldLocation   TD_POINT    <?>
-  View_Distance   mmword   1024.0
-  ConstantZero   mmword 0.0
+  DoubleBuffer     dq ?
+  VirtualPallete   dq ?
+  FrameCountDown   dd 2800
+  StarEntry        STAR_FIELD_ENTRY 1000 DUP(<>)
+  Soft3D           dq ?
+  TwoDPlot         TD_POINT_2D <?>
+  WorldLocation    TD_POINT    <?>
+  View_Distance    mmword   1024.0
+  ConstantZero     mmword 0.0
   CurrentVelocity  dq 1
-  CameraX       mmword 0.0
-  CameraY       mmword 0.0
-  CameraXVel       mmword 0.0
+  CameraX          mmword 0.0
+  CameraY          mmword 0.0
+  CameraXVel       mmword -0.00872665
   CameraYVel       mmword -0.00872665
-  CameraTurns     dq 0
-  ConstantNeg   mmword -1.0
+  ConstantNeg      mmword -1.0
+  
+  FrameLoopHandle dq ?
+
+
+  FrameLoopList   FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 300, 300>
+                  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 10, 10>
+				  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 3, 3>
+				  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 2, 2>
+				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 5,  45>
+				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraYVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 45, 45>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 45, 45>
+				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  90>
+				  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 90, 90>
+				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraYVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
+				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 5,  45>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 45, 45>
+				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  50>
+				  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 50, 50>				  
+				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraXVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
+				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  90>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 90, 90>
+				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraXVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
+				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  50>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 50, 50>
+                  FRAMELOOP_ENTRY_CB <0, 0, 0, 1, 1>  ; End Marker
+
+
 .CODE
 
 ;*********************************************************
@@ -183,6 +207,12 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL StarDemo_CreateStars
+
+  LEA RCX, [FrameLoopList]
+  DEBUG_FUNCTION_CALL FrameLoop_Create
+  MOV [FrameLoopHandle], RAX
+  TEST RAX, RAX
+  JZ @StarInit_Failed
     
   MOV RSI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV RDI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -282,109 +312,19 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL StarDemo_PlotStars
 
-   CMP [FrameCountDown], 2500
-   JNE @SkipUpdateCounter
-   INC [CurrentVelocity]
+   MOV RCX, [FrameLoopHandle]
+   DEBUG_FUNCTION_CALL FrameLoop_PerformFrame
+   CMP RAX, 0
+   JNE @SkipReset
+   
+   LEA RCX, [FrameLoopList]
+   MOV FRAMELOOP_ENTRY_CB.EndFrame[RCX], 5
+   MOV FRAMELOOP_ENTRY_CB.StartFrame[RCX], 5
 
-@SkipUpdateCounter:
-   CMP [FrameCountDown], 2490
-   JNE @SkipUpdateCounter2
-   INC [CurrentVelocity]
+   MOV RCX, [FrameLoopHandle]
+   DEBUG_FUNCTION_CALL FrameLoop_Reset
 
-@SkipUpdateCounter2:
-   CMP [FrameCountDown], 2487
-   JNE @SkipUpdateCounter3
-   ;INC [CurrentVelocity]
-
-@SkipUpdateCounter3:
-   CMP [FrameCountDown], 2485
-   JNE @SkipUpdateCounter4
-   ;INC [CurrentVelocity]
-
-@SkipUpdateCounter4:
-   CMP [FrameCountDown], 2480
-   JA @SkipCamera
-;   INC [CurrentVelocity]
-
-   MOVSD xmm0, [CameraXVel]
-   MOVSD xmm1, [CameraX]
-   ADDSD xmm1, xmm0
-   MOVSD [CameraX], xmm1
-
-   MOVSD xmm0, [CameraYVel]
-   MOVSD xmm2, [CameraY]
-   ADDSD xmm2, xmm0
-   MOVSD [CameraY], xmm2
-
-   PXOR xmm3, xmm3
-  MOV RCX, [SOft3D]
-  DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
-
-  INC [CameraTurns]
-
-  CMP [CameraTurns], HALF_DIRECTION
-  JNE @NextCheck
-  MOVSD xmm0, [ConstantNeg]
-  MOVSD xmm1, [CameraYVel]
-  MULSD xmm1, xmm0
-  MOVSD [CameraYVel], xmm1
-  JMP @CameraDone
-
-@NextCheck:
-  CMP [CameraTurns], HALF_DIRECTION + FULL_DIRECTION
-  JNE @NextCheck2
-  MOVSD xmm0, [ConstantNeg]
-  MOVSD xmm1, [CameraYVel]
-  MULSD xmm1, xmm0
-  MOVSD [CameraYVel], xmm1
-  JMP @CameraDone
-
-@NextCheck2:
-  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION
-  JNE @NextCheck3
-  MOVSD xmm1, [CameraYVel]
-  MOVSD [CameraXVel], xmm1
-  PXOR xmm0, xmm0
-  MOVSD [CameraYVel], xmm0
-  JMP @CameraDone
-@NextCheck3:
-  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + HALF_DIRECTION
-  JNE @NextCheck4
-  MOVSD xmm0, [ConstantNeg]
-  MOVSD xmm1, [CameraXVel]
-  MULSD xmm1, xmm0
-  MOVSD [CameraXVel], xmm1
-  JMP @CameraDone
-@NextCheck4:
-  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + FULL_DIRECTION
-  JNE @NextCheck5
-  MOVSD xmm0, [ConstantNeg]
-  MOVSD xmm1, [CameraXVel]
-  MULSD xmm1, xmm0
-  MOVSD [CameraXVel], xmm1
-  JMP @CameraDone
-@NextCheck5:
-  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + FULL_DIRECTION  + HALF_DIRECTION
-  JNE @NextCheck6
-  MOVSD xmm0, [ConstantNeg]
-  MOVSD xmm1, [CameraXVel]
-  MULSD xmm1, xmm0
-  MOVSD [CameraXVel], xmm1
-
-@NextCheck6:
-  CMP [CameraTurns], FULL_DIRECTION + FULL_DIRECTION + FULL_DIRECTION  +  FULL_DIRECTION
-  JNE @CameraDone
-  MOV [CameraTurns], 0
-
-  MOVSD xmm1,  [CameraXVel]
-  MOVSD [CameraYVel], xmm1
-  PXOR xmm1, xmm1
-  MOVSD [CameraXVel], xmm1
- 
-@CameraDone:
-@SkipCamera:
-
-
+@SkipReset:
   MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
   MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
@@ -663,6 +603,113 @@ NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
   RET
 NESTED_END StarDemo_PlotStars, _TEXT$00
 
+;*********************************************************
+;  StarDemo_IncStarVelocity_CB
+;
+;        Parameters: Leaf function for updating Velocity
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY StarDemo_IncStarVelocity_CB, _TEXT$00
+  .ENDPROLOG 
+  CMP [CurrentVelocity], 5
+  JAE @SkipUpdate
+  INC [CurrentVelocity]
+@SkipUpdate:
+  RET
+NESTED_END StarDemo_IncStarVelocity_CB, _TEXT$00
+
+
+;*********************************************************
+;  StarDemo_SetCameraYOnly_CB
+;
+;        Parameters: Set the Camera
+;
+;       
+;
+;
+;*********************************************************    
+NESTED_ENTRY StarDemo_SetCameraYOnly_CB, _TEXT$00
+  alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+  .ENDPROLOG 
+  MOVSD xmm1, [CameraX]
+
+  MOVSD xmm0, [CameraYVel]
+  MOVSD xmm2, [CameraY]
+  ADDSD xmm2, xmm0
+  MOVSD [CameraY], xmm2
+
+  PXOR xmm3, xmm3
+  MOV RCX, [SOft3D]
+  DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
+  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  RET
+NESTED_END StarDemo_SetCameraYOnly_CB, _TEXT$00
+
+
+;*********************************************************
+;  StarDemo_SetCameraXOnly_CB
+;
+;        Parameters: Set the Camera
+;
+;       
+;
+;
+;*********************************************************    
+NESTED_ENTRY StarDemo_SetCameraXOnly_CB, _TEXT$00
+  alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+  .ENDPROLOG 
+  MOVSD xmm0, [CameraXVel]
+  MOVSD xmm1, [CameraX]
+  ADDSD xmm1, xmm0
+  MOVSD [CameraX], xmm1
+
+  MOVSD xmm2, [CameraY]
+
+  PXOR xmm3, xmm3
+  MOV RCX, [SOft3D]
+  DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
+  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  RET
+NESTED_END StarDemo_SetCameraXOnly_CB, _TEXT$00
+
+;*********************************************************
+;  StarDemo_DecCameraYVel_CB
+;
+;        Parameters: Slow down Camera Y Panning
+;
+;       
+;
+;
+;*********************************************************    
+NESTED_ENTRY StarDemo_DecCameraYVel_CB, _TEXT$00
+  .ENDPROLOG 
+  MOVSD xmm0, [CameraYVel]
+  MOVSD xmm1, [ConstantNeg]
+  MULSD xmm0, xmm1
+  MOVSD [CameraYVel], xmm0
+  RET
+NESTED_END StarDemo_DecCameraYVel_CB, _TEXT$00
+
+;*********************************************************
+;  StarDemo_DecCameraXVel_CB
+;
+;        Parameters: Slow down Camera Y Panning
+;
+;       
+;
+;
+;*********************************************************    
+NESTED_ENTRY StarDemo_DecCameraXVel_CB, _TEXT$00
+  .ENDPROLOG 
+  MOVSD xmm0, [CameraXVel]
+  MOVSD xmm1, [ConstantNeg]
+  MULSD xmm0, xmm1
+  MOVSD [CameraXVel], xmm0
+  RET
+NESTED_END StarDemo_DecCameraXVel_CB, _TEXT$00
 
 
 END
