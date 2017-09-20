@@ -85,6 +85,13 @@ NESTED_ENTRY WinMain, _TEXT$00
   SETE AL
   MOV WINMAIN_FRAME.InitializationStruct.FullScreen[RSP], RAX
 
+  ;
+  ; If Windowed Mode, enable emulated verticle retrace
+  ;
+  ;XOR AL, 1
+  ;SHL RAX, 3
+  MOV WINMAIN_FRAME.InitializationStruct.EmulateVRTrace[RSP], 0  ; We can do 0, that disables it in Windowed mode.  Otherwise it's garbage since the struct was updated.
+
   LEA RCX, WINMAIN_FRAME.InitializationStruct[RSP]
   CALL Initialization_Demo
 

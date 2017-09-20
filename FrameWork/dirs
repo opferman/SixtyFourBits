@@ -6,4 +6,5 @@ dirs=DDraw \
      Font \
      Init \
      Soft3D \
-	 Brownian
+     Brownian \
+     FrameLoop
