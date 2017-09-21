@@ -57,6 +57,7 @@ public Brownian_DisplayPixel
 public Brownian_GetNextXLocation
 public Brownian_GetNextYLocation
 public Brownian_SetupBuffer
+public Brownian_PlotLocation
 
 ;*********************************************************
 ; Data Segment
@@ -389,13 +390,13 @@ NESTED_ENTRY Brownian_FindNextPixel, _TEXT$00
   CMP r11, rsi
   JAE @ChangeRight
   
-  ;check top
-  CMP r12, rbx
-  JAE @ChangeTop
-  
   ;check Bottom
+  CMP r12, rbx
+  JAE @ChangeBottom
+  
+  ;check Top
   CMP r12, r13
-  JBE @ChangeBottom
+  JBE @ChangeTop
   
   MOV RCX, r11
   MOV RDX, r12
@@ -425,8 +426,8 @@ NESTED_ENTRY Brownian_FindNextPixel, _TEXT$00
   INC [xDirection]
   
   CALL rand
-  MOV r13,10h
-  DIV r13
+  MOV r9,10h
+  DIV r9
   ADD r11, RDX
   JMP @PlotRandomInternal
   
@@ -436,30 +437,30 @@ NESTED_ENTRY Brownian_FindNextPixel, _TEXT$00
   DEC [xDirection]
   
   CALL rand
-  MOV r13,09h
-  DIV r13
+  MOV r9,09h
+  DIV r9
   SUB r11, RDX
   JMP @PlotRandomInternal
   
-  @ChangeTop:
+  @ChangeBottom:
   CMP [yDirection], 1
   JNE @PlotRandomInternal
   DEC [yDirection]
   
   CALL rand
-  MOV r13,20h
-  DIV r13
+  MOV r9,20h
+  DIV r9
   SUB r12, RDX
   JMP @PlotRandomInternal
   
-  @ChangeBottom:
+  @ChangeTop:
   CMP [yDirection], 0
   JNE @PlotRandomInternal
   INC [yDirection]
   
   CALL rand
-  MOV r13,0fh
-  DIV r13
+  MOV r9,0fh
+  DIV r9
   ADD r12, RDX
   JMP @PlotRandomInternal
   

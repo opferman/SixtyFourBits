@@ -12,3 +12,4 @@ extern Brownian_DisplayPixel:proc
 extern Brownian_GetNextXLocation:proc
 extern Brownian_GetNextYLocation:proc
 extern Brownian_SetupBuffer:proc
+extern Brownian_PlotLocation:proc

@@ -153,125 +153,179 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   ;
   ; Get the Video Buffer
   ;  
-  
   CMP [Brownian_InitFlag], 1
-  JE @PlotRandom
-    
+  JE @StartDemo
   CALL Brownian_SetupBuffer
-
   XOR r10, r10
   XOR r13, r13
+  MOV R11, 4
+  MOV R12, 100
+  @FirstLine:
+  MOV RCX,R12
+  MOV RDX,100
+  MOV R8, 000FF00h
+  MOV R9, RSI
+  CALL DrawSquares
+  ADD R12, 200
+  DEC R11
+  JNZ @FirstLine
   
+  MOV R11, 4
+  MOV R12, 100
+  @SecondLine:
+  MOV RCX,R12
+  MOV RDX,300
+  MOV R8, 000FF00h
+  MOV R9, RSI
+  CALL DrawSquares
+  ADD R12, 200
+  DEC R11
+  JNZ @SecondLine
   
-  MOV RCX, 0200h;
-  MOV RDX, 0120h;
+  MOV R11, 4
+  MOV R12, 100
+  @ThirdLine:
+  MOV RCX,R12
+  MOV RDX,500
+  MOV R8, 000FF00h
+  MOV R9, RSI
+  CALL DrawSquares
+  ADD R12, 200
+  DEC R11
+  JNZ @ThirdLine
+  
+  XOR R11,R11
+  XOR R12,R12
+  MOV R11, 4
+  MOV R12, 100
+  @PlantFLSeed:
+  CALL rand
+  MOV r13,150
+  DIV r13
+  ADD RDX,100
+  MOV R10,RDX
+  
+  CALL rand
+  MOV r13,150
+  DIV r13
+  ADD RDX,R12
+  MOV RCX,RDX
+  MOV RDX,R10
   CALL Brownian_PlantSeed
+  ADD R12, 200
+  DEC R11
+  JNZ @PlantFLSeed
   
-  MOV RCX, 0210h
-  MOV RDX, 0B0h
-  CALL Brownian_PlantSeed
+  MOV R11, 4
+  MOV R12, 100
+  @PlantSLSeed:
+  CALL rand
+  MOV r13,150
+  DIV r13
+  ADD RDX,300
+  MOV R10,RDX
   
-  MOV RCX, 01F0h
-  MOV RDX, 0100h
+  CALL rand
+  MOV r13,150
+  DIV r13
+  ADD RDX,R12
+  MOV RCX,RDX
+  MOV RDX,R10
   CALL Brownian_PlantSeed
+  ADD R12, 200
+  DEC R11
+  JNZ @PlantSLSeed
   
-  MOV RCX, 0220h
-  MOV RDX, 0150h
+  MOV R11, 4
+  MOV R12, 100
+  @PlantTLSeed:
+  CALL rand
+  MOV r13,150
+  DIV r13
+  ADD RDX,500
+  MOV R10,RDX
+  
+  CALL rand
+  MOV r13,150
+  DIV r13
+  ADD RDX,R12
+  MOV RCX,RDX
+  MOV RDX,R10
   CALL Brownian_PlantSeed
- 
+  ADD R12, 200
+  DEC R11
+  JNZ @PlantTLSeed
   
   MOV [Brownian_InitFlag], 1
- 
   
+  @StartDemo:
   
-  @PlotRandom: 
-  CMP [Plot_Counter], 03000h
-  JAE @SecondSquare
-  MOV rcx, 01E7h
-  MOV rdx, 0219h
-  MOV r8, 0250h
-  MOV r9, 0B8h
+  MOV R11, 4
+  MOV R12, 100
+  @PlotFL: 
+  MOV rcx, R12
+  MOV rdx, R12
+  ADD rdx, 150
+  MOV r8, 250
+  MOV r9, 100
   CALL Brownian_FindNextPixel 
-  CALL rand
-  MOV r13,0EEEEEEh
-  DIV r13
-  ADD RDX,0010101h
-  MOV R9,RDX
-  
-  
+  MOV R9,0FF0000h
   CALL Brownian_GetNextXLocation
   MOV RDX, RAX
   CALL Brownian_GetNextYLocation
   MOV r8, RAX
   MOV RCX, RSI
   CALL Brownian_DisplayPixel
-
-  CMP [Plot_Counter], 0500h
-  JAE @SecondSquare
-  MOV rcx, 01DDh
-  MOV rdx, 0223h
-  MOV r8, 0C8h
-  MOV r9, 096h
-  CALL Brownian_FindNextPixel
-  CALL rand
-  MOV r13,0EEEEEEh
-  DIV r13
-  ADD RDX,0010101h
-  MOV R9,RDX
+  ADD R12, 200
+  DEC R11
+  JNZ @PlotFL
  
- 
+  MOV R11, 4
+  MOV R12, 100
+  @PlotSL: 
+  MOV rcx, R12
+  MOV rdx, R12
+  ADD rdx, 150
+  MOV r8, 450
+  MOV r9, 300
+  CALL Brownian_FindNextPixel 
+  MOV R9,0FF0000h
   CALL Brownian_GetNextXLocation
   MOV RDX, RAX
   CALL Brownian_GetNextYLocation
   MOV r8, RAX
   MOV RCX, RSI
   CALL Brownian_DisplayPixel
+  ADD R12, 200
+  DEC R11
+  JNZ @PlotSL
   
-  @SecondSquare:
-  CMP [Plot_Counter], 05000h
-  JAE @LastSquare
-  MOV rcx, 01ABh
-  MOV rdx, 0255h
-  MOV r8, 012Ch
-  MOV r9, 0C8h
-  CALL Brownian_FindNextPixel
-  CALL rand
-  MOV r13,0EEEEEEh
-  DIV r13
-  ADD RDX,0010101h
-  MOV R9,RDX
-  
-  MOV RCX, RSI
+  MOV R11, 4
+  MOV R12, 100
+  @PlotTL: 
+  MOV rcx, R12
+  MOV rdx, R12
+  ADD rdx, 150
+  MOV r8, 650
+  MOV r9, 500
+  CALL Brownian_FindNextPixel 
+  MOV R9,0FF0000h
   CALL Brownian_GetNextXLocation
   MOV RDX, RAX
   CALL Brownian_GetNextYLocation
   MOV r8, RAX
+  MOV RCX, RSI
   CALL Brownian_DisplayPixel
+  ADD R12, 200
+  DEC R11
+  JNZ @PlotTL
   
-  @LastSquare:
-  CMP [Plot_Counter], 0A000h
+  MOV RAX,0
+  INC [FrameCounter]
+  CMP [FrameCounter],10000
   JAE @Terminate
-  MOV rcx, 0160h
-  MOV rdx, 02A0h
-  MOV r8, 01C2h
-  MOV r9, 012Ch
-  CALL Brownian_FindNextPixel
-  CALL rand
-  MOV r13,0EEEEEEh
-  DIV r13
-  ADD RDX,0010101h
-  MOV R9,RDX
-  
-  MOV RCX, RSI
-  CALL Brownian_GetNextXLocation
-  MOV RDX, RAX
-  CALL Brownian_GetNextYLocation
-  MOV r8, RAX
-  CALL Brownian_DisplayPixel
-  
-  INC [Plot_Counter]
- @Terminate:
   MOV RAX, 01h  
+ @Terminate:
   MOV rdi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
   MOV rsi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
   MOV rbx, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
@@ -286,6 +340,103 @@ NESTED_ENTRY Brownian_Demo, _TEXT$00
   
 NESTED_END Brownian_Demo, _TEXT$00
 
+
+;*********************************************************
+;  DrawSquares
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+
+NESTED_ENTRY DrawSquares, _TEXT$00
+ alloc_stack(SIZEOF BROWNIAN_FUNCTION_STRUCT)
+ save_reg rdi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRdi
+ save_reg rsi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRsi
+ save_reg rbx, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRbx
+ save_reg r10, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR10
+ save_reg r11, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR11
+ save_reg r12, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR12
+ save_reg r13, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR13
+
+.ENDPROLOG 
+
+  MOV R10,RCX
+  MOV R11, RDX
+  MOV R12d, R8d
+  MOV RSI, R9
+  
+  MOV R13, 150
+  @DrawLeftLine:
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  MOV RCX, RSI
+  MOV RDX, r10
+  MOV r8,  r11
+  CALL Brownian_PlotLocation
+  ADD RDI, RAX
+  MOV EAX, r12d
+  MOV [RDI], EAX
+  INC R11
+  DEC R13
+  JNZ @DrawLeftLine
+  
+  MOV R13,150
+  @DrawBottomLine:
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  MOV RCX, RSI
+  MOV RDX, r10
+  MOV r8,  r11
+  CALL Brownian_PlotLocation
+  ADD RDI, RAX
+  MOV EAX, r12d
+  MOV [RDI], EAX
+  INC R10
+  DEC R13
+  JNZ @DrawBottomLine
+  
+  MOV R13,150
+  @DrawRightLine:
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  MOV RCX, RSI
+  MOV RDX, r10
+  MOV r8,  r11
+  CALL Brownian_PlotLocation
+  ADD RDI, RAX
+  MOV EAX, r12d
+  MOV [RDI], EAX
+  DEC R11
+  DEC R13
+  JNZ @DrawRightLine
+  
+  MOV R13,150
+  @DrawTopLine:
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  MOV RCX, RSI
+  MOV RDX, r10
+  MOV r8,  r11
+  CALL Brownian_PlotLocation
+  ADD RDI, RAX
+  MOV EAX, r12d
+  MOV [RDI], EAX
+  DEC R10
+  DEC R13
+  JNZ @DrawTopLine
+  
+ @Terminate:
+  MOV rdi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
+  MOV rsi, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
+  MOV rbx, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
+
+  MOV r10, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR10[RSP]
+  MOV r11, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR11[RSP]
+  MOV r12, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR12[RSP]
+  MOV r13, BROWNIAN_FUNCTION_STRUCT.SaveFrame.SaveR13[RSP]
+
+  ADD RSP, SIZE BROWNIAN_FUNCTION_STRUCT
+  RET
+NESTED_END DrawSquares, _TEXT$00
 
 
 ;*********************************************************
