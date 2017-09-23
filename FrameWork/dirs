@@ -7,4 +7,5 @@ dirs=DDraw \
      Init \
      Soft3D \
      Brownian \
-     FrameLoop
+     FrameLoop \
+     Dbuffer

@@ -25,6 +25,7 @@ include master.inc
 include vpal_public.inc
 include font_public.inc
 include debug_public.inc
+include dbuffer_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -393,12 +394,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   ;
   ; Allocate Double Screen Buffer for Fire
   ;
-  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MUL R9
-  MOV RDX, RAX
-  MOV ECX, 040h ; LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV RDX, 1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [FireBuffer], RAX
   TEST RAX, RAX
   JZ @FireInit_Failed
@@ -406,12 +404,9 @@ NESTED_ENTRY Fire_Init, _TEXT$00
   ;
   ; Allocate Double Screen Buffer for Stars
   ;
-  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MUL R9
-  MOV RDX, RAX
-  MOV ECX, 040h ; LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV RDX, 1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [StarBuffer], RAX
   TEST RAX, RAX
   JZ @FireInit_Failed
@@ -553,105 +548,22 @@ NESTED_ENTRY Fire_Demo, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
-
-
+  
   ;
   ; Plot the background stars
   ;  
-  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [StarBuffer]
-
-  XOR r14, r14
-  XOR r12, r12
-
-@FillScreenStars:
-      ;
-      ; Get the Virtual Pallete Index for the pixel on the screen
-      ;
-      XOR EDX, EDX
-      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
-
-      MOV RCX, [VirtualPalleteStars]
-      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
-
-      ; Plot Pixel
-      MOV DWORD PTR [RSI], EAX
-
-      ; Increment to the next location
-      ADD RSI, 4
-      INC r13
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-      JB @FillScreenStars
-
-   ; Calcluate Pitch
-   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-   SHL RAX, 2
-   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
-   SUB RBX, RAX
-   ADD RSI, RBX
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC r14
-
-   CMP r14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-   JB @FillScreenStars
-
+  XOR R8, R8
+  MOV RDX, [VirtualPalleteStars]
+  MOV RCX, [StarBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
   ;
   ; Plot the fire buffer
   ;  
-  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [FireBuffer]
-
-  XOR r14, r14
-  XOR r12, r12
-
-@FillScreen:
-      ;
-      ; Get the Virtual Pallete Index for the pixe on the screen
-      ;
-      XOR EDX, EDX
-      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
-
-	  ;
-	  ; Skip zero so the stars will show.  The stars have already zeroed out the screen also.
-	  ;
-      CMP DL, 0
-      JE @SkipPlottingPixelItIszero
-      MOV RCX, [VirtualPallete]
-      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
-
-      ; Plot Pixel
-      MOV DWORD PTR [RSI], EAX
-@SkipPlottingPixelItIszero:
-      ; Increment to the next location
-      ADD RSI, 4
-      INC r13
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-      JB @FillScreen
-
-   ; Calcluate Pitch
-   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-   SHL RAX, 2
-   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
-   SUB RBX, RAX
-   ADD RSI, RBX
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC r14
-
-   CMP r14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-   JB @FillScreen
+  MOV R8, DB_FLAG_TRANSPARENT_ZERO 
+  MOV RDX, [VirtualPallete]
+  MOV RCX, [FireBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
   ;
   ; Update the fire graphics
