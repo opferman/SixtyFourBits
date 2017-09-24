@@ -24,6 +24,7 @@ include font_public.inc
 include soft3d_public.inc
 include soft3d_funcs.inc
 include debug_public.inc
+include dbuffer_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -54,8 +55,8 @@ SAVEREGSFRAME struct
 	SaveXmm9       xmmword ?
 	SaveXmm10      xmmword ?
 	SaveXmm11      xmmword ?
-	SaveXmm12       xmmword ?
-	SaveXmm13       xmmword ?
+	SaveXmm12      xmmword ?
+	SaveXmm13      xmmword ?
     SaveR13        dq ?
 SAVEREGSFRAME ends
 
@@ -176,12 +177,9 @@ NESTED_ENTRY WormHole_Init, _TEXT$00
 
   MOV [VirtualPallete], 0
 
-  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MUL R9
-  MOV RDX, RAX
-  MOV ECX, 040h ; LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV RDX, 1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @WormInit_Failed
@@ -280,49 +278,13 @@ NESTED_ENTRY WormHole_Demo, _TEXT$00
   ;
   ; Update the screen with the buffer
   ;  
-  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [DoubleBuffer]
 
-  XOR R14, R14
-  XOR r12, r12
+   MOV RCX, [DoubleBuffer]
+   MOV RDX, [VirtualPallete]
+   MOV R8, DB_FLAG_CLEAR_BUFFER
+   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
-@FillScreen:
-      ;
-      ; Get the Virtual Pallete Index for the pixel on the screen
-      ;
-      XOR EDX, EDX
-      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
-	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
 
-      MOV RCX, [VirtualPallete]
-      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
-
-      ; Plot Pixel
-      MOV DWORD PTR [RSI], EAX
-
-      ; Increment to the next location
-      ADD RSI, 4
-      INC r13
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-      JB @FillScreen
-
-   ; Calcluate Pitch
-   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-   SHL RAX, 2
-   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
-   SUB RBX, RAX
-   ADD RSI, RBX
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC R14
-
-   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-   JB @FillScreen
 
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL WormHole_MoveStars

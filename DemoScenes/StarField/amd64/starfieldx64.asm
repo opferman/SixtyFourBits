@@ -26,6 +26,7 @@ include soft3d_public.inc
 include soft3d_funcs.inc
 include debug_public.inc
 include frameloop_public.inc
+include dbuffer_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -108,23 +109,23 @@ extern rand:proc
 
   FrameLoopList   FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 300, 300>
                   FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 10, 10>
-				  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 3, 3>
-				  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 2, 2>
-				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 5,  45>
-				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraYVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 45, 45>
+                  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 3, 3>
+                  FRAMELOOP_ENTRY_CB <StarDemo_IncStarVelocity_CB, 0, RELATIVE_FROM_PREVIOUS_FRAME, 2, 2>
+                  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 5,  45>
+                  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraYVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 45, 45>
                   FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 45, 45>
-				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  90>
-				  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 90, 90>
-				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraYVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
-				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 5,  45>
-                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 45, 45>
-				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  50>
-				  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 50, 50>				  
-				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraXVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
-				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  90>
+                  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  90>
                   FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 90, 90>
-				  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraXVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
-				  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  50>
+                  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraYVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
+                  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraYOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 5,  45>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 45, 45>
+                  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  50>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 50, 50>				  
+                  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraXVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
+                  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  90>
+                  FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 90, 90>
+                  FRAMELOOP_ENTRY_CB <StarDemo_DecCameraXVel_CB,   0, RELATIVE_FROM_PREVIOUS_FRAME, 1, 1>
+                  FRAMELOOP_ENTRY_CB <StarDemo_SetCameraXOnly_CB,  0, RELATIVE_FROM_PREVIOUS_FRAME, 10,  50>
                   FRAMELOOP_ENTRY_CB <0,                           0, RELATIVE_FROM_PREVIOUS_FRAME or STOP_FRAME_SERIES, 50, 50>
                   FRAMELOOP_ENTRY_CB <0, 0, 0, 1, 1>  ; End Marker
 
@@ -151,13 +152,10 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
-
-  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MUL R9
-  MOV RDX, RAX
-  MOV ECX, 040h ; LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+    
+  MOV RDX, 1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @StarInit_Failed
@@ -260,51 +258,16 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
   ;
   ; Update the screen with the buffer
   ;  
-  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [DoubleBuffer]
 
-  XOR r14, r14
-  XOR r12, r12
+   MOV RCX, [DoubleBuffer]
+   MOV RDX, [VirtualPallete]
+   MOV R8, DB_FLAG_CLEAR_BUFFER
 
-@FillScreen:
-      ;
-      ; Get the Virtual Pallete Index for the pixel on the screen
-      ;
-      XOR EDX, EDX
-      MOV DL, BYTE PTR [r13] ; Get Virtual Pallete Index
-	  CMP [FrameCountDown], 100
-	  JB @DontClear
-	  MOV BYTE PTR [r13], 0   ; Clear Video Buffer
-@DontClear:
-      MOV RCX, [VirtualPallete]
-      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
-
-      ; Plot Pixel
-      MOV DWORD PTR [RSI], EAX
-
-      ; Increment to the next location
-      ADD RSI, 4
-      INC r13
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-      JB @FillScreen
-
-   ; Calcluate Pitch
-   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-   SHL RAX, 2
-   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
-   SUB RBX, RAX
-   ADD RSI, RBX
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC r14
-
-   CMP r14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-   JB @FillScreen
+   CMP [FrameCountDown], 100
+   JA @UpdateScreen
+   XOR R8, R8
+@UpdateScreen:
+   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL StarDemo_MoveStars

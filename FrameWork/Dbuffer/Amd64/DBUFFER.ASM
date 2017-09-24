@@ -262,13 +262,16 @@ NESTED_ENTRY Dbuffer_UpdateScreen, _TEXT$00
 
 @SkipClearingBuffer2:    
 
+	  CMP RAX, 0
+	  JNZ @SkipZeroFlagCheck2
+
 	  TEST RBP, DB_FLAG_TRANSPARENT_ZERO 
-	  JZ @SkipFlagCheck2
+	  JNZ @SkipPlottingPixel2
 
-	  CMP AX, 0
-	  JE @SkipPlottingPixel2
+	  TEST RBP, DB_FLAG_ZERO_IGNORES_PAL 
+	  JNZ @PlotPixel2
 
-@SkipFlagCheck2:
+@SkipZeroFlagCheck2:
 
 	  CMP R15, 0
 	  JE @PlotPixel2

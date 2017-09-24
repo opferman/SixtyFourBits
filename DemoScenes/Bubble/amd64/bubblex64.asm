@@ -23,6 +23,7 @@ include vpal_public.inc
 include font_public.inc
 include debug_public.inc
 include demoprocs.inc
+include dbuffer_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -122,13 +123,13 @@ NESTED_ENTRY Bubble_Init, _TEXT$00
 
   MOV [VirtualPallete], 0
 
-  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MUL R9
-  MOV RDX, RAX
-  SHL RDX, 1    ; Turn Buffer into WORD values
-  MOV ECX, 040h ; LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+
+  ;
+  ; Allocate Double Screen Buffer for Fire
+  ;
+  MOV RDX, 2
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @PalInit_Failed
@@ -500,51 +501,11 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
   ;
   ; Update the screen with the buffer
   ;  
-  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [DoubleBuffer]
+  MOV R8, DB_FLAG_ZERO_IGNORES_PAL
+  MOV RDX, [VirtualPallete]
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen 
 
-  XOR R12, R12
-  XOR r14, r14
-
-@FillScreen:
-      ;
-      ; Get the Virtual Pallete Index for the pixel on the screen
-      ;
-      XOR EDX, EDX
-      MOV DX, WORD PTR [r13] ; Get Virtual Pallete Index
-	;  MOV WORD PTR [r13], 0  ; Clear Screen
-	  XOR EAX, EAX
-	  CMP DX, 0
-	  JE @PlotAsZero
-      MOV RCX, [VirtualPallete]
-      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
-@PlotAsZero:
-      ; Plot Pixel
-      MOV DWORD PTR [RSI], EAX
-
-      ; Increment to the next location
-      ADD RSI, 4
-      Add R13, 2
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-      JB @FillScreen
-
-   ; Calcluate Pitch
-   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-   SHL RAX, 2
-   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
-   SUB RBX, RAX
-   ADD RSI, RBX
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC r14
-
-   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-   JB @FillScreen
 
    ;
    ; Rotate the pallete by 1.  This is the only animation being performed.

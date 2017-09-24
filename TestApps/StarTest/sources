@@ -30,5 +30,5 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
              $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib \
              $(OBJ_PATH)\..\..\Framework\Soft3D\$O\Soft3Dx64.lib \
+             $(OBJ_PATH)\..\..\Framework\DBuffer\$O\dbufferx64.lib \
              $(OBJ_PATH)\..\..\Framework\FrameLoop\$O\Frameloopx64.lib 
-

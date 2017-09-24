@@ -23,6 +23,7 @@ include debug_public.inc
 include master.inc
 include vpal_public.inc
 include font_public.inc
+include dbuffer_public.inc
 
 extern cos:proc
 extern sin:proc
@@ -160,13 +161,9 @@ NESTED_ENTRY PlasmaDemo_Init, _TEXT$00
 
   MOV [VirtualPallete], 0
 
-  MOV RAX,  MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  MOV R9,  MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MUL R9
-  MOV RDX, RAX
-  SHL RDX, 1    ; Turn Buffer into WORD values
-  MOV ECX, 040h ; LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV RDX, 2
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @PalInit_Failed
@@ -336,51 +333,11 @@ NESTED_ENTRY PlasmaDemo_Demo, _TEXT$00
   ;
   ; Update the screen with the buffer
   ;  
-  MOV RSI, MASTER_DEMO_STRUCT.VideoBuffer[RDI]
-  MOV r13, [DoubleBuffer]
+  XOR R8, R8
+  MOV RDX, [VirtualPallete]
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen 
 
-  XOR R14, R14
-  XOR r12, r12
-
-@FillScreen:
-      ;
-      ; Get the Virtual Pallete Index for the pixel on the screen
-      ;
-      XOR EDX, EDX
-      MOV DX, WORD PTR [r13] ; Get Virtual Pallete Index
-      
-      XOR EAX, EAX
-
-      MOV RCX, [VirtualPallete]
-      DEBUG_FUNCTION_CALL VPal_GetColorIndex 
-      ; Plot Pixel
-      MOV DWORD PTR [RSI], EAX
-
-
-@ContinuePLotting:
-      ; Increment to the next location
-      ADD RSI, 4
-      Add R13, 2
-  
-      INC r12
-
-      CMP r12, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-      JB @FillScreen
-
-   ; Calcluate Pitch
-   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RDI]
-   SHL RAX, 2
-   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RDI]
-   SUB RBX, RAX
-   ADD RSI, RBX
-
-   ; Screen Height Increment
-
-   XOR r12, r12
-   INC R14
-
-   CMP R14, MASTER_DEMO_STRUCT.ScreenHeight[RDI]
-   JB @FillScreen
 
   MOV RCX,  RDI
   DEBUG_FUNCTION_CALL PlasmaDemo_PerformPlasma
