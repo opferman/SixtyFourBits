@@ -150,7 +150,7 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   MOV RCX, 50
   DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
 
-  MOV RDX, 0C3CC1D0h
+  MOV RDX, 0C3CC1B0h
   MOV RCX, 60
   DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
 
@@ -169,6 +169,10 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   MOV RDX, 0D23333h
   MOV RCX, 100
   DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
+
+  MOV RDX, 049619Ah
+  MOV RCX, 200
+  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBackgroundColor
   
 ;  MOV RCX, RSI
 ;  DEBUG_FUNCTION_CALL CopperBarDemo_CreateHorzBars
@@ -235,6 +239,9 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL CopperBarDemo_MoveVertBars
+
+   MOV RCX, RDI
+   DEBUG_FUNCTION_CALL CopperBarDemo_CreateBackground
 
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL CopperBarDemo_PlotVBars
@@ -594,6 +601,59 @@ NESTED_ENTRY CopperBarDemo_PlotVBars, _TEXT$00
   RET
 NESTED_END CopperBarDemo_PlotVBars, _TEXT$00
 
+
+
+
+;*********************************************************
+;  CopperBarDemo_CreateBackground
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_CreateBackground, _TEXT$00
+ alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
+ save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
+ save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RCX
+
+  MOV RCX, [DoubleBuffer]
+  MOV R12, 200
+  XOR R8, R8
+  XOR R9, R9
+@BackgroundPlot:
+  MOV RAX, R12
+  MOV [RCX], AX
+  ADD RCX, 2
+  INC R8
+  CMP R8, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  JB @BackgroundPlot
+  INC R12
+  CMP R12, 250
+  JB @ColorStillValid
+  MOV R12, 200
+@ColorStillValid:
+  XOR R8, R8
+  INC R9
+  CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  JB @BackgroundPlot
+  
+  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  RET
+NESTED_END CopperBarDemo_CreateBackground, _TEXT$00
+
 ;*********************************************************
 ;  CopperBarDemo_CreateBarColor
 ;
@@ -647,6 +707,57 @@ NESTED_ENTRY CopperBarDemo_CreateBarColor, _TEXT$00
   ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
   RET
 NESTED_END CopperBarDemo_CreateBarColor, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_CreateBackgroundColor
+;
+;        Parameters: Start Index, Start Color
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_CreateBackgroundColor, _TEXT$00
+  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
+  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
+  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
+  .ENDPROLOG 
+
+   XOR EBX, EBX
+   MOV RDI, RCX
+   MOV RSI, RDX
+
+@CreateCopperBarColor:
+   MOV RAX, RSI
+   MOV DL, AL
+   SHR RAX, 8
+   ADD DL, 1
+   ADD AL, 1
+   ADD AH, 1
+   SHL RAX, 8
+   MOV AL, DL
+   MOV RSI, RAX
+   MOV R8, RAX
+   MOV RDX, RBX
+   ADD RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+   INC RBX
+   CMP EBX, 50
+   JB @CreateCopperBarColor
+
+
+
+  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  RET
+NESTED_END CopperBarDemo_CreateBackgroundColor, _TEXT$00
 
 ;*********************************************************
 ;  StarDemo_IncStarVelocity_CB
