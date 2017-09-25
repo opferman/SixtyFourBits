@@ -8,4 +8,5 @@ PlasmaTest \
 StarTest \
 BallTest \
 BrownianTest \
-TemplateTest
+TemplateTest \
+CopperTest

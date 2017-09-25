@@ -1,0 +1,3 @@
+extern CopperBarsDemo_Init:proc
+extern CopperBarsDemo_Demo:proc
+extern CopperBarsDemo_Free:proc
