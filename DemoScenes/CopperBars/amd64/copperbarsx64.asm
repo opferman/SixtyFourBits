@@ -79,8 +79,8 @@ COPPERBARS_DEMO_STRUCTURE_FUNC ends
 
 
 MAX_VERTICLE_BARS EQU <200>
-VBAR_LOWER_BOUNDS EQU <300>
-VBAR_UPPER_BOUNDS EQU <500>
+VBAR_LOWER_BOUNDS EQU <200>
+VBAR_UPPER_BOUNDS EQU <600>
 
 public CopperBarsDemo_Init
 public CopperBarsDemo_Demo
@@ -345,7 +345,7 @@ NESTED_ENTRY CopperBarDemo_CreateVertBars, _TEXT$00
   XOR RDX, RDX
   MUL RCX
   MOV COPPERBARS_FIELD_ENTRY.StartColor[RDI], AX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], 3 
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], 5
 
   ADD RDI, SIZEOF COPPERBARS_FIELD_ENTRY
   INC RSI
@@ -402,12 +402,19 @@ NESTED_ENTRY CopperBarDemo_MoveVertBars, _TEXT$00
   MOV COPPERBARS_FIELD_ENTRY.X[RDI], VBAR_LOWER_BOUNDS + 1
   CALL Math_Rand
   XOR RDX, RDX
-  MOV RCX, 2
+  MOV RCX, R14
   DIV RCX
   INC RDX
+  CMP R14, 8
+  JE @AdjustVelocity
   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
   JMP @NotOutOfBounds
-
+@AdjustVelocity:
+  CMP RDX, 4
+  JA @NotOutOfBounds
+  ADD RDX, 4
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @NotOutOfBounds
 @CheckUpperBounds:
   ADD RAX, 21
   CMP RAX, VBAR_UPPER_BOUNDS
@@ -421,9 +428,18 @@ NESTED_ENTRY CopperBarDemo_MoveVertBars, _TEXT$00
   MOV RCX, R14
   DIV RCX
   INC RDX
+  CMP R14, 8
+  JE @AdjustVelocityNeg
   NEG RDX
   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-
+  JMP @NotOutOfBounds
+@AdjustVelocityNeg:
+  CMP RDX, 4
+  JA @SkipIncrease
+  ADD RDX, 4
+@SkipIncrease:
+  NEG RDX
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
 @NotOutOfBounds:
   CMP RSI, 0
   JE @SkipPreviousXAlignmentCheck
@@ -441,8 +457,19 @@ NESTED_ENTRY CopperBarDemo_MoveVertBars, _TEXT$00
   MOV RCX, R14
   DIV RCX
   INC RDX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
 
+  CMP R14, 8
+  JE @AdjustVelocity2
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @SkipPreviousXAlignmentCheck
+
+@AdjustVelocity2:
+  CMP RDX, 4
+  JA @DontAdjustVel
+   ADD RDX, 4
+
+@DontAdjustVel:
+   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
   JMP @SkipPreviousXAlignmentCheck
 
 @CheckUpperBoundsOfPreviousBar:
@@ -460,10 +487,18 @@ NESTED_ENTRY CopperBarDemo_MoveVertBars, _TEXT$00
   MOV RCX, R14
   DIV RCX
   INC RDX
+  CMP R14, 8
+  JE @AdjustVelocity3
   NEG RDX
   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-
-
+  JMP @SkipPreviousXAlignmentCheck
+@AdjustVelocity3:
+  CMP RDX, 4
+  JA @DoNotAdjustVelocity
+  ADD RDX, 4
+@DoNotAdjustVelocity:
+  NEG RDX
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
 @SkipPreviousXAlignmentCheck:
   MOV R14, 3
   MOV R13, COPPERBARS_FIELD_ENTRY.X[RDI]
