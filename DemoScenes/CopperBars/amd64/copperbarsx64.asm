@@ -88,6 +88,8 @@ public CopperBarsDemo_Free
 
 .DATA
   DoubleBuffer     dq ?
+  TripleBuffer     dq ?
+  Stepping         dq 2
   VirtualPallete   dq ?
   FrameCountDown   dd 2800
   CopperBarsVert   dq ?
@@ -123,6 +125,13 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [DoubleBuffer], RAX
+  TEST RAX, RAX
+  JZ @CopperInit_Failed
+
+  MOV RDX, 2
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
+  MOV [TripleBuffer], RAX
   TEST RAX, RAX
   JZ @CopperInit_Failed
 
@@ -241,7 +250,7 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   ;
   ; Update the screen with the buffer
   ;  
-   MOV RCX, [DoubleBuffer]
+   MOV RCX, [TripleBuffer]
    MOV RDX, [VirtualPallete]
    MOV R8, DB_FLAG_CLEAR_BUFFER
    DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
@@ -265,7 +274,9 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL CopperBarDemo_PlotVBars
-
+      
+   MOV RCX, RDI
+   DEBUG_FUNCTION_CALL CopperBarDemo_ResizeAndCopyBuffers
 
   MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -636,6 +647,7 @@ NESTED_ENTRY CopperBarDemo_MoveHorzBars, _TEXT$00
   MOV [WaitState], 0
   MOV COPPERBARS_FIELD_ENTRY.Y[RDI], 100
   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], 10
+  ADD COPPERBARS_FIELD_ENTRY.StartColor[RDI], 10
   JMP @Complete
 
 @CheckUpperBounds:
@@ -644,6 +656,7 @@ NESTED_ENTRY CopperBarDemo_MoveHorzBars, _TEXT$00
   MOV [WaitState], 0
   MOV COPPERBARS_FIELD_ENTRY.Y[RDI], 700
   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], -10
+  ADD COPPERBARS_FIELD_ENTRY.StartColor[RDI], 10
   JMP @Complete
 @PlotFollowers:
   MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RSI]
@@ -667,7 +680,10 @@ NESTED_ENTRY CopperBarDemo_MoveHorzBars, _TEXT$00
   JA @Complete
   INC [WaitState]
 @Complete:
-  
+  CMP COPPERBARS_FIELD_ENTRY.StartColor[RDI], 120
+  JB @SkipColorUpdate
+  MOV COPPERBARS_FIELD_ENTRY.StartColor[RDI], 10
+@SkipColorUpdate:
   ADD RDI, SIZE COPPERBARS_FIELD_ENTRY
   INC R13
   CMP R13,MAX_HORZ_BARS
@@ -1130,6 +1146,78 @@ NESTED_ENTRY CopperBarDemo_CreateTransparancy, _TEXT$00
   RET
 NESTED_END CopperBarDemo_CreateTransparancy, _TEXT$00
 
+
+;*********************************************************
+;  CopperBarDemo_ResizeAndCopyBuffers
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_ResizeAndCopyBuffers, _TEXT$00
+  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
+  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
+  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
+  .ENDPROLOG 
+  MOV RBX, RCX
+  MOV RDI, [TripleBuffer]
+
+  XOR R9, R9                  ; True Width Counter
+  XOR R10, R10                ; True Height Counter
+  XOR R8, R8                  ; Image Width Counter
+
+@StartImagePlot:
+  XOR R11, R11                ; Image Height Counter
+  MOV RSI, [DoubleBuffer]
+@PlotHorizontalLines:
+  MOV AX, WORD PTR [RSI+R8]
+  MOV WORD PTR [RDI], AX
+  ADD RDI, 2
+  INC R9
+  MOV RAX, [Stepping]
+  SHL RAX, 1
+  ADD R8, RAX
+  CMP R9, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  JAE @DoneWithHorizontalPlotting
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  SHL RAX, 1
+  CMP R8, RAX
+  JB @PlotHorizontalLines
+  XOR R8, R8
+  JMP @PlotHorizontalLines
+
+@DoneWithHorizontalPlotting:  
+  XOR R9,R9
+  INC R10
+  CMP R10, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  JAE @DoneWithImage
+  XOR R8, R8
+  ADD R11, [Stepping]
+  CMP R11, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  JAE @StartImagePlot
+
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  SHL RCX, 1
+  XOR RDX, RDX
+  MOV RAX, [Stepping]
+  MUL RCX
+  ADD RSI, RAX
+  JMP @PlotHorizontalLines
+  
+
+@DoneWithImage:
+
+  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  RET
+NESTED_END CopperBarDemo_ResizeAndCopyBuffers, _TEXT$00
 
 
 
