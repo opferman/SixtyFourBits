@@ -91,7 +91,7 @@ public CopperBarsDemo_Free
   TripleBuffer     dq ?
   Stepping         dq 2
   VirtualPallete   dq ?
-  FrameCountDown   dd 2800
+  FrameCountDown   dd 4000
   CopperBarsVert   dq ?
   CopperBarsVert2  dq ?
   CopperBarsHorz   dq ?
@@ -277,6 +277,11 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
       
    MOV RCX, RDI
    DEBUG_FUNCTION_CALL CopperBarDemo_ResizeAndCopyBuffers
+
+  MOV RCX, 10
+  MOV RDX, 120
+  DEBUG_FUNCTION_CALL CopperBarDemo_RotateBarColor
+
 
   MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
   MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -986,7 +991,66 @@ NESTED_ENTRY CopperBarDemo_CreateBarColor, _TEXT$00
   ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
   RET
 NESTED_END CopperBarDemo_CreateBarColor, _TEXT$00
+  MOV RCX, 10
+  MOV RDX, 120
 
+;*********************************************************
+;  CopperBarDemo_RotateBarColor
+;
+;        Parameters: Start Index, Stop Index
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_RotateBarColor, _TEXT$00
+  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
+  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
+  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
+  save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
+  .ENDPROLOG 
+
+  MOV RDI, RCX
+  MOV RSI, RDX
+  MOV R12, RCX
+
+   MOV RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_GetColorIndex
+   MOV R13, RAX
+   INC RDI
+   
+@RotateCopperBarColor:
+
+   MOV RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_GetColorIndex
+
+   MOV R8, R13
+   MOV R13, RAX
+   MOV RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+
+   INC RDI
+   CMP RDI, RSI
+   JBE @RotateCopperBarColor
+
+   MOV R8, R13
+   MOV RDX, R12
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+   
+  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
+  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  RET
+NESTED_END CopperBarDemo_RotateBarColor, _TEXT$00
 
 ;*********************************************************
 ;  CopperBarDemo_CreateBackgroundColor
