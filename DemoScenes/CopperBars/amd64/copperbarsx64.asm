@@ -956,7 +956,7 @@ NESTED_ENTRY CopperBarDemo_CreateBarColor, _TEXT$00
   save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
   save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
   .ENDPROLOG 
-
+  DEBUG_RSP_CHECK_MACRO
    XOR EBX, EBX
    MOV R12, 10
    MOV RDI, RCX
@@ -991,8 +991,6 @@ NESTED_ENTRY CopperBarDemo_CreateBarColor, _TEXT$00
   ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
   RET
 NESTED_END CopperBarDemo_CreateBarColor, _TEXT$00
-  MOV RCX, 10
-  MOV RDX, 120
 
 ;*********************************************************
 ;  CopperBarDemo_RotateBarColor
@@ -1011,7 +1009,7 @@ NESTED_ENTRY CopperBarDemo_RotateBarColor, _TEXT$00
   save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
   save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
   .ENDPROLOG 
-
+  DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   MOV RSI, RDX
   MOV R12, RCX
@@ -1068,7 +1066,7 @@ NESTED_ENTRY CopperBarDemo_CreateBackgroundColor, _TEXT$00
   save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
   save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
   .ENDPROLOG 
-
+  DEBUG_RSP_CHECK_MACRO
    XOR EBX, EBX
    MOV RDI, RCX
    MOV RSI, RDX
@@ -1119,7 +1117,7 @@ NESTED_ENTRY CopperBarDemo_CreateTransparancy, _TEXT$00
   save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
   save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
   .ENDPROLOG 
-
+  DEBUG_RSP_CHECK_MACRO
    MOV RDI, RCX
    MOV RSI, RDX
 
@@ -1227,6 +1225,7 @@ NESTED_ENTRY CopperBarDemo_ResizeAndCopyBuffers, _TEXT$00
   save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
   save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
   .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX
   MOV RDI, [TripleBuffer]
 
