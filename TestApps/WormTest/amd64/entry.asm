@@ -51,10 +51,10 @@ GlobalDemoStructure  dq WormHole_Init
                      dq 0
                      dq 0
 
-pszWindowClass       db 'FireClassWindow', 0
-pszWindowTitle       db 'Fire Demo', 0
+pszWindowClass       db 'WormClassWindow', 0
+pszWindowTitle       db 'Worm Demo', 0
 
-pszMsgCpt       db 'Fire Demo', 0
+pszMsgCpt       db 'Worm Demo', 0
 pszMsgTxt       db 'Do you want to view in full screen?', 0
 
 .CODE
