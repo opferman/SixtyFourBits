@@ -33,12 +33,12 @@ it will save the non-volatile registers before your function call, then after yo
 except for RAX/XMM0 since they can return data from the function.  The goal is that if you have assumed the volatile registers retained information this forces them to hopefully cause a crash or a bug
 if you have done this.
 
-...
+```
 ;
 ; Generate new random color
 ;
 DEBUG_FUNCTION_CALL Math_rand
-...
+```
 
 ## Header File list
 
