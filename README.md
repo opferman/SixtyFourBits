@@ -5,9 +5,9 @@
 2. The environment to use is Windows x64 free
 
 ## Demoscene Template 
-There is a template demo that you can use to create your own demo scene.  You can use this as an example by copying the code to your own demoscene directory. **\DemoScenes\\<YourDemo>\**
+There is a template demo that you can use to create your own demo scene.  You can use this as an example by copying the code to your own demoscene directory. **\DemoScenes\YourDemo\**
 All code will need to go into the **AMD64** directory as this is an **X86-64 assembly project there should not be any C or other langauges used**.  The **SOURCES** file will need modified to change the target name.
-The makefile is copied but you do not modify the make file.  To build the project you use **bcz** command.
+The makefile is copied but you do not modify the make file.  To build the project you use **bcz** command.  You will also need to update the **DIRS** file in order to have your applications and libraries built using BCZ from the root directories.
 
 ## Demoscene functions and Master Context
 There are three functions to implement which the engine will use to call you back.
@@ -25,6 +25,26 @@ double buffer API.
 There are x64 volatile and non volatile registers.  You can look at them on MSDN: https://msdn.microsoft.com/en-us/library/9z1stfyw.aspx
 Also, each function call will occur with RSP aligned to 0xFFFFFFFFFFFFFFF8.  If you plan to call any functions you must align the stack to 0xFFFFFFFFFFFFFFF0 as some functions will assume they can use
 instructions that require alignemnt such as MOVAPS.  If the stack is not aligned you run the risk of crashing in some lower function call.
+
+## Function Calls
+Function calls in X86-64 require that there are 4 parameter locations reserved on the stack.  All stack reservations are done before .ENDPROLOG so that stack walks can work by tracking the amount of space
+reserved on the stack.  The first four parameters are RCX or xmm0, RDX or xmm1, R8 or xmm2 and R9 or xmm3.  Parameters beyond 4 must be passed on the stack after the required 4 stack locations that are reserved no matter 
+how many parameters are passed.  The first 4 parameters are also not populated as you use the registers to pass those parameters.  However, the space is available for use by the function being called to either save the parameters
+since they are in volatile registers or use the space for saving whatever it needs.
+
+```
+Parameter N (Not Required, must be populated with Nth parameter if exists)
+...
+Parameter 5 (Not Required, must be populated with 5th parameter if exists)
+Parameter 4 (Required, but not populated use register)
+Parameter 3 (Required, but not populated use register)
+Parameter 2 (Required, but not populated use register)
+Parameter 1 (Required, but not populated use register)
+Return Address
+Save registers
+Locals
+Parameter Frame for Function Calls in this function.
+```
 
 ## Adding Debug Macros
 There are two debug macros in debug_public.inc, the first is DEBUG_RSP_CHECK_MACRO which does nothing if debug is not being built but when debug is built you put it directly after .ENDPROLOG and it
@@ -46,6 +66,15 @@ if you have done this.
 ;
 DEBUG_FUNCTION_CALL Math_rand
 ```
+
+## Directory structure
+The following describes the directory structure layout.
+- **INC\AMD64** - Header files to be used by the framework, applications and demos.
+- **Apps** - Applications built to run the demos.
+- **TestApps** - Testing applications for a particular demo scene.
+- **Framework** - The directory that contains the engine and framework for the demoscenes.
+- **DemoScenes** - Demoscene libraries themselves which users implement.
+- **DemoEffects** - TBD, Future directory to contain libraries of demo effects that can be included in your demoscene.
 
 ## Public Framework Header File list
 - **ksamd64.inc** - This is a required file to include the basic runtime for X86-64 assembly on Windows.  This is part of the WDK and not a file checked into this repository.
@@ -78,48 +107,185 @@ The framework contains various functions you can use to accellerate your demo bu
 
 ### init_public.inc
 - **Initialization_Demo**
+    - Description: This function is called from your entry point application to start the demo.  It doesn't return until all demos are complete.
+	- Parameters: (RCX - INIT_DEMO_STRUCT)
+	- Return: None
 
 ### master.INC
 - **MASTER_DEMO_STRUCT**
+    - Description: The data structure that contains the video buffer information.
 
 ### DBuffer_Public.inc
 - **DBuffer_Create**
+    - Description: Create a double buffer.
+	- Parameters: (RCX - MASTER_DEMO_STRUCT, RDX - Bytes Per Pixel (1, 2, 4, 8))
+	- Return: (RAX - Pointer to Double Buffer)
+
 - **Dbuffer_UpdateScreen**
-- *Dbuffer_Free**
+    - Description: Update the screen video buffer from the double buffer.
+	- Parameters: (RCX - Double Buffer, RDX - Palette (optional), R8 - Flags)
+	- Return: (None)
+
+- **Dbuffer_Free**
+    - Description: Free  double buffer.
+	- Parameters: (RCX - Double Buffer)
+	- Return: (None)
 
 ### Debug_public.inc
 - **DEBUG_IS_ENABLED**
+    - Description: An EQU set to 1 to enable Debug or set to 0 to disable debug.
+
 - **DEBUG_FUNCTION_CALL**
+    - Description: Performs the function call verifcation when debug is enabled as described above.
+
 - **DEBUG_RSP_CHECK_MACRO**
+    - Description: Performs the RSP verification when debug is enabled as described above.
 
 ### demoprocs.inc
 - **Math_Rand**
+    - Description: Returns a random number.
+	- Parameters: (None)
+	- Return: (RAX - Random Number)
 
 ### font_public.inc
 - **Font_GetBitFont**
+    - Description: Returns a pointer to an 8x8 bit font of 8 bytes.
+	- Parameters: (RCX - Character)
+	- Return: (RAX - Pointer to bit font for the character)
 
 ### frameloop_public.inc
 - **FrameLoop_Create**
+    - Description: Creates a frameloop handle.
+	- Parameters: (RCX - List of FRAMELOOP_ENTRY_CB)
+	- Return: (RAX - Frameloop handle)
+
 - **FrameLoop_PerformFrame**
+    - Description: Executes 1 itteration of the frame loop.
+	- Parameters: (RCX - Frame Loop Handle)
+	- Return: (RAX - TRUE is more frames; FALSE no more frames)
+
 - **FrameLoop_Reset**
+    - Description: Resets the frame loop to start over.
+	- Parameters: (RCX - Frame loop handle)
+	- Return: (None)
+
 - **FrameLoop_Free**
+    - Description: Frees the frame loop
+	- Parameters: (RCX - Frame loop handle)
+	- Return: (none)
+
 
 ### soft3d_public.inc
 - **Soft3D_Init**
+    - Description: Creates a 3D Handle
+	- Parameters: (RCX - MASTER_DEMO_STRUCT, RDX - Flags, R8 - Pixel Callback function)
+	- Return: (RAX - 3D Handle)
+
 - **Soft3D_SetCameraRotation**
+    - Description: Sets the radians rotation for the camera.
+	- Parameters: (RCX -3D Handle, xmm1 - X Radians, xmm2 - Y Radians, xmm3 - Z radians)
+	- Return: (None)
+
 - **Soft3D_SetViewDistance**
+    - Description: Sets the view distance.
+	- Parameters: (RCX -3D Handle, xmm1 - View Distance)
+	- Return: (None)
+
 - **Soft3D_SetViewPoint**
+    - Description: Sets the view point.
+	- Parameters: (RCX -3D Handle, RDX - TD_POINT Pointer)
+	- Return: (None)
+
 - **Soft3D_SetAspectRatio**
+    - Description: Sets the aspect ratio.
+	- Parameters: (RCX -3D Handle, xmm1 - Aspect Ratio)
+	- Return: (None)
+
 - **Soft3D_Convert3Dto2D**
+    - Description: Converts a 3D point to a projected point on the 2d screen.
+	- Parameters: (RCX -3D Handle, RDX - Location TD_POINT Pointer, R8 - World Location TD_POINT pointer, R9 - Projected 2D TD_POINT_2D Pointer, Stack - Camera TD_POINT Pointer)
+	- Return: (RAX - Pixel is on or off screen.)
+
 - **Soft3D_Close**
+    - Description: Closes the 3D Handle.
+	- Parameters: (RCX - Software 3D Handle)
+	- Return: (None)
 
 ### vpal_public.inc
 - **VPal_Create**
+    - Description: Creates a Virtual Palette
+	- Parameters: (RCX - Palette Handle)
+	- Return: (RAX - Palette Handle)
+
 - **VPal_SetColorIndex**
+    - Description: Set the RGB value for the Palette color index
+	- Parameters: (RCX - Palette Handle, RDX - Palette Index, R8 - RGB)
+	- Return: (None)
+
 - **VPal_GetColorIndex**
+    - Description: Get the RGB value for the Palette color index
+	- Parameters: (RCX - Palette Handle, RDX - Palette Index)
+	- Return: (RAX - RGB)
+
 - **VPal_Rotate**
+    - Description: Rotates the color palette
+	- Parameters: (RCX - Palette Handle, RDX - Rotation Integer)
+	- Return: (None)
+
 - **VPal_RotateReset**
+    - Description: Clears all rotations
+	- Parameters: (RCX - Palette Handle)
+	- Return: (None)
+
 - **VPal_Free**
+    - Description: Closes the palette
+	- Parameters: (RCX - Palette Handle)
+	- Return: (None)
+
+# Programming Guide (Examples)
+
+The main focus of this project was for people to be able to learn assembly programming in a fun way by doing graphics.  The framework removes the burdern of learning Windows GUI and Direct X programming and setting up all the
+boiler plate and just hit the ground running as with a few instructions they can see pixels being set on the screen without much effort at all.  Plus it is fun to write 1990s style graphics effects and demos.
+
+## Creating and using the Virtual Palette 
+
+## Creating and using the Double Buffer
+
+The creation of the double buffer is simple using the API as defined below.
+```
+  MOV RDX, 1		; 1 Byte Per pixels
+  MOV RCX, RSI		; MASTER_DEMO_STRUCT
+  DEBUG_FUNCTION_CALL DBuffer_Create
+  MOV [DoubleBufferPointer], RAX
+  TEST RAX, RAX
+  JZ @Failure_Exit
+```
+
+The returned pointer can be directly accessed as the screen height x width based on the pixel size specified.  
+```
+  MOV RCX, [DoubleBufferPointer]
+  MOV BYTE PTR [RCX], 10h
+```
+
+The screen can then be updated by a single function call.
+
+```
+  ;
+  ; Update the screen with the buffer
+  ;
+
+   MOV RCX, [DoubleBuffer]
+   MOV RDX, [VirtualPallete]
+   MOV R8, DB_FLAG_CLEAR_BUFFER
+   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+```
+
+
+## Introduction to using the Software 3D Library
+
+## Creating Arrays vs. Dynamically Allocating
+
+## Frame Loop example
 
 
 
