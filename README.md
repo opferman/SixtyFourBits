@@ -214,7 +214,7 @@ The framework contains various functions you can use to accellerate your demo bu
 ### vpal_public.inc
 - **VPal_Create**
     - Description: Creates a Virtual Palette
-	- Parameters: (RCX - Palette Handle)
+	- Parameters: (RCX - Number of Colors)
 	- Return: (RAX - Palette Handle)
 
 - **VPal_SetColorIndex**
@@ -249,6 +249,35 @@ boiler plate and just hit the ground running as with a few instructions they can
 
 ## Creating and using the Virtual Palette 
 
+The creation of the palette is simple, you just supply the number of colors and save the return address as the palette handle.
+
+```
+  MOV RCX, 256
+  DEBUG_FUNCTION_CALL VPal_Create
+  TEST RAX, RAX
+  JZ @Failure_Exit
+  MOV [VirtualPallete], RAX
+```
+
+You can then generate the colors for each color index.  The below example creates an increasing white palette.  If you are using the double buffer API, it can take the palette handle and populate the video buffer with the appropraite colors.
+
+```
+@CreateWhitePalette:
+  MOV RAX, R12
+  MOV AH, AL
+  SHL RAX, 8
+  MOV AL, AH
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
+
+  INC R12
+  CMP R12, 256
+  JB @CreateWhitePalette
+```
+
 ## Creating and using the Double Buffer
 
 The creation of the double buffer is simple using the API as defined below.
@@ -274,18 +303,12 @@ The screen can then be updated by a single function call.
   ; Update the screen with the buffer
   ;
 
-   MOV RCX, [DoubleBuffer]
+   MOV RCX, [DoubleBufferPointer]
    MOV RDX, [VirtualPallete]
    MOV R8, DB_FLAG_CLEAR_BUFFER
    DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 ```
 
-
-## Introduction to using the Software 3D Library
-
-## Creating Arrays vs. Dynamically Allocating
-
-## Frame Loop example
 
 
 
