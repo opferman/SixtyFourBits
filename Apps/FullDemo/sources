@@ -35,4 +35,6 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\DemoScenes\WormHole\$O\WormHolex64.lib \
              $(OBJ_PATH)\..\..\Framework\Soft3D\$O\Soft3Dx64.lib \
              $(OBJ_PATH)\..\..\Framework\FrameLoop\$O\FrameLoopx64.lib \
-             $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib
+             $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib \
+             $(OBJ_PATH)\..\..\Framework\primatives\$O\primativesx64.lib
+
