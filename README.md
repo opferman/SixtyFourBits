@@ -244,7 +244,7 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Return: (None)
 
 ### primatives_public.inc
-- **Prm_Circle**
+- **Prm_DrawCircle**
     - Description: Draws a circle
 	- Parameters: (RCX - Master Context, RDX - X, R8 - Y, R9 - Radius, Param5 - Plot Pixel Callback Function, Param6 - Context)
 	- Return: None
