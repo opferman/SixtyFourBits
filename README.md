@@ -89,6 +89,7 @@ The following describes the directory structure layout.
 - **soft3d_funcs.inc** - Software implmented 3D library functions.
 - **demovariables.inc** - Use for constants for the demo but contains nothing today.
 - **vpal_public.inc** - Virtual Palette functions.
+- **primatives_public.inc** - Basic graphic functions (i.e. Circle, etc.).
 
 ### Internal Framework Header File list you should not include.
 - **engdbg_procs.INC** - Internal header file for the engine.
@@ -241,6 +242,13 @@ The framework contains various functions you can use to accellerate your demo bu
     - Description: Closes the palette
 	- Parameters: (RCX - Palette Handle)
 	- Return: (None)
+
+### primatives_public.inc
+- **Prm_Circle**
+    - Description: Draws a circle
+	- Parameters: (RCX - Master Context, RDX - X, R8 - Y, R9 - Radius, Param5 - Plot Pixel Callback Function, Param6 - Context)
+	- Return: None
+        - void PlotPixelCallback(X, Y, Context, Master Context) - In order to accomodate any size buffer, the caller must draw the pixel for any primatives function.
 
 # Programming Guide (Examples)
 
