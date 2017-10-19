@@ -103,6 +103,7 @@ NESTED_ENTRY DBuffer_Create, _TEXT$00
 
  @AllocationFailed:
   MOV RDI, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV RBP, DB_INIT_LOCALS.SaveRegsFrame.SaveRbp[RSP]
   ADD RSP, SIZE DB_INIT_LOCALS
   RET
 

@@ -3,7 +3,7 @@
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  10/29/2017
+;  By Toby Opferman  10/19/2017
 ;
 ;*********************************************************
 
@@ -62,7 +62,7 @@ PRM_INIT_FUNC struct
 PRM_INIT_FUNC ends
 
 public Prm_DrawCircle
-
+public Prm_DrawLine
 
 .DATA 
 .CODE
@@ -82,27 +82,25 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  save_reg rdi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRdi
  save_reg rsi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRsi
  save_reg rbx, PRM_INIT_LOCALS.SaveRegsFrame.SaveRbx
- save_reg r10, PRM_INIT_LOCALS.SaveRegsFrame.SaveR10
- save_reg r11, PRM_INIT_LOCALS.SaveRegsFrame.SaveR11
  save_reg r12, PRM_INIT_LOCALS.SaveRegsFrame.SaveR12
  save_reg r13, PRM_INIT_LOCALS.SaveRegsFrame.SaveR13
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
 
  MOV RSI, RCX
- MOV R10, R9 ; Radius
- MOV R11, R8  ; Y Center
+ MOV PRM_INIT_FUNC.FuncParams.Param3[RSP], R9 ; Radius
+ MOV PRM_INIT_FUNC.FuncParams.Param4[RSP], R8  ; Y Center
  MOV R12, RDX ; X Center
  
  XOR RDI, RDI ; y Increment
- MOV RBX, R10
+ MOV RBX, PRM_INIT_FUNC.FuncParams.Param3[RSP]
  DEC RBX      ; x Increment
 
  MOV PRM_INIT_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
  MOV PRM_INIT_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
  
  MOV R13, 1
- MOV RAX, R10
+ MOV RAX, PRM_INIT_FUNC.FuncParams.Param3[RSP]
  SHL RAX, 1
  SUB R13, RAX   ; Error Correction
 
@@ -112,7 +110,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
 ;
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   ADD RDX, RDI
   MOV RCX, R12
   ADD RCX, RBX
@@ -126,7 +124,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  @PlotQudrant_1_2_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   ADD RDX, RBX
   MOV RCX, R12
   ADD RCX, RDI
@@ -139,7 +137,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  @PlotQudrant_2_1_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   ADD RDX, RBX
   MOV RCX, R12
   SUB RCX, RDI
@@ -153,7 +151,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  @PlotQudrant_2_2_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   ADD RDX, RDI
   MOV RCX, R12
   SUB RCX, RBX
@@ -166,7 +164,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  @PlotQudrant_3_1_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   SUB RDX, RDI
   MOV RCX, R12
   SUB RCX, RBX
@@ -178,7 +176,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  @PlotQudrant_3_2_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   SUB RDX, RBX
   MOV RCX, R12
   SUB RCX, RDI
@@ -191,7 +189,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
  @PlotQudrant_4_1_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   SUB RDX, RBX
   MOV RCX, R12
   ADD RCX, RDI
@@ -204,7 +202,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
   @PlotQudrant_4_2_Pixel:
   MOV R9, RSI
   MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
-  MOV RDX, R11
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param4[RSP]
   SUB RDX, RDI
   MOV RCX, R12
   ADD RCX, RBX
@@ -225,7 +223,7 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
 
   DEC RBX
   ADD PRM_INIT_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
+  MOV RAX, PRM_INIT_FUNC.FuncParams.Param3[RSP]
   SHL RAX, 1
   NEG RAX
   ADD RAX, PRM_INIT_FUNC.FuncParams.Param1[RSP]
@@ -238,13 +236,91 @@ NESTED_ENTRY Prm_DrawCircle, _TEXT$00
   MOV rdi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
   MOV rsi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
   MOV rbx, PRM_INIT_LOCALS.SaveRegsFrame.SaveRbx[RSP]
-  MOV r10, PRM_INIT_LOCALS.SaveRegsFrame.SaveR10[RSP]
-  MOV r11, PRM_INIT_LOCALS.SaveRegsFrame.SaveR11[RSP]
   MOV r12, PRM_INIT_LOCALS.SaveRegsFrame.SaveR12[RSP]
   MOV r13, PRM_INIT_LOCALS.SaveRegsFrame.SaveR13[RSP]
   ADD RSP, SIZE PRM_INIT_LOCALS
   RET
 NESTED_END Prm_DrawCircle, _TEXT$00
 
+;*********************************************************
+;  Prm_DrawLine
+;
+;        Parameters: Master Context, X, Y, X2, Y2, PlotPixelCallback, Context
+;
+;             PlotPixelCallback(X, Y, Context, Master Context)
+;
+;
+;*********************************************************  
+NESTED_ENTRY Prm_DrawLine, _TEXT$00
+ alloc_stack(SIZEOF PRM_INIT_LOCALS)
+ save_reg rdi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRdi
+ save_reg rsi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRsi
+ save_reg rbx, PRM_INIT_LOCALS.SaveRegsFrame.SaveRbx
+ save_reg r12, PRM_INIT_LOCALS.SaveRegsFrame.SaveR12
+ save_reg r13, PRM_INIT_LOCALS.SaveRegsFrame.SaveR13
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+ MOV RSI, RCX
+
+ CMP RDX, R9
+ JE @DrawVerticleLine
+
+ CMP R8, PRM_INIT_FUNC.FuncParams.Param5[RSP]
+ JE @DrawHorizontalLine
+
+@DrawDiagonalLine:
+
+  JMP @DoneDrawingLine
+@DrawVerticleLine:
+  MOV RDI, RDX
+  CMP R8, PRM_INIT_FUNC.FuncParams.Param5[RSP]
+  JA @StartDrawingVertLine
+  XCHG R8, PRM_INIT_FUNC.FuncParams.Param5[RSP]
+@StartDrawingVertLine:
+  MOV R12, R8
+  MOV R13, PRM_INIT_FUNC.FuncParams.Param5[RSP]
+
+@DrawVertLine:
+  MOV R9, RSI
+  MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
+  MOV RDX, R12
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL PRM_INIT_FUNC.FuncParams.Param5[RSP]
+
+  INC R12
+  CMP R12, R13
+  JBE @DrawVertLine
+
+  JMP @DoneDrawingLine
+
+@DrawHorizontalLine:
+  CMP R9, RDX
+  JA @StartDrawingHorzLine
+  XCHG R9, RDX
+@StartDrawingHorzLine:
+  MOV R12, RDX
+  MOV R13, R9
+
+@DrawHorzLine:
+  MOV R9, RSI
+  MOV R8, PRM_INIT_FUNC.FuncParams.Param6[RSP]
+  MOV RDX, PRM_INIT_FUNC.FuncParams.Param5[RSP]
+  MOV RCX, R12
+  DEBUG_FUNCTION_CALL PRM_INIT_FUNC.FuncParams.Param5[RSP]
+
+  INC R12
+  CMP R12, R13
+  JBE @DrawHorzLine
+
+@DoneDrawingLine:
+  
+ MOV rdi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+ MOV rsi, PRM_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
+ MOV rbx, PRM_INIT_LOCALS.SaveRegsFrame.SaveRbx[RSP]
+ MOV r12, PRM_INIT_LOCALS.SaveRegsFrame.SaveR12[RSP]
+ MOV r13, PRM_INIT_LOCALS.SaveRegsFrame.SaveR13[RSP]
+ ADD RSP, SIZE PRM_INIT_LOCALS
+ RET
+NESTED_END Prm_DrawLine, _TEXT$00
 
 END
