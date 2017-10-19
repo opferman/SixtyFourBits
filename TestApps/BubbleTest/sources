@@ -29,5 +29,5 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
              $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
              $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib \
-             $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib 
-
+             $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Primatives\$O\Primativesx64.lib 
