@@ -24,6 +24,7 @@ include font_public.inc
 include debug_public.inc
 include demoprocs.inc
 include dbuffer_public.inc
+include primatives_public.inc
 
 extern LocalAlloc:proc
 extern LocalFree:proc
@@ -454,12 +455,14 @@ NESTED_ENTRY Bubble_DrawRandomCircle, _TEXT$00
 @DrawBubble:
 
   MOV DX, BUBBLE_MOVER.Color[RDI]
-  MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RDX ; Random Color
+  MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX ; Random Color
+  MOV RCX, OFFSET Bubble_PlotPixel_Callback
+  MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX ; Callback
   MOV R9, R12
   MOV R8, R14
   MOV RDX, R15
   MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Bubble_DrawCircle   
+  DEBUG_FUNCTION_CALL Prm_DrawCircle   
 
    MOV rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
    MOV rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
@@ -578,12 +581,14 @@ NESTED_ENTRY Bubble_Demo, _TEXT$00
 @DoneTesting:
 
   MOV DX, BUBBLE_MOVER.Color[R14]
-  MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RDX 
+  MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX ; Random Color
+  MOV RCX, OFFSET Bubble_PlotPixel_Callback
+  MOV BUBBLE_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX ; Callback
   MOV R9, BUBBLE_MOVER.Radius[R14]
   MOV R8, BUBBLE_MOVER.Y[R14]
   MOV RDX, BUBBLE_MOVER.X[R14]
   MOV RCX, RDI
-  DEBUG_FUNCTION_CALL Bubble_DrawCircle   
+  DEBUG_FUNCTION_CALL Prm_DrawCircle   
 
   INC R12
   ADD R14, SIZE BUBBLE_MOVER
@@ -646,214 +651,34 @@ NESTED_END Bubble_Free, _TEXT$00
 
 
 
-
-
-
 ;*********************************************************
-;  Bubble_DrawCircle
+;  Bubble_PlotPixel_Callback
 ;
-;        Parameters: Master Context, X, Y, Radius, Color
+;        Parameters: X, Y, Context (Color), Master Context
 ;
 ;       
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Bubble_DrawCircle, _TEXT$00
+NESTED_ENTRY Bubble_PlotPixel_Callback, _TEXT$00
  alloc_stack(SIZEOF BUBBLE_DEMO_STRUCTURE)
  save_reg rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r10, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR10
- save_reg r11, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR11
- save_reg r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
 
- MOV RSI, RCX
- MOV R10, R9 ; Radius
- MOV R11, R8  ; Y Center
- MOV R12, RDX ; X Center
- 
- XOR RDI, RDI ; y Increment
- MOV RBX, R10
- DEC RBX      ; x Increment
-
- MOV BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 1 ; Change in X
- MOV BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 1 ; Change in Y
- 
- MOV R13, 1
- MOV RAX, R10
+ MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+ MOV RDI, RDX
+ XOR RDX, RDX
+ MUL RDI
+ ADD RAX, RCX
  SHL RAX, 1
- SUB R13, RAX   ; Error Correction
-
-@PlotQudrant_Pixels:
-;
-; Quadrant 1.1
-;
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RDI
-  MUL RCX
-  ADD RAX, R12
-  ADD RAX, RBX
-  SHL RAX, 1
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
- ;
- ; Quadrant 1.2
- ; 
- @PlotQudrant_1_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RBX
-  MUL RCX
-  ADD RAX, R12
-  ADD RAX, RDI
-  SHL RAX, 1
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
- ;
- ; Quadrant 2.1
- ; 
- @PlotQudrant_2_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RBX
-  MUL RCX
-  ADD RAX, R12
-  SUB RAX, RDI
-  SHL RAX, 1
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
-
- ;
- ; Quadrant 2.2
- ; 
- @PlotQudrant_2_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  ADD RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  SUB RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
- ;
- ; Quadrant 3.1
- ; 
- @PlotQudrant_3_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  SUB RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
- ;
- ; Quadrant 3.2
- ; 
- @PlotQudrant_3_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RBX
-  MUL RCX
-
-  ADD RAX, R12
-  SUB RAX, RDI
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
-
- ;
- ; Quadrant 4.1
- ; 
- @PlotQudrant_4_1_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RBX
-  MUL RCX
-
-  ADD RAX, R12
-  ADD RAX, RDI
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
- ;
- ; Quadrant 4.2
- ; 
-  @PlotQudrant_4_2_Pixel:
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  MOV RCX, R11
-  SUB RCX, RDI
-  MUL RCX
-
-  ADD RAX, R12
-  ADD RAX, RBX
-  SHL RAX, 1
-
-  ADD RAX,[DoubleBuffer]
-  MOV RCX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param5[RSP]
-  MOV WORD PTR [RAX], CX
-
-  ;
-  ; Error Checks
-  ;
-  CMP R13, 0
-  JG @Check_Second_Error
-  INC RDI
-  ADD R13, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP]
-  ADD BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param2[RSP], 2
+ ADD RAX,[DoubleBuffer]
+ MOV WORD PTR [RAX], R8W
   
- @Check_Second_Error:  
-  CMP R13, 0
-  JLE @Check_Loop_Condition
-
-  DEC RBX
-  ADD BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP], 2
-  MOV RAX, R10
-  SHL RAX, 1
-  NEG RAX
-  ADD RAX, BUBBLE_DEMO_STRUCTURE_FUNC.FuncParams.Param1[RSP]
-  ADD R13, RAX
-  
-@Check_Loop_Condition:
-  CMP RBX, RDI
-  JGE @PlotQudrant_Pixels
-  
-  MOV rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r10, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR10[RSP]
-  MOV r11, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR11[RSP]
-  MOV r12, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE BUBBLE_DEMO_STRUCTURE
-  RET
-NESTED_END Bubble_DrawCircle, _TEXT$00
+ MOV rdi, BUBBLE_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+ ADD RSP, SIZE BUBBLE_DEMO_STRUCTURE
+ RET
+NESTED_END Bubble_PlotPixel_Callback, _TEXT$00
 
 
 

@@ -8,4 +8,5 @@ dirs=DDraw \
      Soft3D \
      Brownian \
      FrameLoop \
-     Dbuffer
+     Dbuffer \
+     Primatives
