@@ -98,6 +98,8 @@ public TTT_Free
   DoubleBuffer     dq ?
   VirtualPallete   dq ?
   FrameCountDown   dd 2800
+  EndOfGamePause   dd 0
+  EndOfGameActive  dd 0
 
   FrameLoopHandleCircle dq ?
   FrameLoopHandleX dq ?
@@ -181,22 +183,15 @@ NESTED_ENTRY TTT_Init, _TEXT$00
   JZ @TTT_Failed
   MOV [VirtualPallete], RAX
  
-  XOR R12, R12
-
-@PopulatePallete:
-  MOV RAX, R12
-  MOV AH, AL
-  SHL RAX, 8
-  MOV AL, AH
-
-  MOV R8, RAX
-  MOV RDX, R12
+  MOV R8, 0FFFFFFh
+  MOV RDX, 255
   MOV RCX, [VirtualPallete]
   DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
-  INC R12
-  CMP R12, 256
-  JB @PopulatePallete
+  MOV R8, 0FF0000h
+  MOV RDX, 10
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
   LEA RCX, [FrameLoopList_Circle]
   DEBUG_FUNCTION_CALL FrameLoop_Create
@@ -266,17 +261,80 @@ NESTED_ENTRY TTT_Demo, _TEXT$00
   MOV RDX, [VirtualPallete]
   XOR R8, R8
   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+
+  CMP [EndOfGameActive], 1
+  JNE @GameContinue
+
+  DEC [EndOfGamePause]
+  JNZ @SkipReset
   
-  MOV RCX, [FrameLoopHandleCurrent]
-  DEBUG_FUNCTION_CALL FrameLoop_PerformFrame
-  CMP RAX, 0
-  JNE @SkipReset
+  MOV [EndOfGameActive], 0
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL TTT_CreateBoard
 
   MOV RCX, [FrameLoopHandleCurrent]
   DEBUG_FUNCTION_CALL FrameLoop_Reset
+    
+@GameContinue:
+  MOV RCX, [FrameLoopHandleCurrent]
+  DEBUG_FUNCTION_CALL FrameLoop_PerformFrame
+  CMP RAX, 0
+  JNE @CheckWin
+  MOV [EndOfGameActive], 1
+  MOV [EndOfGamePause], 20
+@CheckWin:
+  MOV RCX, [CircleLocations]
+  DEBUG_FUNCTION_CALL TTT_CheckWin
+  CMP RAX, 0
+  JNE @CircleWin
+
+  MOV RCX, [XLocations]
+  DEBUG_FUNCTION_CALL TTT_CheckWin
+  CMP RAX, 0
+  JNE @XWin
+  JMP @SkipReset
+@CircleWin:
+  MOV [EndOfGameActive], 1
+  MOV [EndOfGamePause], 20
+  MOV RCX, [FrameLoopHandleCircle]
+  MOV [FrameLoopHandleCurrent], RCX
+  MOV RDI, RAX
+  MOV RSI, 1
+
+ @TryPlotCircleAgain:
+  TEST RSI, RDI
+  JZ @NextCircleCheck
+  MOV RCX, RSI
+  MOV RDX, 10
+  DEBUG_FUNCTION_CALL TTT_DrawCircle
+
+@NextCircleCheck:
+  SHL RSI, 1
+  TEST RSI, 800h
+  JZ @TryPlotCircleAgain
+
+  JMP @SkipReset
+
+@XWin:
+  MOV [EndOfGameActive], 1
+  MOV [EndOfGamePause], 20
+  MOV RCX, [FrameLoopHandleX]
+  MOV [FrameLoopHandleCurrent], RCX
+  MOV RDI, RAX
+  MOV RSI, 1
+
+ @TryPlotXAgain:
+  TEST RSI, RDI
+  JZ @NextXCheck
+  MOV RCX, RSI
+  MOV RDX, 10
+  DEBUG_FUNCTION_CALL TTT_DrawX
+
+@NextXCheck:
+  SHL RSI, 1
+  TEST RSI, 800h
+  JZ @TryPlotXAgain
 
 @SkipReset:
   MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -323,7 +381,66 @@ NESTED_ENTRY TTT_Free, _TEXT$00
   RET
 NESTED_END TTT_Free, _TEXT$00
 
+;*********************************************************
+;  TTT_CheckWin
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY TTT_CheckWin, _TEXT$00
+ alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
 
+  MOV RAX, RCX
+  AND RAX, 07h
+  CMP RAX, 07h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 070h
+  CMP RAX, 070h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 0700h
+  CMP RAX, 0700h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 0111h
+  CMP RAX, 0111h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 0222h
+  CMP RAX, 0222h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 0444h
+  CMP RAX, 0444h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 0124h
+  CMP RAX, 0124h
+  JE @WinFound
+
+  MOV RAX, RCX
+  AND RAX, 0421h
+  CMP RAX, 0421h
+  JE @WinFound
+
+  XOR RAX, RAX
+
+@WinFound:
+  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  RET
+NESTED_END TTT_CheckWin, _TEXT$00
 
 
 ;*********************************************************
@@ -411,6 +528,39 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
 
 @PerformPlot:
 
+ MOV RDX, 255
+ MOV RCX, RAX
+ DEBUG_FUNCTION_CALL TTT_DrawX
+
+@DoneXPlot:
+  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  RET
+NESTED_END TTT_Plot_X, _TEXT$00
+
+
+;*********************************************************
+;  TTT_DrawX
+;
+;        Parameters: Bitmask, Color
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY TTT_DrawX, _TEXT$00
+  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
+  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
+  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RAX, RCX
+  MOV RBX, RDX
+
   CMP RAX ,0400h
   JE @X_Top_First 
 
@@ -443,7 +593,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Top_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
@@ -453,7 +603,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 200
@@ -467,7 +617,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Top_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
@@ -477,7 +627,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 200
@@ -491,7 +641,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Top_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
@@ -501,7 +651,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 200
@@ -515,7 +665,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Mid_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
@@ -525,7 +675,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
@@ -539,7 +689,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Mid_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
@@ -549,7 +699,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
@@ -562,7 +712,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Mid_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
@@ -572,7 +722,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
@@ -587,7 +737,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Bottom_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
@@ -597,7 +747,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
@@ -611,7 +761,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Bottom_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
@@ -621,7 +771,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
@@ -634,7 +784,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   JMP @DoneXPlot
 
 @X_Bottom_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
@@ -644,7 +794,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
@@ -661,7 +811,7 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
   MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
   ADD RSP, SIZE TTT_DEMO_STRUCTURE
   RET
-NESTED_END TTT_Plot_X, _TEXT$00
+NESTED_END TTT_DrawX, _TEXT$00
 
 ;*********************************************************
 ;  TTT_Plot_Circle
@@ -713,6 +863,40 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
 
 
 @PerformPlot:
+ 
+ MOV RDX, 255
+ MOV RCX, RAX
+ DEBUG_FUNCTION_CALL TTT_DrawCircle
+
+@DoneCirclePlot:
+  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+
+  RET
+NESTED_END TTT_Plot_Circle, _TEXT$00
+
+
+;*********************************************************
+;  TTT_DrawCircle
+;
+;        Parameters: Bitmask, Color
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY TTT_DrawCircle, _TEXT$00
+  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
+  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
+  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
+  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RAX, RCX
+
   CMP RAX, 0400h
   JE @Circle_Top_First
 
@@ -745,7 +929,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Top_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -757,7 +941,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Top_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -769,7 +953,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Top_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -781,7 +965,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Mid_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -793,7 +977,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Mid_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -805,7 +989,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Mid_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -817,7 +1001,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Bottom_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -829,7 +1013,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Bottom_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -841,7 +1025,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Bottom_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0ffh
+  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
   MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
   MOV R9, 50
@@ -858,7 +1042,7 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
   ADD RSP, SIZE TTT_DEMO_STRUCTURE
 
   RET
-NESTED_END TTT_Plot_Circle, _TEXT$00
+NESTED_END TTT_DrawCircle, _TEXT$00
 
 ;*********************************************************
 ;  TTT_CreateBoard
