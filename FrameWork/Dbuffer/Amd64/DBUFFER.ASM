@@ -57,6 +57,7 @@ extern LocalFree:proc
 public Dbuffer_Free
 public Dbuffer_UpdateScreen
 public DBuffer_Create
+public Dbuffer_ClearBuffer
 
 .CODE
 
@@ -452,6 +453,73 @@ NESTED_ENTRY Dbuffer_UpdateScreen, _TEXT$00
   ADD RSP, SIZE DB_INIT_LOCALS
   RET
 NESTED_END Dbuffer_UpdateScreen, _TEXT$00
+
+
+;*********************************************************
+;  Dbuffer_ClearBuffer
+;
+;        Parameters: Buffer
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Dbuffer_ClearBuffer, _TEXT$00
+  alloc_stack(SIZEOF DB_INIT_LOCALS)
+  save_reg rdi, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi
+  save_reg rsi, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi
+  save_reg r12, DB_INIT_LOCALS.SaveRegsFrame.SaveR12
+  save_reg r13, DB_INIT_LOCALS.SaveRegsFrame.SaveR13
+  save_reg r14, DB_INIT_LOCALS.SaveRegsFrame.SaveR14
+  save_reg r15, DB_INIT_LOCALS.SaveRegsFrame.SaveR15
+  save_reg rbp, DB_INIT_LOCALS.SaveRegsFrame.SaveRbp
+.ENDPROLOG 
+
+  MOV RDI, RCX
+  MOV RSI, RCX
+  SUB RSI, SIZEOF DBUFFER_HANDLE
+  MOV RBP, DBUFFER_HANDLE.MasterContext[RSI]
+
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RBP]
+  XOR RDX, RDX
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RBP]
+  MUL RCX
+  MOV RCX, RAX
+  XOR RAX, RAX
+
+  CMP DBUFFER_HANDLE.BytesPerPixel[RSI], 1
+  JE @ClearScreen
+
+  SHL RCX, 1
+  CMP DBUFFER_HANDLE.BytesPerPixel[RSI], 2
+  JE @ClearScreen
+
+  SHL RCX, 1
+  CMP DBUFFER_HANDLE.BytesPerPixel[RSI], 4
+  JE @ClearScreen
+
+  SHL RCX, 1
+  CMP DBUFFER_HANDLE.BytesPerPixel[RSI], 8
+  JE @ClearScreen
+
+  JMP @DoneClearBuffer
+  
+@ClearScreen:
+  SHR RCX, 3
+  REP STOSQ
+  
+@DoneClearBuffer:
+  MOV RDI, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV R15, DB_INIT_LOCALS.SaveRegsFrame.SaveR15[RSP]
+  MOV R14, DB_INIT_LOCALS.SaveRegsFrame.SaveR14[RSP]
+  MOV R13, DB_INIT_LOCALS.SaveRegsFrame.SaveR13[RSP]
+  MOV R12, DB_INIT_LOCALS.SaveRegsFrame.SaveR12[RSP]
+  MOV RBP, DB_INIT_LOCALS.SaveRegsFrame.SaveRbp[RSP]
+  MOV RSI, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
+  ADD RSP, SIZE DB_INIT_LOCALS
+  RET
+NESTED_END Dbuffer_ClearBuffer, _TEXT$00
+
 
 
 END

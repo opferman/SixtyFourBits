@@ -2,3 +2,4 @@ include Dbuffer_flags.inc
 extern Dbuffer_Free:proc
 extern Dbuffer_UpdateScreen:proc
 extern DBuffer_Create:proc
+extern Dbuffer_ClearBuffer:proc

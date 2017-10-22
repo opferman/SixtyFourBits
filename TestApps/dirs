@@ -9,4 +9,5 @@ StarTest \
 BallTest \
 BrownianTest \
 TemplateTest \
-CopperTest
+CopperTest \
+TttTest
