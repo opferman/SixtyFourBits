@@ -1,10 +1,11 @@
 ;****************************************
 ;
-; Primatives Public Definitions
+; TTT Public Definitions
 ;
 ;     Toby Opferman
 ;
 ;****************************************
 
-extern Prm_DrawCircle:proc
-extern Prm_DrawLine:proc
+extern TTT_Init:proc
+extern TTT_Demo:proc
+extern TTT_Free:proc

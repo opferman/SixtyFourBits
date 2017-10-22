@@ -1,0 +1,34 @@
+TARGETNAME=TttDemo
+TARGETPATH=obj
+TARGETTYPE=PROGRAM
+UMTYPE=windows
+UMENTRY=winmain
+
+
+USE_MSVCRT = 1
+
+MSC_WARNING_LEVEL = $(MSC_WARNING_LEVEL) -WX
+
+C_DEFINES = $(CFASTFLAGS) $(C_DEFINES) -DWIN64 
+
+UMTYPE = windows
+INCLUDES=$(INCLUDES);..\..\inc;..\..\inc\amd64
+
+AMD64_SOURCES = entry.asm
+SOURCES=
+
+TARGETLIBS = $(TARGETLIBS) \
+             $(SDK_LIB_PATH)\user32.lib \
+             $(SDK_LIB_PATH)\kernel32.lib \
+             $(SDK_LIB_PATH)\ddraw.lib \
+             $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\TicTacToe\$O\tttx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
+             $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
+             $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
+             $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib \
+             $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Primatives\$O\Primativesx64.lib \
+             $(OBJ_PATH)\..\..\Framework\frameloop\$O\frameloopx64.lib 
