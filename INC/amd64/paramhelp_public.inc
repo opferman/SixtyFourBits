@@ -75,3 +75,35 @@ STD_FUNCTION_STACK_PARAMS struct
 	FuncParams  FUNCTION_PARAMETERS_FRAME <?>
 STD_FUNCTION_STACK_PARAMS ends
 
+
+STD_FUNCTION_STACK_MIN struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+	SaveRegs    SAVE_REGISTERS_FRAME      <?>
+	Padding     dq                         ?
+STD_FUNCTION_STACK_MIN ends
+
+STD_FUNCTION_STACK_MIN_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+	SaveRegs    SAVE_REGISTERS_FRAME      <?>
+	Padding     dq                         ?
+	FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+STD_FUNCTION_STACK_MIN_PARAMS ends
+
+
+
+STD_FUNCTION_STACK_MICRO struct
+    Parameters  LOCAL_PARAMETER_FRAME4    <?>
+	SaveRegs    SAVE_REGISTERS_FRAME      <?>
+	Padding     dq                         ?
+STD_FUNCTION_STACK_MICRO ends
+
+STD_FUNCTION_STACK_MICRO_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME4    <?>
+	SaveRegs    SAVE_REGISTERS_FRAME      <?>
+	Padding     dq                         ?
+	FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+STD_FUNCTION_STACK_MICRO_PARAMS ends
+
+
+
+
