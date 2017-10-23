@@ -88,7 +88,6 @@ The following describes the directory structure layout.
 - **soft3d_public.inc** - Software implmented 3D library structures.
 - **vpal_public.inc** - Virtual Palette functions.
 - **primatives_public.inc** - Basic graphic functions (i.e. Circle, etc.).
-- **paramhelp_public.inc** - Standard paramter and locals frames.  Does not include any local variables.
 
 ## Available functions in the framework
 
