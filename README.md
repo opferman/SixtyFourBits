@@ -69,39 +69,26 @@ DEBUG_FUNCTION_CALL Math_rand
 
 ## Directory structure
 The following describes the directory structure layout.
-- **INC\AMD64** - Header files to be used by the framework, applications and demos.
+- **public\inc\amd64** - Public header files from the framework that can be included into demos, applications, etc.
+- **private\inc\amd64** - Supporting header files that should not be directly included.  These are included as dependencies from the public header files when needed.
 - **Apps** - Applications built to run the demos.
 - **TestApps** - Testing applications for a particular demo scene.
 - **Framework** - The directory that contains the engine and framework for the demoscenes.
+- **Framework\inc\amd64** - Private header files that should not be included in anything but the framework.
 - **DemoScenes** - Demoscene libraries themselves which users implement.
+- **DemoScenes\inc\amd64** - Header files to include to use the demo scenes.
 - **DemoEffects** - TBD, Future directory to contain libraries of demo effects that can be included in your demoscene.
 
 ## Public Framework Header File list
-- **ksamd64.inc** - This is a required file to include the basic runtime for X86-64 assembly on Windows.  This is part of the WDK and not a file checked into this repository.
+- **DemoScene.inc** - This is the base header file that should be included for demoscenes.
 - **DBuffer_Public.inc** - Doublebuffer library.
-- **Debug_public.inc** - Debug macro library.
-- **demoprocs.inc** - Contains internal functions and the Math library.  TODO: Split this out into seperate headers for internal vs. demo.
 - **font_public.inc** - Library to obtain bit-fonts.
 - **frameloop_public.inc** - Library that allows callback scripting of your demo based on absolute or relative frame counts.
 - **init_public.inc** - Initialization API for the framework and is included in your entry test or demo application but not in the demoscene itself.
-- **master.INC** - Contains the MASTER_DEMO_STRUCT definition that is needed and passed into the demoscene callbacks (Init, Demo, Free).
 - **soft3d_public.inc** - Software implmented 3D library structures.
-- **soft3d_funcs.inc** - Software implmented 3D library functions.
-- **demovariables.inc** - Use for constants for the demo but contains nothing today.
 - **vpal_public.inc** - Virtual Palette functions.
 - **primatives_public.inc** - Basic graphic functions (i.e. Circle, etc.).
 - **paramhelp_public.inc** - Standard paramter and locals frames.  Does not include any local variables.
-
-### Internal Framework Header File list you should not include.
-- **engdbg_procs.INC** - Internal header file for the engine.
-- **engine.INC** - Internal header file for the engine.
-- **ddrawx64.INC** - Internal header file that contains direct draw definitions. 
-- **engdbg_internal.INC** - Internal header file for the engine.
-- **init_vars.INC** - Included indirectly by the other header files as needed.
-- **DBuffer_flags.INC** - Included indirectly by the other header files as needed.
-- **frameloop_vars.inc** - Included indirectly by the other header files as needed.
-- **windowsx64.inc** - Internal header file that contains information for the Windowing library.
-- **Windowsx64_public.inc** - Previously publicly used in test applications, it is no longer needed to be used and has been moved to internal only.
 
 ## Available functions in the framework
 
@@ -113,7 +100,7 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Parameters: (RCX - INIT_DEMO_STRUCT)
 	- Return: None
 
-### master.INC
+### DemoScene.inc
 - **MASTER_DEMO_STRUCT**
     - Description: The data structure that contains the video buffer information.
 
@@ -133,7 +120,7 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Parameters: (RCX - Double Buffer)
 	- Return: (None)
 
-### Debug_public.inc
+### DemoScene.inc (Debug_public.inc)
 - **DEBUG_IS_ENABLED**
     - Description: An EQU set to 1 to enable Debug or set to 0 to disable debug.
 
@@ -143,7 +130,7 @@ The framework contains various functions you can use to accellerate your demo bu
 - **DEBUG_RSP_CHECK_MACRO**
     - Description: Performs the RSP verification when debug is enabled as described above.
 
-### demoprocs.inc
+### DemoScene.inc (math_public.inc)
 - **Math_Rand**
     - Description: Returns a random number.
 	- Parameters: (None)
