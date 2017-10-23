@@ -104,6 +104,51 @@ STD_FUNCTION_STACK_MICRO_PARAMS struct
     FuncParams  FUNCTION_PARAMETERS_FRAME <?>
 STD_FUNCTION_STACK_MICRO_PARAMS ends
 
+SAVE_ALL_STD_REGS MACRO Structure
+ save_reg r12, Structure.SaveRegs.SaveR12
+ save_reg r13, Structure.SaveRegs.SaveR13
+ save_reg r14, Structure.SaveRegs.SaveR14
+ save_reg r15, Structure.SaveRegs.SaveR15
+ save_reg rdi, Structure.SaveRegs.SaveRdi
+ save_reg rsi, Structure.SaveRegs.SaveRsi
+ save_reg rbx, Structure.SaveRegs.SaveRbx
+ save_reg rbp, Structure.SaveRegs.SaveRbp
+ENDM
 
+RESTORE_ALL_STD_REGS MACRO Structure
+ MOV r12, Structure.SaveRegs.SaveR12[RSP]
+ MOV r13, Structure.SaveRegs.SaveR13[RSP]
+ MOV r14, Structure.SaveRegs.SaveR14[RSP]
+ MOV r15, Structure.SaveRegs.SaveR15[RSP]
+ MOV rdi, Structure.SaveRegs.SaveRdi[RSP]
+ MOV rsi, Structure.SaveRegs.SaveRsi[RSP]
+ MOV rbx, Structure.SaveRegs.SaveRbx[RSP]
+ MOV rbp, Structure.SaveRegs.SaveRbp[RSP]
+ENDM
 
+SAVE_ALL_XMM_REGS MACRO Structure
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm6[RSP], xmm6  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm7[RSP], xmm7  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm8[RSP], xmm8  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm9[RSP], xmm9  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm10[RSP], xmm10 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm11[RSP], xmm11 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm12[RSP], xmm12 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm13[RSP], xmm13 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm14[RSP], xmm14 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm15[RSP], xmm15 
+ENDM
+
+RESTORE_ALL_XMM_REGS MACRO Structure
+ MOVAPS  xmm6, Structure.SaveXmmRegs.SaveXmm6[RSP]
+ MOVAPS  xmm7, Structure.SaveXmmRegs.SaveXmm7[RSP]
+ MOVAPS  xmm8, Structure.SaveXmmRegs.SaveXmm8[RSP]
+ MOVAPS  xmm9, Structure.SaveXmmRegs.SaveXmm9[RSP]
+ MOVAPS  xmm10, Structure.SaveXmmRegs.SaveXmm10[RSP]
+ MOVAPS  xmm11, Structure.SaveXmmRegs.SaveXmm11[RSP]
+ MOVAPS  xmm12, Structure.SaveXmmRegs.SaveXmm12[RSP]
+ MOVAPS  xmm13, Structure.SaveXmmRegs.SaveXmm13[RSP]
+ MOVAPS  xmm14, Structure.SaveXmmRegs.SaveXmm14[RSP]
+ MOVAPS  xmm15, Structure.SaveXmmRegs.SaveXmm15[RSP]
+ENDM
 

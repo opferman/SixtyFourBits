@@ -199,14 +199,7 @@ NESTED_END StarDemo_Init, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY StarDemo_Demo, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
- save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
- save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
- save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
- save_reg r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14
- save_reg r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15
- save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
- save_reg r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13
-
+ SAVE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
@@ -244,15 +237,7 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    DEBUG_FUNCTION_CALL FrameLoop_Reset
 
 @SkipReset:
-  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
-  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
-  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
-
-  MOV r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14[RSP]
-  MOV r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15[RSP]
-  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
-  MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
-
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   
   DEC [FrameCountDown]
@@ -275,7 +260,7 @@ NESTED_ENTRY StarDemo_Free, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
-  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
  MOV RCX, [VirtualPallete]
@@ -309,7 +294,7 @@ NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
-  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX
