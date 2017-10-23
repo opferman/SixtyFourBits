@@ -16,11 +16,7 @@
 ;*********************************************************
 ; Included Files
 ;*********************************************************
-include ksamd64.inc
-include demovariables.inc
-include demoprocs.inc
-include master.inc
-include debug_public.inc
+include demoscene.inc
 
 ;*********************************************************
 ; External WIN32/C Functions

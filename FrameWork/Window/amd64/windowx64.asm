@@ -20,7 +20,6 @@ public Windowx64_Loop
 ;*********************************************************
 include ksamd64.inc
 include windowsx64.inc
-include demovariables.inc
 include init_vars.inc
 
 WM_TIMER EQU <0113h>

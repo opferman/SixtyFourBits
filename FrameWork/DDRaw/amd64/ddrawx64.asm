@@ -18,7 +18,6 @@
 ;*********************************************************
 include ksamd64.inc
 include windowsx64.inc
-include demovariables.inc
 include ddrawx64.inc
 include init_public.inc
 include engdbg_internal.inc

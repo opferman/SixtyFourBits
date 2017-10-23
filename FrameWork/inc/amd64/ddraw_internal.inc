@@ -1,0 +1,7 @@
+extern DDrawx64_Init:proc
+extern DDrawx64_Free:proc
+extern DDrawx64_LockSurfaceBuffer:proc
+extern DDrawx64_UnLockSurfaceAndFlip:proc
+extern DDrawx64_GetScreenRes:proc
+extern DDrawx64_PixelPlot:proc
+extern DDrawx64_RestoreSurfacesIfNeeded:proc

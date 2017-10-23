@@ -18,8 +18,6 @@
 ;*********************************************************
 include ksamd64.inc
 include dbuffer_flags.inc
-include demovariables.inc
-include demoprocs.inc
 include debug_public.inc
 include master.inc
 include vpal_public.inc

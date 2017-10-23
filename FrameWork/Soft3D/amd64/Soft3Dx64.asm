@@ -20,9 +20,8 @@
 ; Included Files
 ;*********************************************************
 include ksamd64.inc
-include demovariables.inc
 include master.inc
-include soft3d_public.inc
+include soft3d_structures.inc
 
 extern cos:proc
 extern sin:proc

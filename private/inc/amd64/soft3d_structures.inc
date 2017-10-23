@@ -1,10 +1,3 @@
-;****************************************
-;
-;  Software 3D Public Header
-;
-;     Toby Opferman
-;
-;****************************************
 
 SOFT3D_FLAG_ZBUFFER EQU <1>
 
@@ -53,6 +46,4 @@ TD_PIXEL STRUCT
   Point      TD_POINT    <?>
   Pixel      PIXEL_COLOR  <>
 TD_PIXEL ENDS
-
-
 

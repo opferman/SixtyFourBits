@@ -38,70 +38,70 @@ FUNCTION_PARAMETERS_FRAME ends
 
 SAVE_REGISTERS_FRAME struct
     SaveR12  dq ?
-	SaveR13  dq ?
-	SaveR14  dq ?
-	SaveR15  dq ?
-	SaveRdi  dq ?
-	SaveRsi  dq ?
-	SaveRbx  dq ?
-	SaveRbp  dq ?
+    SaveR13  dq ?
+    SaveR14  dq ?
+    SaveR15  dq ?
+    SaveRdi  dq ?
+    SaveRsi  dq ?
+    SaveRbx  dq ?
+    SaveRbp  dq ?
 SAVE_REGISTERS_FRAME ends
 
 SAVE_REGISTERS_FRAME_XMM struct
     SaveXmm6  oword ?
-	SaveXmm7  oword ?
-	SaveXmm8  oword ?
-	SaveXmm9  oword ?
-	SaveXmm10 oword ?
-	SaveXmm11 oword ?
-	SaveXmm12 oword ?
-	SaveXmm13 oword ?
-	SaveXmm14 oword ?
+    SaveXmm7  oword ?
+    SaveXmm8  oword ?
+    SaveXmm9  oword ?
+    SaveXmm10 oword ?
+    SaveXmm11 oword ?
+    SaveXmm12 oword ?
+    SaveXmm13 oword ?
+    SaveXmm14 oword ?
     SaveXmm15 oword ?
 SAVE_REGISTERS_FRAME_XMM ends
 
 STD_FUNCTION_STACK struct
     Parameters  LOCAL_PARAMETER_FRAME8    <?>
-	SaveRegs    SAVE_REGISTERS_FRAME      <?>
-	SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
-	Padding     dq                         ?
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    Padding     dq                         ?
 STD_FUNCTION_STACK ends
 
 STD_FUNCTION_STACK_PARAMS struct
     Parameters  LOCAL_PARAMETER_FRAME8    <?>
-	SaveRegs    SAVE_REGISTERS_FRAME      <?>
-	SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
-	Padding     dq                         ?
-	FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
 STD_FUNCTION_STACK_PARAMS ends
 
 
 STD_FUNCTION_STACK_MIN struct
     Parameters  LOCAL_PARAMETER_FRAME8    <?>
-	SaveRegs    SAVE_REGISTERS_FRAME      <?>
-	Padding     dq                         ?
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
 STD_FUNCTION_STACK_MIN ends
 
 STD_FUNCTION_STACK_MIN_PARAMS struct
     Parameters  LOCAL_PARAMETER_FRAME8    <?>
-	SaveRegs    SAVE_REGISTERS_FRAME      <?>
-	Padding     dq                         ?
-	FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
 STD_FUNCTION_STACK_MIN_PARAMS ends
 
 
 
 STD_FUNCTION_STACK_MICRO struct
     Parameters  LOCAL_PARAMETER_FRAME4    <?>
-	SaveRegs    SAVE_REGISTERS_FRAME      <?>
-	Padding     dq                         ?
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
 STD_FUNCTION_STACK_MICRO ends
 
 STD_FUNCTION_STACK_MICRO_PARAMS struct
     Parameters  LOCAL_PARAMETER_FRAME4    <?>
-	SaveRegs    SAVE_REGISTERS_FRAME      <?>
-	Padding     dq                         ?
-	FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
 STD_FUNCTION_STACK_MICRO_PARAMS ends
 
 
