@@ -28,27 +28,7 @@ extern LocalFree:proc
 ;*********************************************************
 ; Structures
 ;*********************************************************
-PARAMFRAME struct
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-PARAMFRAME ends
 
-SAVEREGSFRAME struct
-    SaveRdi        dq ?
-    SaveRsi        dq ?
-    SaveRbx        dq ?
-    SaveR14        dq ?
-    SaveR15        dq ?
-    SaveR12        dq ?
-    SaveR13        dq ?
-SAVEREGSFRAME ends
-
-TEMPLATE_FUNCTION_STRUCT struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-TEMPLATE_FUNCTION_STRUCT ends
 
 ;*********************************************************
 ; Public Declarations
@@ -78,17 +58,17 @@ MAX_FRAMES EQU <200>
 ;
 ;*********************************************************  
 NESTED_ENTRY Template_Init, _TEXT$00
- alloc_stack(SIZEOF TEMPLATE_FUNCTION_STRUCT)
- save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
- save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
   MOV [FrameCounter], 0
 
-  MOV RSI, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
-  MOV RDI, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
-  ADD RSP, SIZE TEMPLATE_FUNCTION_STRUCT
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   MOV EAX, 1
   RET
 NESTED_END Template_Init, _TEXT$00
@@ -105,14 +85,14 @@ NESTED_END Template_Init, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Template_Demo, _TEXT$00
- alloc_stack(SIZEOF TEMPLATE_FUNCTION_STRUCT)
- save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
- save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
- save_reg rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx
- save_reg r14, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR14
- save_reg r15, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR15
- save_reg r12, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR12
- save_reg r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14
+ save_reg r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+ save_reg r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13
 
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
@@ -160,16 +140,16 @@ NESTED_ENTRY Template_Demo, _TEXT$00
   SETE AL
   XOR AL, 1
  
-  MOV rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  MOV r14, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR14[RSP]
-  MOV r15, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR15[RSP]
-  MOV r12, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR12[RSP]
-  MOV r13, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveR13[RSP]
+  MOV r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14[RSP]
+  MOV r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
 
-  ADD RSP, SIZE TEMPLATE_FUNCTION_STRUCT
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END Template_Demo, _TEXT$00
 
@@ -185,20 +165,20 @@ NESTED_END Template_Demo, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Template_Free, _TEXT$00
- alloc_stack(SIZEOF TEMPLATE_FUNCTION_STRUCT)
- save_reg rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi
- save_reg rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi
- save_reg rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
 
   ; Nothing to clean up
 
-  MOV rdi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TEMPLATE_FUNCTION_STRUCT.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  ADD RSP, SIZE TEMPLATE_FUNCTION_STRUCT
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END Template_Free, _TEXT$00
 
