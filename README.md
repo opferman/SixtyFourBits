@@ -90,6 +90,7 @@ The following describes the directory structure layout.
 - **demovariables.inc** - Use for constants for the demo but contains nothing today.
 - **vpal_public.inc** - Virtual Palette functions.
 - **primatives_public.inc** - Basic graphic functions (i.e. Circle, etc.).
+- **paramhelp_public.inc** - Standard paramter and locals frames.  Does not include any local variables.
 
 ### Internal Framework Header File list you should not include.
 - **engdbg_procs.INC** - Internal header file for the engine.
@@ -247,6 +248,12 @@ The framework contains various functions you can use to accellerate your demo bu
 - **Prm_DrawCircle**
     - Description: Draws a circle
 	- Parameters: (RCX - Master Context, RDX - X, R8 - Y, R9 - Radius, Param5 - Plot Pixel Callback Function, Param6 - Context)
+	- Return: None
+        - void PlotPixelCallback(X, Y, Context, Master Context) - In order to accomodate any size buffer, the caller must draw the pixel for any primatives function.
+
+- **Prm_DrawLine**
+    - Description: Draws a line
+	- Parameters: (RCX - Master Context, RDX - X, R8 - Y, R9 - X2, Param5 - Y2, Param6 - Plot Pixel Callback Function, Param7 - Context)
 	- Return: None
         - void PlotPixelCallback(X, Y, Context, Master Context) - In order to accomodate any size buffer, the caller must draw the pixel for any primatives function.
 
