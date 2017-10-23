@@ -26,6 +26,7 @@ include debug_public.inc
 include frameloop_public.inc
 include dbuffer_public.inc
 include primatives_public.inc
+include paramhelp_public.inc
 
 CHECK_SELECT MACRO RegCheckMask, Constant, RegBlockMask
    LOCAL NotAMatch
@@ -44,55 +45,9 @@ CHECK_SELECT MACRO RegCheckMask, Constant, RegBlockMask
 NotAMatch:
 ENDM
 
-PARAMFRAME struct
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-    Param5         dq ?
-    Param6         dq ?
-    Param7         dq ?
-    Param8         dq ?
-PARAMFRAME ends
-
-SAVEREGSFRAME struct
-    SaveRdi        dq ?
-    SaveRsi        dq ?
-    SaveRbx        dq ?
-    SaveR14        dq ?
-    SaveR15        dq ?
-    SaveR12        dq ?
-    SaveR13        dq ?
-SAVEREGSFRAME ends
-
-FUNC_PARAMS struct
-    ReturnAddress  dq ?
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-    Param5         dq ?
-    Param6         dq ?
-    Param7         dq ?
-FUNC_PARAMS ends
-
-
-TTT_DEMO_STRUCTURE struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-TTT_DEMO_STRUCTURE ends
-
-TTT_DEMO_STRUCTURE_FUNC struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-   FuncParams     FUNC_PARAMS     <?>
-TTT_DEMO_STRUCTURE_FUNC ends
-
 public TTT_Init
 public TTT_Demo
 public TTT_Free
-
-
 
 .DATA
   DoubleBuffer     dq ?
@@ -159,11 +114,11 @@ public TTT_Free
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_Init, _TEXT$00
- alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
- save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg r12, TTT_DEMO_STRUCTURE.SaveFrame.SaveR12
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -210,20 +165,20 @@ NESTED_ENTRY TTT_Init, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL TTT_CreateBoard
     
-  MOV RSI, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, TTT_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   MOV EAX, 1
   RET
 
 @TTT_Failed:
-  MOV RSI, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, TTT_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   XOR EAX, EAX
   RET
 NESTED_END TTT_Init, _TEXT$00
@@ -240,14 +195,14 @@ NESTED_END TTT_Init, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_Demo, _TEXT$00
- alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
- save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r14, TTT_DEMO_STRUCTURE.SaveFrame.SaveR14
- save_reg r15, TTT_DEMO_STRUCTURE.SaveFrame.SaveR15
- save_reg r12, TTT_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, TTT_DEMO_STRUCTURE.SaveFrame.SaveR13
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14
+ save_reg r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+ save_reg r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13
 
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
@@ -339,16 +294,16 @@ NESTED_ENTRY TTT_Demo, _TEXT$00
   JZ @TryPlotXAgain
 
 @SkipReset:
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  MOV r14, TTT_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
-  MOV r15, TTT_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
-  MOV r12, TTT_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, TTT_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  MOV r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14[RSP]
+  MOV r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
 
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   
   MOV EAX, [GameCountDown]
   RET
@@ -366,19 +321,19 @@ NESTED_END TTT_Demo, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_Free, _TEXT$00
- alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
- save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
  MOV RCX, [VirtualPallete]
  DEBUG_FUNCTION_CALL VPal_Free
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END TTT_Free, _TEXT$00
 
@@ -392,7 +347,7 @@ NESTED_END TTT_Free, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_CheckWin, _TEXT$00
- alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
@@ -439,7 +394,7 @@ NESTED_ENTRY TTT_CheckWin, _TEXT$00
   XOR RAX, RAX
 
 @WinFound:
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END TTT_CheckWin, _TEXT$00
 
@@ -454,10 +409,10 @@ NESTED_END TTT_CheckWin, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_GetNextMove, _TEXT$00
-  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
-  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
   .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
@@ -472,11 +427,11 @@ NESTED_ENTRY TTT_GetNextMove, _TEXT$00
   CHECK_SELECT RDX, 0421h, RCX
 
 @DoneCheck:
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END TTT_GetNextMove, _TEXT$00
 
@@ -490,10 +445,10 @@ NESTED_END TTT_GetNextMove, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_Plot_X, _TEXT$00
-  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
-  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
   .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RDX, [CircleLocations]
@@ -534,10 +489,10 @@ NESTED_ENTRY TTT_Plot_X, _TEXT$00
  DEBUG_FUNCTION_CALL TTT_DrawX
 
 @DoneXPlot:
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END TTT_Plot_X, _TEXT$00
 
@@ -552,10 +507,10 @@ NESTED_END TTT_Plot_X, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_DrawX, _TEXT$00
-  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
-  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
   .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
@@ -594,20 +549,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Top_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 300
   MOV R8, 200
   MOV RDX, 200
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 200
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 200
   MOV R9, 300
   MOV R8, 300
   MOV RDX, 200
@@ -618,20 +573,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Top_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 400
   MOV R8, 200
   MOV RDX, 300
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 200
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 200
   MOV R9, 400
   MOV R8, 300
   MOV RDX, 300
@@ -642,20 +597,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Top_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 500
   MOV R8, 200
   MOV RDX, 400
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 200
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 200
   MOV R9, 500
   MOV R8, 300
   MOV RDX, 400
@@ -666,20 +621,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Mid_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 300
   MOV R8, 400
   MOV RDX, 200
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 300
   MOV R8, 300
   MOV RDX, 200
@@ -690,20 +645,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Mid_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 400
   MOV R8, 400
   MOV RDX, 300
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 400
   MOV R8, 300
   MOV RDX, 300
@@ -713,20 +668,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Mid_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 500
   MOV R8, 400
   MOV RDX, 400
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 500
   MOV R8, 300
   MOV RDX, 400
@@ -738,20 +693,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Bottom_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 500
   MOV R9, 300
   MOV R8, 400
   MOV RDX, 200
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 300
   MOV R8, 500
   MOV RDX, 200
@@ -762,20 +717,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Bottom_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 500
   MOV R9, 400
   MOV R8, 400
   MOV RDX, 300
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 400
   MOV R8, 500
   MOV RDX, 300
@@ -785,20 +740,20 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   JMP @DoneXPlot
 
 @X_Bottom_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 500
   MOV R9, 500
   MOV R8, 400
   MOV RDX, 400
   MOV RCX, [MasterContext]
   DEBUG_FUNCTION_CALL Prm_DrawLine   
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], RBX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], RBX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 500
   MOV R8, 500
   MOV RDX, 400
@@ -807,10 +762,10 @@ NESTED_ENTRY TTT_DrawX, _TEXT$00
   OR [XLocations], 1
 
 @DoneXPlot:
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END TTT_DrawX, _TEXT$00
 
@@ -824,10 +779,10 @@ NESTED_END TTT_DrawX, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
-  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
-  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
   .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
@@ -870,10 +825,10 @@ NESTED_ENTRY TTT_Plot_Circle, _TEXT$00
  DEBUG_FUNCTION_CALL TTT_DrawCircle
 
 @DoneCirclePlot:
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
 
   RET
 NESTED_END TTT_Plot_Circle, _TEXT$00
@@ -889,10 +844,10 @@ NESTED_END TTT_Plot_Circle, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_DrawCircle, _TEXT$00
-  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
-  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
   .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
@@ -930,9 +885,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Top_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 250
   MOV RDX, 250
@@ -942,9 +897,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Top_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 250
   MOV RDX, 350
@@ -954,9 +909,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Top_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 250
   MOV RDX, 450
@@ -966,9 +921,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Mid_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 350
   MOV RDX, 250
@@ -978,9 +933,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Mid_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 350
   MOV RDX, 350
@@ -990,9 +945,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Mid_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 350
   MOV RDX, 450
@@ -1002,9 +957,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Bottom_First:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 450
   MOV RDX, 250
@@ -1014,9 +969,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Bottom_Second:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 450
   MOV RDX, 350
@@ -1026,9 +981,9 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   JMP @DoneCirclePlot
 
 @Circle_Bottom_Third:
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RDX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RDX
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], RCX
   MOV R9, 50
   MOV R8, 450
   MOV RDX, 450
@@ -1037,10 +992,10 @@ NESTED_ENTRY TTT_DrawCircle, _TEXT$00
   OR [CircleLocations], 1
 
 @DoneCirclePlot:
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
 
   RET
 NESTED_END TTT_DrawCircle, _TEXT$00
@@ -1055,50 +1010,50 @@ NESTED_END TTT_DrawCircle, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_CreateBoard, _TEXT$00
-  alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
-  save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+  save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
   .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV RCX, [DoubleBuffer]
   DEBUG_FUNCTION_CALL Dbuffer_ClearBuffer
   
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], 0ffh
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 500
   MOV R9, 300
   MOV R8, 200
   MOV RDX, 300
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Prm_DrawLine
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], 0ffh
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 500
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 500
   MOV R9, 400
   MOV R8, 200
   MOV RDX, 400
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Prm_DrawLine
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], 0ffh
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 300
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 300
   MOV R9, 500
   MOV R8, 300
   MOV RDX, 200
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Prm_DrawLine
 
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0ffh
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param7[RSP], 0ffh
   MOV RCX, OFFSET TTT_DrawPixel
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], RCX
-  MOV TTT_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 400
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param6[RSP], RCX
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 400
   MOV R9, 500
   MOV R8, 400
   MOV RDX, 200
@@ -1108,11 +1063,11 @@ NESTED_ENTRY TTT_CreateBoard, _TEXT$00
   MOV [CircleLocations], 0
   MOV [XLocations], 0
 
-  MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, TTT_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  ADD RSP, SIZE TTT_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END TTT_CreateBoard, _TEXT$00
 
@@ -1128,8 +1083,8 @@ NESTED_END TTT_CreateBoard, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY TTT_DrawPixel, _TEXT$00
- alloc_stack(SIZEOF TTT_DEMO_STRUCTURE)
- save_reg rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
 
@@ -1142,8 +1097,8 @@ NESTED_ENTRY TTT_DrawPixel, _TEXT$00
  MOV RCX, R8
  MOV BYTE PTR [RAX], CL
   
- MOV rdi, TTT_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
- ADD RSP, SIZE TTT_DEMO_STRUCTURE
+ MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+ ADD RSP, SIZE STD_FUNCTION_STACK_MIN
  RET
 NESTED_END TTT_DrawPixel, _TEXT$00
 
