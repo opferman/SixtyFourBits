@@ -17,9 +17,7 @@
 ;*********************************************************
 ; Included Files
 ;*********************************************************
-include ksamd64.inc
-include demovariables.inc
-include master.inc
+include demoscene.inc
 include vpal_public.inc
 include brownianx_public.inc
 

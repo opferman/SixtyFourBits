@@ -6,13 +6,6 @@
 ;
 ;****************************************
 
-
-; Function Procedures
-
-
-; Constants
-
-
 ; Structure Definitions
 DEMO_STRUCT struct
      InitFunction dq ?
@@ -29,8 +22,8 @@ MASTER_DEMO_STRUCT struct
       Pitch              dd ?
       Padding            dd ?
       ScreenWidth        dq ?
-      ScreenHeight       dq ?
-	  BitsPerPixel       dq ?
+      ScreenHeight       dq ?	
+      BitsPerPixel       dq ?
       DirectDrawCtx      dq ?
-	;  FullScreen         dq ? ; TBD if needed 
+;      FullScreen         dq ? ; TBD if needed 
 MASTER_DEMO_STRUCT ends

@@ -18,10 +18,9 @@
 ;*********************************************************
 include ksamd64.inc
 include windowsx64_public.inc
-include demovariables.inc
-include demoprocs.inc
 include engine.inc
-
+include math_public.inc
+include ddraw_internal.inc
 
 ;*********************************************************
 ; Structures

@@ -18,11 +18,10 @@
 ;*********************************************************
 include ksamd64.inc
 include windowsx64.inc
-include demovariables.inc
-include demoprocs.inc
 include ddrawx64.inc
 include master.inc
 include engdbg_internal.inc
+include ddraw_internal.inc
 
 extern LocalAlloc:proc
 

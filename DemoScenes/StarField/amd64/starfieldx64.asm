@@ -16,15 +16,10 @@
 ;*********************************************************
 ; Included Files
 ;*********************************************************
-include ksamd64.inc
-include demovariables.inc
-include demoprocs.inc
-include master.inc
+include demoscene.inc
 include vpal_public.inc
 include font_public.inc
 include soft3d_public.inc
-include soft3d_funcs.inc
-include debug_public.inc
 include frameloop_public.inc
 include dbuffer_public.inc
 
