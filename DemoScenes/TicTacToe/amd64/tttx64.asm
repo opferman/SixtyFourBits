@@ -97,7 +97,7 @@ public TTT_Free
 .DATA
   DoubleBuffer     dq ?
   VirtualPallete   dq ?
-  FrameCountDown   dd 2800
+  GameCountDown    dd 10
   EndOfGamePause   dd 0
   EndOfGameActive  dd 0
 
@@ -270,6 +270,8 @@ NESTED_ENTRY TTT_Demo, _TEXT$00
   
   MOV [EndOfGameActive], 0
 
+  DEC [GameCountDown]
+
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL TTT_CreateBoard
 
@@ -348,8 +350,7 @@ NESTED_ENTRY TTT_Demo, _TEXT$00
 
   ADD RSP, SIZE TTT_DEMO_STRUCTURE
   
-  DEC [FrameCountDown]
-  MOV EAX, [FrameCountDown]
+  MOV EAX, [GameCountDown]
   RET
 NESTED_END TTT_Demo, _TEXT$00
 
