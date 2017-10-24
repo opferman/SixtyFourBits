@@ -1,5 +1,10 @@
 # SixtyFourBits
 
+## About
+
+The main focus of this project was for people to be able to learn assembly programming in a fun way by doing graphics.  The framework removes the burdern of learning Windows GUI and Direct X programming and setting up all the
+boiler plate and just hit the ground running as with a few instructions they can see pixels being set on the screen without much effort at all.  Plus it is fun to write 1990s style graphics effects and demos.
+
 ## Build environment
 1. Download the Windows 7 WDK
 2. The environment to use is Windows x64 free
@@ -245,8 +250,7 @@ The framework contains various functions you can use to accellerate your demo bu
 
 # Programming Guide (Examples)
 
-The main focus of this project was for people to be able to learn assembly programming in a fun way by doing graphics.  The framework removes the burdern of learning Windows GUI and Direct X programming and setting up all the
-boiler plate and just hit the ground running as with a few instructions they can see pixels being set on the screen without much effort at all.  Plus it is fun to write 1990s style graphics effects and demos.
+The following are coding examples of how to use some of the library and framework functionality in your demo.
 
 ## Creating and using the Virtual Palette 
 
@@ -309,6 +313,88 @@ The screen can then be updated by a single function call.
    MOV R8, DB_FLAG_CLEAR_BUFFER
    DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 ```
+
+
+## Register saving, parameter passing and parameter accessing
+
+There are macros and structures included in the **demoscene.inc** by **paramhelp_public.inc** that provide a fast and easy way to setup the local stack frame.  One thing to remember is that stack
+space is really free these days, so reserving stack space you don't need in this simple demo framework is going to save some time than tailoring each stack specifically to the space you need.  However, you
+can limit the execution time by only saving the registers you actually plan to use.  There are macros in the header file to help with this by providing you structures and macros to reserve and save your
+registers.  If you need to use local variables you will need to create your own additional structures and if you want to only save a few registers you may need to save those manually as well as the macros 
+only go so far and save all registers or a few specific registers.
+
+The **STD_FUNCTION_STACK_MIN** is defined as all non-volatile general purpose registers and 8 parameters for function calls.  The example below shows using it to save only a few required GP registers.
+
+```
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  ...  Function Code ...
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  MOV EAX, 1
+  RET  
+```
+
+However, there is a macro that allows you to just save and restore ALL the GP registers.  An example of this is shown below.
+
+
+```
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
+  .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  ...  Function Code ...
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  MOV EAX, 1
+  RET  
+```
+
+
+The below shows the definitions of the minimum and there are always two versions.  The first is the stack allocation for the current function and the second includes access to the stack parameters passed to it from the caller.
+```
+STD_FUNCTION_STACK_MIN struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
+STD_FUNCTION_STACK_MIN ends
+
+STD_FUNCTION_STACK_MIN_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+STD_FUNCTION_STACK_MIN_PARAMS ends
+```
+
+There is also a version that includes XMM registers as well as a macro to save and restore all XMM registers.  However, none of these standard structures have local variables.  If you need to define local variables though, these are 
+great structures to start out with and then add your local variables.  I would add your local variables either where the "Padding" variable is or between the the parameters and the save registers structure as shown in the below example.
+If you are adding local variables you can use the padding position it doesn't need to be kept.  It is in there to maintain alignment but you can arrange your local variables to make up for the alignment issue, just ensure that you do
+not trap on MOVAPS when saving XMM registers and use the DEBUG_RSP_CHECK_MACRO to ensure stack alignment is maintained.  You will need to run with debug EQU enabled to have the macro test enforcement. 
+
+```
+DEMO_FUNCTION_STACK_MIN_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    ; Local Variables Here
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    ; Or Local Variables Here
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+DEMO_FUNCTION_STACK_MIN_PARAMS ends
+```
+
+
 
 
 
