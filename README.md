@@ -1,5 +1,10 @@
 # SixtyFourBits
 
+## About
+
+The main focus of this project was for people to be able to learn assembly programming in a fun way by doing graphics.  The framework removes the burdern of learning Windows GUI and Direct X programming and setting up all the
+boiler plate and just hit the ground running as with a few instructions they can see pixels being set on the screen without much effort at all.  Plus it is fun to write 1990s style graphics effects and demos.
+
 ## Build environment
 1. Download the Windows 7 WDK
 2. The environment to use is Windows x64 free
@@ -69,39 +74,25 @@ DEBUG_FUNCTION_CALL Math_rand
 
 ## Directory structure
 The following describes the directory structure layout.
-- **INC\AMD64** - Header files to be used by the framework, applications and demos.
+- **public\inc\amd64** - Public header files from the framework that can be included into demos, applications, etc.
+- **private\inc\amd64** - Supporting header files that should not be directly included.  These are included as dependencies from the public header files when needed.
 - **Apps** - Applications built to run the demos.
 - **TestApps** - Testing applications for a particular demo scene.
 - **Framework** - The directory that contains the engine and framework for the demoscenes.
+- **Framework\inc\amd64** - Private header files that should not be included in anything but the framework.
 - **DemoScenes** - Demoscene libraries themselves which users implement.
+- **DemoScenes\inc\amd64** - Header files to include to use the demo scenes.
 - **DemoEffects** - TBD, Future directory to contain libraries of demo effects that can be included in your demoscene.
 
 ## Public Framework Header File list
-- **ksamd64.inc** - This is a required file to include the basic runtime for X86-64 assembly on Windows.  This is part of the WDK and not a file checked into this repository.
+- **DemoScene.inc** - This is the base header file that should be included for demoscenes.
 - **DBuffer_Public.inc** - Doublebuffer library.
-- **Debug_public.inc** - Debug macro library.
-- **demoprocs.inc** - Contains internal functions and the Math library.  TODO: Split this out into seperate headers for internal vs. demo.
 - **font_public.inc** - Library to obtain bit-fonts.
 - **frameloop_public.inc** - Library that allows callback scripting of your demo based on absolute or relative frame counts.
 - **init_public.inc** - Initialization API for the framework and is included in your entry test or demo application but not in the demoscene itself.
-- **master.INC** - Contains the MASTER_DEMO_STRUCT definition that is needed and passed into the demoscene callbacks (Init, Demo, Free).
 - **soft3d_public.inc** - Software implmented 3D library structures.
-- **soft3d_funcs.inc** - Software implmented 3D library functions.
-- **demovariables.inc** - Use for constants for the demo but contains nothing today.
 - **vpal_public.inc** - Virtual Palette functions.
 - **primatives_public.inc** - Basic graphic functions (i.e. Circle, etc.).
-- **paramhelp_public.inc** - Standard paramter and locals frames.  Does not include any local variables.
-
-### Internal Framework Header File list you should not include.
-- **engdbg_procs.INC** - Internal header file for the engine.
-- **engine.INC** - Internal header file for the engine.
-- **ddrawx64.INC** - Internal header file that contains direct draw definitions. 
-- **engdbg_internal.INC** - Internal header file for the engine.
-- **init_vars.INC** - Included indirectly by the other header files as needed.
-- **DBuffer_flags.INC** - Included indirectly by the other header files as needed.
-- **frameloop_vars.inc** - Included indirectly by the other header files as needed.
-- **windowsx64.inc** - Internal header file that contains information for the Windowing library.
-- **Windowsx64_public.inc** - Previously publicly used in test applications, it is no longer needed to be used and has been moved to internal only.
 
 ## Available functions in the framework
 
@@ -113,7 +104,7 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Parameters: (RCX - INIT_DEMO_STRUCT)
 	- Return: None
 
-### master.INC
+### DemoScene.inc
 - **MASTER_DEMO_STRUCT**
     - Description: The data structure that contains the video buffer information.
 
@@ -133,7 +124,7 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Parameters: (RCX - Double Buffer)
 	- Return: (None)
 
-### Debug_public.inc
+### DemoScene.inc (Debug_public.inc)
 - **DEBUG_IS_ENABLED**
     - Description: An EQU set to 1 to enable Debug or set to 0 to disable debug.
 
@@ -143,7 +134,7 @@ The framework contains various functions you can use to accellerate your demo bu
 - **DEBUG_RSP_CHECK_MACRO**
     - Description: Performs the RSP verification when debug is enabled as described above.
 
-### demoprocs.inc
+### DemoScene.inc (math_public.inc)
 - **Math_Rand**
     - Description: Returns a random number.
 	- Parameters: (None)
@@ -259,8 +250,7 @@ The framework contains various functions you can use to accellerate your demo bu
 
 # Programming Guide (Examples)
 
-The main focus of this project was for people to be able to learn assembly programming in a fun way by doing graphics.  The framework removes the burdern of learning Windows GUI and Direct X programming and setting up all the
-boiler plate and just hit the ground running as with a few instructions they can see pixels being set on the screen without much effort at all.  Plus it is fun to write 1990s style graphics effects and demos.
+The following are coding examples of how to use some of the library and framework functionality in your demo.
 
 ## Creating and using the Virtual Palette 
 
@@ -323,6 +313,88 @@ The screen can then be updated by a single function call.
    MOV R8, DB_FLAG_CLEAR_BUFFER
    DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 ```
+
+
+## Register saving, parameter passing and parameter accessing
+
+There are macros and structures included in the **demoscene.inc** by **paramhelp_public.inc** that provide a fast and easy way to setup the local stack frame.  One thing to remember is that stack
+space is really free these days, so reserving stack space you don't need in this simple demo framework is going to save some time than tailoring each stack specifically to the space you need.  However, you
+can limit the execution time by only saving the registers you actually plan to use.  There are macros in the header file to help with this by providing you structures and macros to reserve and save your
+registers.  If you need to use local variables you will need to create your own additional structures and if you want to only save a few registers you may need to save those manually as well as the macros 
+only go so far and save all registers or a few specific registers.
+
+The **STD_FUNCTION_STACK_MIN** is defined as all non-volatile general purpose registers and 8 parameters for function calls.  The example below shows using it to save only a few required GP registers.
+
+```
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  ...  Function Code ...
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  MOV EAX, 1
+  RET  
+```
+
+However, there is a macro that allows you to just save and restore ALL the GP registers.  An example of this is shown below.
+
+
+```
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
+  .ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  ...  Function Code ...
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  MOV EAX, 1
+  RET  
+```
+
+
+The below shows the definitions of the minimum and there are always two versions.  The first is the stack allocation for the current function and the second includes access to the stack parameters passed to it from the caller.
+```
+STD_FUNCTION_STACK_MIN struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
+STD_FUNCTION_STACK_MIN ends
+
+STD_FUNCTION_STACK_MIN_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+STD_FUNCTION_STACK_MIN_PARAMS ends
+```
+
+There is also a version that includes XMM registers as well as a macro to save and restore all XMM registers.  However, none of these standard structures have local variables.  If you need to define local variables though, these are 
+great structures to start out with and then add your local variables.  I would add your local variables either where the "Padding" variable is or between the the parameters and the save registers structure as shown in the below example.
+If you are adding local variables you can use the padding position it doesn't need to be kept.  It is in there to maintain alignment but you can arrange your local variables to make up for the alignment issue, just ensure that you do
+not trap on MOVAPS when saving XMM registers and use the DEBUG_RSP_CHECK_MACRO to ensure stack alignment is maintained.  You will need to run with debug EQU enabled to have the macro test enforcement. 
+
+```
+DEMO_FUNCTION_STACK_MIN_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    ; Local Variables Here
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    ; Or Local Variables Here
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+DEMO_FUNCTION_STACK_MIN_PARAMS ends
+```
+
+
 
 
 

@@ -26,35 +26,6 @@ include dbuffer_public.inc
 extern LocalAlloc:proc
 extern LocalFree:proc
 
-PARAMFRAME struct
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-    Param5         dq ?
-    Param6         dq ?
-PARAMFRAME ends
-
-SAVEREGSFRAME struct
-    SaveRdi        dq ?
-    SaveRsi        dq ?
-    SaveRbx        dq ?
-    SaveR14        dq ?
-    SaveR15        dq ?
-    SaveR12        dq ?
-    SaveR13        dq ?
-SAVEREGSFRAME ends
-
-FUNC_PARAMS struct
-    ReturnAddress  dq ?
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-    Param5         dq ?
-    Param6         dq ?
-    Param7         dq ?
-FUNC_PARAMS ends
 
 STAR_FIELD_ENTRY struct
    Location       TD_POINT <?>
@@ -63,16 +34,6 @@ STAR_FIELD_ENTRY struct
    Color          db        ?
 STAR_FIELD_ENTRY ends
 
-STAR_DEMO_STRUCTURE struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-STAR_DEMO_STRUCTURE ends
-
-STAR_DEMO_STRUCTURE_FUNC struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-   FuncParams     FUNC_PARAMS     <?>
-STAR_DEMO_STRUCTURE_FUNC ends
 
 public StarDemo_Init
 public StarDemo_Demo
@@ -137,11 +98,11 @@ extern rand:proc
 ;
 ;*********************************************************  
 NESTED_ENTRY StarDemo_Init, _TEXT$00
- alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
- save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -207,20 +168,20 @@ NESTED_ENTRY StarDemo_Init, _TEXT$00
   TEST RAX, RAX
   JZ @StarInit_Failed
     
-  MOV RSI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   MOV EAX, 1
   RET
 
 @StarInit_Failed:
-  MOV RSI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   XOR EAX, EAX
   RET
 NESTED_END StarDemo_Init, _TEXT$00
@@ -237,15 +198,8 @@ NESTED_END StarDemo_Init, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY StarDemo_Demo, _TEXT$00
- alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
- save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r14, STAR_DEMO_STRUCTURE.SaveFrame.SaveR14
- save_reg r15, STAR_DEMO_STRUCTURE.SaveFrame.SaveR15
- save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, STAR_DEMO_STRUCTURE.SaveFrame.SaveR13
-
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ SAVE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
@@ -283,16 +237,8 @@ NESTED_ENTRY StarDemo_Demo, _TEXT$00
    DEBUG_FUNCTION_CALL FrameLoop_Reset
 
 @SkipReset:
-  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-
-  MOV r14, STAR_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
-  MOV r15, STAR_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
-  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, STAR_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_MIN
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   
   DEC [FrameCountDown]
   MOV EAX, [FrameCountDown]
@@ -311,10 +257,10 @@ NESTED_END StarDemo_Demo, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY StarDemo_Free, _TEXT$00
- alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
- save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
  MOV RCX, [VirtualPallete]
@@ -326,11 +272,11 @@ NESTED_ENTRY StarDemo_Free, _TEXT$00
 
   DEBUG_FUNCTION_CALL LocalFree
  @SkipFreeingMem:
-  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END StarDemo_Free, _TEXT$00
 
@@ -345,10 +291,10 @@ NESTED_END StarDemo_Free, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
- alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
- save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX
@@ -398,11 +344,11 @@ NESTED_ENTRY StarDemo_CreateStars, _TEXT$00
   CMP RSI, 1000
   JB @Initialize_Stars
   
-  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
 
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END StarDemo_CreateStars, _TEXT$00
 
@@ -418,11 +364,11 @@ NESTED_END StarDemo_CreateStars, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
- alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
- save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   LEA RDI, [StarEntry]
@@ -495,11 +441,11 @@ NESTED_ENTRY StarDemo_MoveStars, _TEXT$00
   JMP  @SkipIncrementColor
 @StarMoveComplete:
    
-  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END StarDemo_MoveStars, _TEXT$00
 
@@ -513,11 +459,11 @@ NESTED_END StarDemo_MoveStars, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
- alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
- save_reg rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   LEA RDI, [StarEntry]
@@ -525,7 +471,7 @@ NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
   MOV R12, RCX
   
 @Plot_Stars:
-  MOV STAR_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 0
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 0
   LEA R9, [TwoDPlot]
   LEA R8, [WorldLocation]
   LEA RDX, STAR_FIELD_ENTRY.Location[RDI]
@@ -553,11 +499,11 @@ NESTED_ENTRY StarDemo_PlotStars, _TEXT$00
   CMP RSI, 1000
   JB @Plot_Stars
   
-  MOV rdi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, STAR_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, STAR_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, STAR_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END StarDemo_PlotStars, _TEXT$00
 
@@ -590,7 +536,7 @@ NESTED_END StarDemo_IncStarVelocity_CB, _TEXT$00
 ;
 ;*********************************************************    
 NESTED_ENTRY StarDemo_SetCameraYOnly_CB, _TEXT$00
-  alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
   .ENDPROLOG 
   MOVSD xmm1, [CameraX]
 
@@ -602,7 +548,7 @@ NESTED_ENTRY StarDemo_SetCameraYOnly_CB, _TEXT$00
   PXOR xmm3, xmm3
   MOV RCX, [SOft3D]
   DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END StarDemo_SetCameraYOnly_CB, _TEXT$00
 
@@ -617,7 +563,7 @@ NESTED_END StarDemo_SetCameraYOnly_CB, _TEXT$00
 ;
 ;*********************************************************    
 NESTED_ENTRY StarDemo_SetCameraXOnly_CB, _TEXT$00
-  alloc_stack(SIZEOF STAR_DEMO_STRUCTURE)
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
   .ENDPROLOG 
   MOVSD xmm0, [CameraXVel]
   MOVSD xmm1, [CameraX]
@@ -629,7 +575,7 @@ NESTED_ENTRY StarDemo_SetCameraXOnly_CB, _TEXT$00
   PXOR xmm3, xmm3
   MOV RCX, [SOft3D]
   DEBUG_FUNCTION_CALL Soft3D_SetCameraRotation
-  ADD RSP, SIZE STAR_DEMO_STRUCTURE
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END StarDemo_SetCameraXOnly_CB, _TEXT$00
 
