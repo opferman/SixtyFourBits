@@ -24,6 +24,7 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
              $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
              $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Dbuffer\$O\Dbufferx64.lib \
              $(OBJ_PATH)\..\..\DemoScenes\FractalA\$O\FractalA.lib \
              $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
              $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \

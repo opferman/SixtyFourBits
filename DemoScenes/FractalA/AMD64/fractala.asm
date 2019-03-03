@@ -20,7 +20,7 @@
 ; Included Files
 ;*********************************************************
 include demoscene.inc
-
+include dbuffer_public.inc
 ;*********************************************************
 ; External WIN32/C Functions
 ;*********************************************************
@@ -93,6 +93,7 @@ EQU_PARAMETERS EQU <18>
    XandY          mmword ?
    XandT          mmword ?
    YandT          mmword ?
+   DoubleBuffer     dq ?
    PixelHistory   PIXEL_HISTORY EQU_ITTERATIONS DUP(<>)
    Parameters     EQUATION_PARAMS EQU_PARAMETERS DUP(<>)
    IsOffScreen    dd ?
@@ -115,6 +116,12 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
    
   MOV RSI, RCX
+
+  MOV RDX, 4
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
+  MOV [DoubleBuffer], RAX
+
   MOV [FrameCounter], 0
 
   XOR R8, R8
@@ -224,6 +231,65 @@ NESTED_ENTRY FractalA_RandomInitParams, _TEXT$00
 NESTED_END FractalA_RandomInitParams, _TEXT$00
 
 
+;*********************************************************
+;   FractalA_FadePixels
+;
+;        Parameters: MASTER_CONTEXT
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_FadePixels, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, [DoubleBuffer]
+  
+  XOR R10, R10
+@Height:
+  XOR R9, R9
+  @Width:
+   MOV EDX, DWORD PTR [RDI]
+   CMP EDX, 0
+   JE @NextPixelTest
+   MOV EAX, EDX
+   CMP DL, 0
+   JE @Skip1
+   DEC DL
+@Skip1:
+   CMP DH, 0
+   JE @Skip2
+   DEC DH
+@Skip2:
+   CMP AL, 0
+   JE @Skip3
+   DEC AL
+@Skip3:
+   XOR ECX, ECX
+   MOV CX, DX
+   SHL EAX, 16
+   OR EAX, ECX
+   MOV DWORD PTR [RDI], EAX
+@NextPixelTest:
+   ADD RDI, 4
+   INC R9
+   CMP R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+   JB @Width
+   INC R10
+   CMP R10, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+   JB @Height
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_FadePixels, _TEXT$00
+
+
 
 ;*********************************************************
 ;  FractalA_Demo
@@ -248,11 +314,12 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
 
   MOV RSI, RCX
+  DEBUG_FUNCTION_CALL FractalA_FadePixels
 
   ;
-  ; Get the Video Buffer
+  ; Get the Double Buffer
   ; 
-  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
+  MOV RDI, [DoubleBuffer]
   
   MOVSD xmm0, [DeltaPerStep]
   MULSD xmm0, [SpeedMult]
@@ -371,7 +438,8 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
 ;
 ; Plot Pixel and Update ColorInc
 ;
-  MOV EBX, MASTER_DEMO_STRUCT.Pitch[RSI]
+  MOV RBX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL EBX, 2
   XOR EDX, EDX
   MUL EBX
   SHL RCX, 2
@@ -547,6 +615,11 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   DEBUG_FUNCTION_CALL FractalA_RandomInitParams 
   
 @NoReset:
+  XOR R8, R8
+  XOR RDX, RDX
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+
   ;
   ; Update the frame counter and determine if the demo is complete.
   ;
