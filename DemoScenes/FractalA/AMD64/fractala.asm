@@ -319,7 +319,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   JMP @NoUpdateRollingDelta
 
   ;
-  ;  NOthing on the screen if I enable this code.
+  ; Nothing on screen if enable this code path.  TBD
   ;
 
   MOV [IsOffScreen], 0
@@ -339,7 +339,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MULSD xmm4, xmm4                      ; dy*dy
   ADDSD xmm3, xmm3                      ; dx*dx + dy*dy
   MOVSD xmm0, xmm3
-  DEBUG_FUNCTION_CALL sqrt 
+  SQRTSD xmm0, xmm0
   MULSD xmm0, [FiveHundred]             ; dist = sqrt() * 500
 
   MOVSD xmm1, [SpeedMult]
