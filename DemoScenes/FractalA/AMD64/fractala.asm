@@ -5,8 +5,8 @@
 ; 
 ;  By Toby Opferman  3/2/2019
 ;
-;     x' = -x^2 + xt + y
-;     y' = x^2 - y^2 - t^2 - xy + yt - x + y
+;
+;   Dynamic Equation from this project: https://github.com/HackerPoet/Chaos-Equations 
 ;
 ;*********************************************************
 
@@ -79,11 +79,14 @@ EQU_PARAMETERS EQU <18>
    RollingDelta   mmword 0.00001
    DeltaPerStep   mmword 0.00001
    MinDelta       mmword 0.0000001
+   Delta          mmword ?
    TenNegFive     mmword 0.00001
    SpeedMult      mmword 1.0
    One            mmword 1.0
    NegOne         mmword -1.0
    Zero           mmword 0.0
+   NineyNine      mmword 0.99
+   PontOhOne      mmword 0.01
    XSquared       mmword ?
    YSquared       mmword ?
    TSquared       mmword ?
@@ -251,7 +254,16 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ; 
   MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[RSI]
   
-  
+  MOVSD xmm0, [DeltaPerStep]
+  MULSD xmm0, [SpeedMult]
+  MOVSD [Delta], xmm0                   ; Delta = DeltaPerSTep * Speed Multiplier
+
+  MOVSD xmm1, [RollingDelta]
+  MULSD xmm1, [NineyNine]
+  MULSD xmm0, [PontOhOne]
+  ADDSD xmm0, xmm1
+  MOVSD [RollingDelta], xmm0            ; Rolling Delta = Rolling Detla * 0.99 + Delta * 0.01
+
   XOR R8, R8
   MOV R9, OFFSET PixelEntry
 
@@ -313,11 +325,6 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   CMP RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   JAE @CantPlotPixel
 
-  ;
-  ; Save these before calling sqrt
-  ; 
-  MOV R13, RCX
-  MOV R12, RAX
   JMP @NoUpdateRollingDelta
 
   ;
@@ -344,8 +351,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   SQRTSD xmm0, xmm0
   MULSD xmm0, [FiveHundred]             ; dist = sqrt() * 500
 
-  MOVSD xmm1, [SpeedMult]
-  MULSD xmm1, [DeltaPerStep]            ; Delta
+  MOVSD xmm1, [Delta]                   ; Delta
   ADDSD xmm0, [TenNegFive]              ; dist + 1e-5
   DIVSD xmm1, xmm0                      ; Delta / (dist + 1e-5) = xmm1
 
@@ -365,12 +371,6 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
 ;
 ; Plot Pixel and Update ColorInc
 ;
-  ;
-  ; Restore these, probably should have just switched to using them instead.
-  ; 
-  MOV RCX, R13
-  MOV RAX, R12
-
   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RSI]
   XOR EDX, EDX
   MUL EBX
@@ -415,9 +415,6 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   JMP @PixelLoopUpdate
 
 @UpdatePixelMath:
-
-;     x' = -x^2 + xt + y
-;     y' = x^2 - y^2 - t^2 - xy + yt - x + y
 
   MOVSD xmm0, PIXEL_ENTRY.X[R9]
   MOVSD xmm1, PIXEL_ENTRY.Y[R9]
