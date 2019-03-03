@@ -26,7 +26,7 @@ include demoscene.inc
 ;*********************************************************
 extern LocalAlloc:proc
 extern LocalFree:proc
-
+extern sqrt:proc
 
 ;*********************************************************
 ; Structures
@@ -38,6 +38,11 @@ PIXEL_ENTRY struct
    Color          dd        ?
    t              mmword    ?
 PIXEL_ENTRY ends
+
+PIXEL_HISTORY struct
+   X              mmword    ?
+   Y              mmword    ?
+PIXEL_HISTORY ends
 
 ;*********************************************************
 ; Public Declarations
@@ -55,8 +60,7 @@ EQU_ITTERATIONS EQU <800>
 ; Data Segment
 ;*********************************************************
 .DATA
-
-   FrameCounter dd ?
+   FrameCounter   dd ?
    t_Input        mmword -3.0
    t_Increment    mmword 0.01
    PixelEntry     PIXEL_ENTRY NUM_PIXELS DUP(<>)
@@ -65,6 +69,14 @@ EQU_ITTERATIONS EQU <800>
    PlotX          mmword 0.0
    PlotY          mmword 0.0
    PointFive      mmword 0.5
+   FiveHundred    mmword 500.0
+   RollingDelta   mmword 0.00001
+   DeltaPerStep   mmword 0.00001
+   MinDelta       mmword 0.0000001
+   TenNegFive     mmword 0.00001
+   SpeedMult      mmword 1.0
+   PixelHistory   PIXEL_HISTORY EQU_ITTERATIONS DUP(<>)
+   IsOffScreen    dd ?
 .CODE
 
 ;*********************************************************
@@ -88,7 +100,7 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
 
   XOR R8, R8
   MOV RDI, OFFSET PixelEntry
-
+  
   ;
   ; Initialize Random Pixels
   ;
@@ -102,10 +114,23 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   DEBUG_FUNCTION_CALL Math_Rand
   AND EAX, 0FFFFFFh
   MOV PIXEL_ENTRY.Color[RDI], EAX
-
-  DEBUG_FUNCTION_CALL Math_Rand
-  AND EAX, 0FFFFFFh
+ 
+;
+; Smooth Color Increment
+;  
+  MOV EAX,  010101h
   MOV PIXEL_ENTRY.ColorInc[RDI], EAX
+  
+  MOV RDI, OFFSET PixelHistory
+  XOR R8, R8
+@Init_To_Zero:
+  MOV PIXEL_HISTORY.X[RDI], 0
+  MOV PIXEL_HISTORY.Y[RDI], 0
+  ADD RDI, SIZE PIXEL_HISTORY
+  INC R8
+  CMP R8, EQU_ITTERATIONS
+  JB @Init_To_Zero
+
   
 ;  ADD RDI, SIZE PIXEL_ENTRY
 ;  INC R8
@@ -162,12 +187,14 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD PIXEL_ENTRY.t[R9], xmm0
   
   XOR R10, R10
+  MOV R14, OFFSET PixelHistory
+  MOV [IsOffScreen], 1
   JMP @UpdatePixelMath
   ;
   ; Update Pixels
   ;
 @Update_Pixel:
-;int 3
+
   ;
   ; xmm0 = Scale * Screen Height/2
   ;
@@ -204,16 +231,70 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   CVTSD2SI RCX, xmm1
   CVTSD2SI RAX, xmm2
 
-
   CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   JA @CantPlotPixel
 
   CMP RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   JA @CantPlotPixel
 
+  ;
+  ; Save these before calling sqrt
+  ; 
+  MOV R13, RCX
+  MOV R12, RAX
+  JMP @NoUpdateRollingDelta
+
+  ;
+  ;  NOthing on the screen if I enable this code.
+  ;
+
+  MOV [IsOffScreen], 0
+  MOVSD xmm3, PIXEL_HISTORY.X[R14]
+  MOVSD xmm4, PIXEL_HISTORY.Y[R14]
+  SUBSD xmm3, xmm1
+  SUBSD xmm4, xmm2
+  
+  ;
+  ; Save Pixel History
+  ;
+  MOVSD PIXEL_HISTORY.X[R14], xmm1
+  MOVSD PIXEL_HISTORY.Y[R14], xmm2
+  ADD R14, SIZE PIXEL_HISTORY  
+
+  MULSD xmm3, xmm3                      ; dx*dx
+  MULSD xmm4, xmm4                      ; dy*dy
+  ADDSD xmm3, xmm3                      ; dx*dx + dy*dy
+  MOVSD xmm0, xmm3
+  DEBUG_FUNCTION_CALL sqrt 
+  MULSD xmm0, [FiveHundred]             ; dist = sqrt() * 500
+
+  MOVSD xmm1, [SpeedMult]
+  MULSD xmm1, [DeltaPerStep]            ; Delta
+  ADDSD xmm0, [TenNegFive]              ; dist + 1e-5
+  DIVSD xmm1, xmm0                      ; Delta / (dist + 1e-5) = xmm1
+
+  MOVSD xmm0, [MinDelta]
+  MULSD xmm0, [SpeedMult]                ; Delta Minimum * Speed Multiplier
+
+  COMISD xmm0, xmm1                      ; Determine the Maximum
+  JG @CompareMin
+  MOVSD xmm0, xmm1
+@CompareMin:
+  MOVSD xmm1, [RollingDelta]
+  COMISD xmm0, xmm1                     ; Determine the minimum
+  JG @NoUpdateRollingDelta
+  MOVSD [RollingDelta], xmm0              ; Update if it's less than.
+
+@NoUpdateRollingDelta:
 ;
 ; Plot Pixel and Update ColorInc
 ;
+  ;
+  ; Restore these, probably should have just switched to using them instead.
+  ; 
+  MOV RCX, R13
+  MOV RAX, R12
+
   MOV EBX, MASTER_DEMO_STRUCT.Pitch[RSI]
   XOR EDX, EDX
   MUL EBX
@@ -226,12 +307,20 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOV PIXEL_ENTRY.Color[R9], ECX
 
 @PixelLoopUpdate:
+
+
   INC R10
   CMP R10, EQU_ITTERATIONS
   JB @UpdatePixelMath
 
-  MOVSD xmm0, [t_Input]
-  ADDSD xmm0, [t_Increment]
+  CMP [IsOffScreen], 0
+  JE @UpdateRollingDelta
+  MOVSD xmm0, [t_Increment]
+  JMP @FinalUpdateOfT
+@UpdateRollingDelta:
+  MOVSD xmm0, [RollingDelta]
+@FinalUpdateOfT:
+  ADDSD xmm0, [t_Input]
   MOVSD [t_Input], xmm0
 
   INC R8
@@ -241,16 +330,19 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
 
 @CantPlotPixel:
   ;
-  ; TBD - Reinitialize Pixel?
+  ; Save Pixel History
   ;
- ; int 3
+  MOVSD PIXEL_HISTORY.X[R14], xmm1
+  MOVSD PIXEL_HISTORY.Y[R14], xmm2
+  ADD R14, SIZE PIXEL_HISTORY
+
   JMP @PixelLoopUpdate
 
 @UpdatePixelMath:
 
 ;     x' = -x^2 + xt + y
 ;     y' = x^2 - y^2 - t^2 - xy + yt - x + y
-;int 3
+
   MOVSD xmm0, PIXEL_ENTRY.X[R9]
   MOVSD xmm1, PIXEL_ENTRY.Y[R9]
   MOVSD xmm2, [t_Input]
