@@ -44,6 +44,10 @@ PIXEL_HISTORY struct
    Y              mmword    ?
 PIXEL_HISTORY ends
 
+EQUATION_PARAMS struct
+   Param          mmword    ?
+EQUATION_PARAMS ends
+
 ;*********************************************************
 ; Public Declarations
 ;*********************************************************
@@ -55,7 +59,7 @@ MAX_FRAMES EQU <50000>
 NUM_PIXELS EQU <1>
 STEPS_FRAME EQU <500>
 EQU_ITTERATIONS EQU <800>
-
+EQU_PARAMETERS EQU <18>
 ;*********************************************************
 ; Data Segment
 ;*********************************************************
@@ -75,7 +79,17 @@ EQU_ITTERATIONS EQU <800>
    MinDelta       mmword 0.0000001
    TenNegFive     mmword 0.00001
    SpeedMult      mmword 1.0
+   One            mmword 1.0
+   NegOne         mmword -1.0
+   Zero           mmword 0.0
+   XSquared       mmword ?
+   YSquared       mmword ?
+   TSquared       mmword ?
+   XandY          mmword ?
+   XandT          mmword ?
+   YandT          mmword ?
    PixelHistory   PIXEL_HISTORY EQU_ITTERATIONS DUP(<>)
+   Parameters     EQUATION_PARAMS EQU_PARAMETERS DUP(<>)
    IsOffScreen    dd ?
 .CODE
 
@@ -131,6 +145,7 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   CMP R8, EQU_ITTERATIONS
   JB @Init_To_Zero
 
+  DEBUG_FUNCTION_CALL FractalA_RandomInitParams
   
 ;  ADD RDI, SIZE PIXEL_ENTRY
 ;  INC R8
@@ -143,6 +158,65 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   MOV EAX, 1
   RET
 NESTED_END FractalA_Init, _TEXT$00
+
+
+
+;*********************************************************
+;   FractalA_RandomInitParams
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_RandomInitParams, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, OFFSET Parameters
+  XOR RSI, RSI
+@Random_Init:
+  
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND EAX, 3
+
+  CMP EAX, 1
+  JE @SetToOne
+
+  CMP EAX, 2
+  JE @SetToNegativeOne
+;
+; Else Zero
+;
+  MOVSD xmm0, [Zero]
+  MOVSD EQUATION_PARAMS.Param[RDI], xmm0
+  JMP @LoopTest
+
+@SetToOne:
+  MOVSD xmm0, [One]
+  MOVSD EQUATION_PARAMS.Param[RDI], xmm0
+  JMP @LoopTest
+
+@SetToNegativeOne:
+  MOVSD xmm0, [NegOne]
+  MOVSD EQUATION_PARAMS.Param[RDI], xmm0
+
+@LoopTest:
+
+  ADD RDI, SIZE EQUATION_PARAMS
+  INC RSI
+  CMP RSI, EQU_PARAMETERS
+  JB @Random_Init
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_RandomInitParams, _TEXT$00
 
 
 
@@ -232,10 +306,10 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   CVTSD2SI RAX, xmm2
 
   CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  JA @CantPlotPixel
+  JAE @CantPlotPixel
 
   CMP RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  JA @CantPlotPixel
+  JAE @CantPlotPixel
 
   ;
   ; Save these before calling sqrt
@@ -346,30 +420,120 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm0, PIXEL_ENTRY.X[R9]
   MOVSD xmm1, PIXEL_ENTRY.Y[R9]
   MOVSD xmm2, [t_Input]
+
   MOVSD xmm3, xmm0
-  MULSD xmm3, xmm3                      ; x^2
-  MOVSD xmm4, xmm1
-  MULSD xmm4, xmm4                      ; y^2
-  MULSD xmm4, [NegativeOne]             ; - y^2
-  ADDSD xmm4, xmm3                      ; -y^2 + x^2
-  MULSD xmm3, [NegativeOne]             ; -x^2
-  MOVSD xmm5, xmm2
-  MULSD xmm5, xmm5                      ; t^2
-  SUBSD xmm4, xmm5                      ; x^2 - y^2 - t^2
-  MOVSD xmm5, xmm0
-  MULSD xmm5, xmm1                      ; xy
-  SUBSD xmm4, xmm5                      ; x^2 - y^2 - t^2 - xy
-  MOVSD xmm5, xmm2
-  MULSD xmm5, xmm1                      ; yt
-  ADDSD xmm4, xmm5                      ; x^2 - y^2 - t^2 - xy + yt
-  SUBSD xmm4, xmm0                      ; x^2 - y^2 - t^2 - xy + yt - x
-  ADDSD xmm4, xmm1                      ; x^2 - y^2 - t^2 - xy + yt - x + y
-  MULSD xmm0, xmm2                      ; xt
-  ADDSD xmm3, xmm0                      ; -x^2 + xt
-  ADDSD xmm3, xmm1                      ; -x^2 + xt + y
+  MULSD xmm3, xmm3              ; x^2
+  MOVSD [XSquared], xmm3
+
+  MOVSD xmm3, xmm1              
+  MULSD xmm3, xmm3              ; y^2
+  MOVSD [YSquared], xmm3
+  
+  MOVSD xmm3, xmm2
+  MULSD xmm3, xmm3              ; t^2
+  MOVSD [TSquared], xmm3
+
+  MOVSD xmm3, xmm0
+  MULSD xmm3, xmm1
+  MOVSD [XandY], xmm3
+
+  MOVSD xmm3, xmm0
+  MULSD xmm3, xmm2
+  MOVSD [XandT], xmm3
+
+  MOVSD xmm3, xmm1
+  MULSD xmm3, xmm2
+  MOVSD [YandT], xmm3
+
+  MOV R15, OFFSET Parameters
+  
+  MOVSD xmm3, [XSquared]
+  MULSD xmm3, EQUATION_PARAMS.Param[R15]
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [YSquared]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [TSquared]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [XandY]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [XandT]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [YandT]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, PIXEL_ENTRY.X[R9]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, PIXEL_ENTRY.y[R9]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  ;
+  ; New X = xmm3
+  ;
+  MOVSD xmm5, [XSquared]
+  MULSD xmm5, EQUATION_PARAMS.Param[R15]
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [YSquared]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [TSquared]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [XandY]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [XandT]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [YandT]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, PIXEL_ENTRY.X[R9]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, PIXEL_ENTRY.y[R9]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  ;
+  ; xmm5 = New Y
+  ;
 
   MOVSD PIXEL_ENTRY.X[R9], xmm3         ; x'
-  MOVSD PIXEL_ENTRY.Y[R9], xmm4         ; y'
+  MOVSD PIXEL_ENTRY.Y[R9], xmm5         ; y'
 
 ;  ADD R9, SIZE PIXEL_ENTRY
   JMP @Update_Pixel
