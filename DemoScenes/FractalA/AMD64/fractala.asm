@@ -79,7 +79,7 @@ SAVEREGSFRAME struct
     SaveR15        dq ?
     SaveR12        dq ?
     SaveRbp        dq ?
-	Padding        dq ?
+    Padding        dq ?
 
     SaveXmm6       oword ? 
     SaveXmm7       oword ? 
@@ -401,6 +401,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MULSD xmm0, [PontOhOne]
   ADDSD xmm0, xmm1
   MOVSD [RollingDelta], xmm0            ; Rolling Delta = Rolling Detla * 0.99 + Delta * 0.01
+  
 
   XOR R8, R8
   MOV R9, OFFSET PixelEntry
@@ -463,7 +464,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   CMP RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   JAE @CantPlotPixel
 
-  JMP @NoUpdateRollingDelta
+  ;JMP @NoUpdateRollingDelta
 
   ;
   ; Nothing on screen if enable this code path.  TBD
@@ -504,6 +505,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   UCOMISD  xmm0, xmm1                     ; Determine the minimum
   JA @NoUpdateRollingDelta
   MOVSD [RollingDelta], xmm0              ; Update if it's less than.
+  
 
 @NoUpdateRollingDelta:
 ;
@@ -527,7 +529,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   INC R10
   CMP R10, EQU_ITTERATIONS
   JB @UpdatePixelMath
-
+  
   CMP [IsOffScreen], 0
   JE @UpdateRollingDelta
   MOVSD xmm0, [t_Increment]
@@ -799,6 +801,7 @@ NESTED_ENTRY FractalA_DisplayT, _TEXT$00
    CMP R8, 6
    JA @OurLittleLoop
    ADD AL, '0'
+   MOV BYTE PTR [RDI + 5], AL
 
    MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 3
    MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
