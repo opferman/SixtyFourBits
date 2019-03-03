@@ -103,6 +103,8 @@ FUNC_PARAMS ends
 
 
 
+
+
 FRACTAL_DEMO_STRUCTURE struct
    ParameterFrame PARAMFRAME      <?>
    SaveFrame      SAVEREGSFRAME   <?>
@@ -128,6 +130,28 @@ NUM_PIXELS EQU <1>
 STEPS_FRAME EQU <500>
 EQU_ITTERATIONS EQU <800>
 EQU_PARAMETERS EQU <18>
+
+NEWX_X2 EQU <0 * SIZE EQUATION_PARAMS>
+NEWX_Y2 EQU <1 * SIZE EQUATION_PARAMS>
+NEWX_T2 EQU <2 * SIZE EQUATION_PARAMS>
+NEWX_XY EQU <3 * SIZE EQUATION_PARAMS>
+NEWX_XT EQU <4 * SIZE EQUATION_PARAMS>
+NEWX_YT EQU <5 * SIZE EQUATION_PARAMS>
+NEWX_X  EQU <6 * SIZE EQUATION_PARAMS>
+NEWX_Y  EQU <7 * SIZE EQUATION_PARAMS>
+NEWX_T  EQU <8 * SIZE EQUATION_PARAMS>
+NEWY_X2 EQU <9 * SIZE EQUATION_PARAMS>
+NEWY_Y2 EQU <10 * SIZE EQUATION_PARAMS>
+NEWY_T2 EQU <11 * SIZE EQUATION_PARAMS>
+NEWY_XY EQU <12 * SIZE EQUATION_PARAMS>
+NEWY_XT EQU <13 * SIZE EQUATION_PARAMS>
+NEWY_YT EQU <14 * SIZE EQUATION_PARAMS>
+NEWY_X  EQU <15 * SIZE EQUATION_PARAMS>
+NEWY_Y  EQU <16 * SIZE EQUATION_PARAMS>
+NEWY_T  EQU <17 * SIZE EQUATION_PARAMS>
+
+
+
 ;*********************************************************
 ; Data Segment
 ;*********************************************************
@@ -138,6 +162,7 @@ EQU_PARAMETERS EQU <18>
    t_Input        mmword -3.0
    t_Increment    mmword 0.01
    PixelEntry     PIXEL_ENTRY NUM_PIXELS DUP(<>)
+   ColorArray     dd     STEPS_FRAME*EQU_ITTERATIONS DUP(?)
    NegativeOne    mmword -1.0
    Scale          mmword 0.25
    PlotX          mmword 0.0
@@ -211,12 +236,39 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   DEBUG_FUNCTION_CALL Math_Rand
   AND EAX, 0FFFFFFh
   MOV PIXEL_ENTRY.Color[RDI], EAX
- 
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND EAX, 0FFFFFFh 
+  MOV RDI, OFFSET ColorArray
+@Init_Color_Array:
+  MOV DWORD PTR [RDI], EAX
+  CMP AL, 0FFh
+  JE @TryOtherColor
+  INC AL
+  JMP @NextPix
+
+@TryOtherColor:
+  CMP AH, 0FFh
+  JE  @TryOtherColor2
+  INC AH
+  JMP @NextPix
+@TryOtherColor2:
+  MOV EDX, EAX
+  SHR EDX, 15
+  CMP DL, 0FFh
+  JE @NextPix
+  INC DL
+  SHL DL, 16
+  OR EAX, EDX
+@NextPix:
+  ADD RDI, 4
+  INC R8
+  CMP R8, STEPS_FRAME*EQU_ITTERATIONS
+  JB @Init_Color_Array
 ;
 ; Smooth Color Increment
 ;  
-  MOV EAX,  000001h
-  MOV PIXEL_ENTRY.ColorInc[RDI], EAX
+;  MOV EAX,  010101h
+;  MOV PIXEL_ENTRY.ColorInc[RDI], EAX
   
   MOV RDI, OFFSET PixelHistory
   XOR R8, R8
@@ -229,6 +281,7 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   JB @Init_To_Zero
 
   DEBUG_FUNCTION_CALL FractalA_RandomInitParams
+  ;DEBUG_FUNCTION_CALL FractalA_InitSpecialAlgo
   
 ;  ADD RDI, SIZE PIXEL_ENTRY
 ;  INC R8
@@ -300,6 +353,62 @@ NESTED_ENTRY FractalA_RandomInitParams, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END FractalA_RandomInitParams, _TEXT$00
+
+;*********************************************************
+;   FractalA_InitSpecialAlgo
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;      x' = x^2 - xt + yt - x
+;      y' = -y^2 - t^2 - xy - xt - yt - y
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_InitSpecialAlgo, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, OFFSET Parameters
+  
+  MOVSD xmm0, [Zero]
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_Y2], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_T2], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_XY], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_X], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_T], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_Y], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X2], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_XT], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_T], xmm0
+
+  MOVSD xmm0, [One]
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_X2], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_YT], xmm0
+  
+  MOVSD xmm0, [NegOne]
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_Y2], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_T2], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_XY], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_XT], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_YT], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_Y], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_XT], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X], xmm0
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_InitSpecialAlgo, _TEXT$00
+
+
 
 
 ;*********************************************************
@@ -405,6 +514,7 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
 
   XOR R8, R8
   MOV R9, OFFSET PixelEntry
+  MOV R12, OFFSET ColorArray
 
 @OutterLoop:
 
@@ -470,7 +580,14 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ; Nothing on screen if enable this code path.  TBD
   ;
 
+
   MOV [IsOffScreen], 0
+  CMP RCX, 522
+  JNE @Skipit
+  CMP RAX, 268
+  JNE @Skipit
+;  INT 3
+@Skipit:
   MOVSD xmm3, PIXEL_HISTORY.X[R14]
   MOVSD xmm4, PIXEL_HISTORY.Y[R14]
   SUBSD xmm3, xmm1
@@ -481,7 +598,14 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ;
   MOVSD PIXEL_HISTORY.X[R14], xmm1
   MOVSD PIXEL_HISTORY.Y[R14], xmm2
-  ADD R14, SIZE PIXEL_HISTORY  
+
+  MOV RBX, 0fff8000000000000h
+  CMP QWORD PTR PIXEL_HISTORY.X[R14], RBX
+  JNE @SKipingTime2
+  INT 3
+@SKipingTime2:
+  ADD R14, SIZE PIXEL_HISTORY 
+
 
   MULSD xmm3, xmm3                      ; dx*dx
   MULSD xmm4, xmm4                      ; dy*dy
@@ -504,7 +628,16 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm1, [RollingDelta]
   UCOMISD  xmm0, xmm1                     ; Determine the minimum
   JA @NoUpdateRollingDelta
+  MOV RBX, 0fff8000000000000h
+  CMP QWORD PTR [RollingDelta], RBX
+  JNE @Update
+  INT 3
+@Update:
+  MOV RDX, [RollingDelta]
   MOVSD [RollingDelta], xmm0              ; Update if it's less than.
+  CMP QWORD PTR [RollingDelta], RBX
+  JNE @NoUpdateRollingDelta
+  INT 3
   
 
 @NoUpdateRollingDelta:
@@ -517,15 +650,17 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MUL EBX
   SHL RCX, 2
   ADD RAX, RCX
-  MOV ECX, PIXEL_ENTRY.Color[R9]
+  MOV ECX, [R12]
   MOV DWORD PTR [RDI+RAX], ECX
+
+  
   ADD ECX, PIXEL_ENTRY.ColorInc[R9]
   AND ECX, 0FFFFFFh
   MOV PIXEL_ENTRY.Color[R9], ECX
 
 @PixelLoopUpdate:
 
-
+  ADD R12, 4
   INC R10
   CMP R10, EQU_ITTERATIONS
   JB @UpdatePixelMath
@@ -535,13 +670,14 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm0, [t_Increment]
   JMP @FinalUpdateOfT
 @UpdateRollingDelta:
+
   MOVSD xmm0, [RollingDelta]
 @FinalUpdateOfT:
   ADDSD xmm0, [t_Input]
   MOVSD [t_Input], xmm0
 
   INC R8
-  CMP R8, NUM_PIXELS
+  CMP R8, STEPS_FRAME
   JB @OutterLoop
   JMP @DonePlotting
 
@@ -549,8 +685,14 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ;
   ; Save Pixel History
   ;
-  MOVSD PIXEL_HISTORY.X[R14], xmm1
-  MOVSD PIXEL_HISTORY.Y[R14], xmm2
+;  MOVSD PIXEL_HISTORY.X[R14], xmm1
+;  MOVSD PIXEL_HISTORY.Y[R14], xmm2
+
+  MOV RBX, 0fff8000000000000h
+  CMP QWORD PTR PIXEL_HISTORY.X[R14], RBX
+  JNE @SKipingTime
+  INT 3
+@SKipingTime:
   ADD R14, SIZE PIXEL_HISTORY
 
   JMP @PixelLoopUpdate
@@ -626,6 +768,11 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ADDSD xmm3, xmm4
   ADD R15, SIZE EQUATION_PARAMS
 
+  MOVSD xmm4, [t_Input]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm3, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
   ;
   ; New X = xmm3
   ;
@@ -664,6 +811,11 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ADD R15, SIZE EQUATION_PARAMS
 
   MOVSD xmm4, PIXEL_ENTRY.y[R9]
+  MULSD xmm4, EQUATION_PARAMS.Param[R15]
+  ADDSD xmm5, xmm4
+  ADD R15, SIZE EQUATION_PARAMS
+
+  MOVSD xmm4, [t_Input]
   MULSD xmm4, EQUATION_PARAMS.Param[R15]
   ADDSD xmm5, xmm4
   ADD R15, SIZE EQUATION_PARAMS
