@@ -65,6 +65,8 @@ EQU_PARAMETERS EQU <18>
 ;*********************************************************
 .DATA
    FrameCounter   dd ?
+   t_Start        mmword -3.0
+   t_End          mmword 3.0
    t_Input        mmword -3.0
    t_Increment    mmword 0.01
    PixelEntry     PIXEL_ENTRY NUM_PIXELS DUP(<>)
@@ -132,7 +134,7 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
 ;
 ; Smooth Color Increment
 ;  
-  MOV EAX,  010101h
+  MOV EAX,  000001h
   MOV PIXEL_ENTRY.ColorInc[RDI], EAX
   
   MOV RDI, OFFSET PixelHistory
@@ -350,13 +352,13 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm0, [MinDelta]
   MULSD xmm0, [SpeedMult]                ; Delta Minimum * Speed Multiplier
 
-  COMISD xmm0, xmm1                      ; Determine the Maximum
-  JG @CompareMin
+  UCOMISD  xmm0, xmm1                      ; Determine the Maximum
+  JA @CompareMin
   MOVSD xmm0, xmm1
 @CompareMin:
   MOVSD xmm1, [RollingDelta]
-  COMISD xmm0, xmm1                     ; Determine the minimum
-  JG @NoUpdateRollingDelta
+  UCOMISD  xmm0, xmm1                     ; Determine the minimum
+  JA @NoUpdateRollingDelta
   MOVSD [RollingDelta], xmm0              ; Update if it's less than.
 
 @NoUpdateRollingDelta:
@@ -539,6 +541,15 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   JMP @Update_Pixel
 
 @DonePlotting:
+  MOVSD xmm0, [t_Input]
+  MOVSD xmm1, [t_End]
+  UCOMISD  xmm0, xmm1
+  JB @NoReset
+  MOVSD xmm0, [t_Start]
+  MOVSD [t_Input], xmm0
+  DEBUG_FUNCTION_CALL FractalA_RandomInitParams 
+  
+@NoReset:
   ;
   ; Update the frame counter and determine if the demo is complete.
   ;
