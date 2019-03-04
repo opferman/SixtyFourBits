@@ -157,6 +157,8 @@ NEWY_T  EQU <17 * SIZE EQUATION_PARAMS>
 ;*********************************************************
 .DATA
    FrameCounter   dd ?
+   EquationXString db "x' = -x^2 - y^2 - t^2 - xy - xt - yt - x - y - t ", 0
+   EquationYString db "y' = -x^2 - y^2 - t^2 - xy - xt - yt - x - y - t ", 0
    t_Start        mmword -3.0
    t_End          mmword 3.0
    t_Input        mmword -3.0
@@ -187,6 +189,16 @@ NEWY_T  EQU <17 * SIZE EQUATION_PARAMS>
    XandT          mmword ?
    YandT          mmword ?
    Ten            mmword 10.0
+   ParameterText  db "x^2", 0 
+                  db "y^2", 0
+                  db "t^2", 0 
+                  db "xy", 0 
+                  db "xt", 0
+                  db "yt", 0 
+                  db "x", 0 
+                  db "y", 0
+                  db "t",0
+
    StringSize     mmword 100000.0
    FormatString   db  "t = -3.00000", 0
    DoubleBuffer     dq ?
@@ -271,6 +283,10 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   ; Initialize to a known algorithm and then randomize later
   ;
   DEBUG_FUNCTION_CALL FractalA_InitSpecialAlgo
+
+  XOR RDX, RDX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_NewEquationStrings
   
 
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
@@ -366,13 +382,13 @@ NESTED_ENTRY FractalA_InitSpecialAlgo, _TEXT$00
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_Y2], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_T2], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_XY], xmm0
-  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_X], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_T], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_Y], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X2], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWY_XT], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWY_T], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X], xmm0
 
   MOVSD xmm0, [One]
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_X2], xmm0
@@ -386,7 +402,7 @@ NESTED_ENTRY FractalA_InitSpecialAlgo, _TEXT$00
   MOVSD EQUATION_PARAMS.Param[RDI+NEWY_YT], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWY_Y], xmm0
   MOVSD EQUATION_PARAMS.Param[RDI+NEWX_XT], xmm0
-  MOVSD EQUATION_PARAMS.Param[RDI+NEWY_X], xmm0
+  MOVSD EQUATION_PARAMS.Param[RDI+NEWX_X], xmm0
 
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
@@ -806,8 +822,16 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm0, [t_Start]
   MOVSD [t_Input], xmm0
   DEBUG_FUNCTION_CALL FractalA_RandomInitParams 
+
+  MOV EDX, 1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_NewEquationStrings
   
 @NoReset:
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_DisplayEquationStrings
+
   XOR R8, R8
   XOR RDX, RDX
   MOV RCX, [DoubleBuffer]
@@ -866,6 +890,197 @@ NESTED_ENTRY FractalA_Free, _TEXT$00
   RET
 NESTED_END FractalA_Free, _TEXT$00
 
+
+
+;*********************************************************
+;  FractalA_NewEquationStrings
+;
+;        Parameters: MASTER_STRUCT, BOOL Overwrite Old
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_NewEquationStrings, _TEXT$00
+ alloc_stack(SIZEOF FRACTAL_DEMO_STRUCTURE)
+ save_reg rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  CMP EDX, 0
+  JE @SkipErase
+   ;
+   ;  Erase Old Equations!!!!
+   ;
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 1
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0
+  MOV R9, 4
+  MOV R8, 5
+  MOV RDX, OFFSET EquationXString
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_PrintWord
+
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 1
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0
+  MOV R9, 15
+  MOV R8, 5
+  MOV RDX, OFFSET EquationYString
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_PrintWord
+
+@SkipErase:
+
+  MOV RDX, OFFSET Parameters
+  MOV RCX, OFFSET EquationXString
+  DEBUG_FUNCTION_CALL FractalA_UpdateEquation
+
+  MOV RDX, OFFSET Parameters
+  ADD RDX, NEWY_X2
+  MOV RCX, OFFSET EquationYString
+  DEBUG_FUNCTION_CALL FractalA_UpdateEquation
+
+  MOV rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+
+  ADD RSP, SIZE FRACTAL_DEMO_STRUCTURE
+  RET
+NESTED_END FractalA_NewEquationStrings, _TEXT$00
+
+
+;*********************************************************
+;  FractalA_NewEquationStrings
+;
+;        Parameters: MASTER_STRUCT
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_DisplayEquationStrings, _TEXT$00
+ alloc_stack(SIZEOF FRACTAL_DEMO_STRUCTURE)
+ save_reg rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+ MOV RSI, RCX
+
+   ;
+   ;  Display Equations!
+   ;
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 1
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0FFFFFFh
+  MOV R9, 4
+  MOV R8, 5
+  MOV RDX, OFFSET EquationXString
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_PrintWord
+
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param5[RSP], 1
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
+  MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0FFFFFFh
+  MOV R9, 15
+  MOV R8, 5
+  MOV RDX, OFFSET EquationYString
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL FractalA_PrintWord
+
+  MOV rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+
+  ADD RSP, SIZE FRACTAL_DEMO_STRUCTURE
+  RET
+NESTED_END FractalA_DisplayEquationStrings, _TEXT$00
+
+
+;*********************************************************
+;  FractalA_UpdateEquation
+;
+;        Parameters: String, Parameter
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_UpdateEquation, _TEXT$00
+ alloc_stack(SIZEOF FRACTAL_DEMO_STRUCTURE)
+ save_reg rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi
+ save_reg rsi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRsi
+ save_reg rbx, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRbx
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+  
+  XOR RBX, RBX                                   ; Boolean for first item printed.
+
+  ADD RCX, 5
+  MOV RDI, OFFSET ParameterText
+  XOR R8, R8
+
+@CreateEquationStringLoop:
+  
+  MOV R9, [Zero]
+  CMP EQUATION_PARAMS.Param[RDX], R9
+  JE @SkipStringLoop
+
+  MOV R9, [One]
+  CMP EQUATION_PARAMS.Param[RDX], R9           ; Assume -1 otherwise.
+  JE @Addition
+
+  MOV BYTE PTR [RCX], '-'
+  INC RCX
+  JMP @AddEquationEntity
+
+@Addition:
+  CMP EBX, 0
+  JE @AddEquationEntity
+  MOV BYTE PTR [RCX], '+'
+  INC RCX
+@AddEquationEntity:
+  CMP EBX, 0
+  JE @SkipSpaceForFirstItem
+  MOV BYTE PTR [RCX], ' '
+  INC RCX 
+@SkipSpaceForFirstItem:
+  MOV EBX, 1
+@AddStringLoop:
+  MOV AL, BYTE PTR [RDI]
+  MOV BYTE PTR [RCX], AL 
+  INC RCX
+  INC RDI
+  CMP BYTE PTR [RDI], 0
+  JNE @AddStringLoop
+  MOV BYTE PTR [RCX], ' '
+  INC RCX
+  INC RDI
+  JMP @FinishedAddition
+
+@SkipStringLoop:
+  INC RDI
+  CMP BYTE PTR [RDI], 0
+  JNE @SkipStringLoop
+  INC RDI
+@FinishedAddition:
+  ADD RDX, SIZE EQUATION_PARAMS
+  INC R8
+  CMP R8, 9
+  JB @CreateEquationStringLoop
+
+  MOV BYTE PTR [RCX], 0
+
+  MOV rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
+  MOV rsi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
+  MOV rbx, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+
+  ADD RSP, SIZE FRACTAL_DEMO_STRUCTURE
+  RET
+NESTED_END FractalA_UpdateEquation, _TEXT$00
 
 
 ;*********************************************************
