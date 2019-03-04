@@ -151,6 +151,9 @@ NEWY_Y  EQU <16 * SIZE EQUATION_PARAMS>
 NEWY_T  EQU <17 * SIZE EQUATION_PARAMS>
 
 
+RED_MIN   EQU <50>
+BLUE_MIN  EQU <50>
+GREEN_MIN EQU <50>
 
 ;*********************************************************
 ; Data Segment
@@ -188,6 +191,9 @@ NEWY_T  EQU <17 * SIZE EQUATION_PARAMS>
    XandY          mmword ?
    XandT          mmword ?
    YandT          mmword ?
+   Red            db ?
+   Green          db ?
+   Blue           db ?
    Ten            mmword 10.0
    ParameterText  db "x^2", 0 
                   db "y^2", 0
@@ -231,42 +237,16 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   MOV [DoubleBuffer], RAX
 
   MOV [FrameCounter], 0
-
-  XOR R8, R8
   MOV RDI, OFFSET PixelEntry
-
   DEBUG_FUNCTION_CALL Math_Rand
   AND EAX, 0FFFFFFh
   MOV PIXEL_ENTRY.Color[RDI], EAX
-  DEBUG_FUNCTION_CALL Math_Rand
-  AND EAX, 0FFFFFFh 
-  MOV RDI, OFFSET ColorArray
-@Init_Color_Array:
-  MOV DWORD PTR [RDI], EAX
-  CMP AL, 0FFh
-  JE @TryOtherColor
-  INC AL
-  JMP @NextPix
 
-@TryOtherColor:
-  CMP AH, 0FFh
-  JE  @TryOtherColor2
-  INC AH
-  JMP @NextPix
-@TryOtherColor2:
-  MOV EDX, EAX
-  SHR EDX, 15
-  CMP DL, 0FFh
-  JE @NextPix
-  INC DL
-  SHL DL, 16
-  OR EAX, EDX
-@NextPix:
-  ADD RDI, 4
-  INC R8
-  CMP R8, STEPS_FRAME*EQU_ITTERATIONS
-  JB @Init_Color_Array
-  
+
+  ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type2
+ 
+ 
   MOV RDI, OFFSET PixelHistory
   XOR R8, R8
 @Init_To_Zero:
@@ -355,6 +335,158 @@ NESTED_ENTRY FractalA_RandomInitParams, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END FractalA_RandomInitParams, _TEXT$00
+
+
+;*********************************************************
+;   FractalA_PixelColorInit_Type1
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_PixelColorInit_Type1, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR R8, R8
+  MOV RDI, OFFSET ColorArray
+@Init_Color_Array:
+  MOV DWORD PTR [RDI], EAX
+  CMP AL, 0FFh
+  JE @TryOtherColor
+  INC AL
+  JMP @NextPix
+
+@TryOtherColor:
+  CMP AH, 0FFh
+  JE  @TryOtherColor2
+  INC AH
+  JMP @NextPix
+@TryOtherColor2:
+  MOV EDX, EAX
+  SHR EDX, 15
+  CMP DL, 0FFh
+  JE @NextPix
+  INC DL
+  SHL DL, 16
+  OR EAX, EDX
+@NextPix:
+  ADD RDI, 4
+  INC R8
+  CMP R8, STEPS_FRAME*EQU_ITTERATIONS
+  JB @Init_Color_Array
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_PixelColorInit_Type1, _TEXT$00
+
+
+
+;*********************************************************
+;   FractalA_PixelColorInit_Type2
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_PixelColorInit_Type2, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  XOR R8, R8
+  MOV RDI, OFFSET ColorArray
+@Init_Color_Array:
+  XOR EDX, EDX
+  MOV RAX, R8
+  MOV ECX, EQU_ITTERATIONS
+  DIV ECX
+  INC EDX
+  MOV R10, RDX
+
+  ;
+  ; R
+  ;
+  MOV R9, 11909
+  MOV RAX, R10
+  XOR RDX, RDX
+  MUL R9
+  XOR RDX, RDX
+  MOV R9, 256
+  DIV R9
+  ADD RDX, 50
+  CMP RDX, 255
+  JA @UseRed255
+  MOV BYTE PTR [RDI+2], DL
+  JMP @TestGreen
+@UseRed255:
+  MOV BYTE PTR [RDI+2], 255
+
+  ;
+  ; G
+  ;
+@TestGreen:
+  MOV R9, 52973
+  MOV RAX, R10
+  XOR RDX, RDX
+  MUL R9
+  XOR RDX, RDX
+  MOV R9, 256
+  DIV R9
+  ADD RDX, 50
+  CMP RDX, 255
+  JA @UseGreen255
+  MOV BYTE PTR [RDI+1], DL
+  JMP @TestBlue
+@UseGreen255:
+  MOV BYTE PTR [RDI+1], 255
+
+  ;
+  ; B
+  ;
+@TestBlue:
+  MOV R9, 44111
+  MOV RAX, R10
+  XOR RDX, RDX
+  MUL R9
+  XOR RDX, RDX
+  MOV R9, 256
+  DIV R9
+  ADD RDX, 50
+  CMP RDX, 255
+  JA @UseBlue255
+  MOV BYTE PTR [RDI], DL
+  JMP @DoneTesting
+@UseBlue255:
+  MOV BYTE PTR [RDI], 255
+  
+@DoneTesting:
+  MOV BYTE PTR [RDI+3], 16
+
+@NextPix:
+  ADD RDI, 4
+  INC R8
+  CMP R8, STEPS_FRAME*EQU_ITTERATIONS
+  JB @Init_Color_Array
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_PixelColorInit_Type2, _TEXT$00
+
 
 ;*********************************************************
 ;   FractalA_InitSpecialAlgo
@@ -634,12 +766,31 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   SHL RCX, 2
   ADD RAX, RCX
   MOV ECX, [R12]
+
+  ;
+  ; What happens if we average out the colors?
+  ;
+  ;MOV EDX, DWORD PTR [RDI+RAX]
+  ;ADD CL, DL
+  ;SHR CL, 1
+  ;ADD CH, DH
+  ;SHR CH,1
+  ;MOV WORD PTR [RDI+RAX], CX
+  ;SHR ECX, 16
+  ;SHR EDX, 16
+  ;ADD ECX, EDX
+  ;SHR ECX, 1
+  ;SHL ECX, 16
+  ;MOV CX, WORD PTR [RDI+RAX]
+
+  ;
+  ; This just updates the color
+  ;
   MOV DWORD PTR [RDI+RAX], ECX
 
-  
-  ADD ECX, PIXEL_ENTRY.ColorInc[R9]
-  AND ECX, 0FFFFFFh
-  MOV PIXEL_ENTRY.Color[R9], ECX
+  ;ADD ECX, PIXEL_ENTRY.ColorInc[R9]
+  ;AND ECX, 0FFFFFFh
+  ;MOV PIXEL_ENTRY.Color[R9], ECX
 
 @PixelLoopUpdate:
 
