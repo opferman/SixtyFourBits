@@ -1,5 +1,5 @@
 ;*********************************************************
-; Template 
+; Fractal Equations 
 ;
 ;  Written in Assembly x64
 ; 
@@ -576,15 +576,13 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   CMP RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   JAE @CantPlotPixel
 
-  ;JMP @NoUpdateRollingDelta
-
+  ;
+  ; This code is working if we do not save pixel history when values are offscreen since they can be -INF/+INF.
+  ; JMP @NoUpdateRollingDelta
+  ;
+  ;
   MOV [IsOffScreen], 0
-  CMP RCX, 522
-  JNE @Skipit
-  CMP RAX, 268
-  JNE @Skipit
-;  INT 3
-@Skipit:
+
   MOVSD xmm3, PIXEL_HISTORY.X[R14]
   MOVSD xmm4, PIXEL_HISTORY.Y[R14]
   SUBSD xmm3, xmm1
