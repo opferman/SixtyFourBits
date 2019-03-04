@@ -324,10 +324,11 @@ NESTED_ENTRY FractalA_RandomInitParams, _TEXT$00
   JE @SetToOne
 
   CMP EAX, 2
-  JE @SetToNegativeOne
-;
-; Else Zero
-;
+  JE @SetToZero
+  JMP @SetToNegativeOne
+
+@SetToZero:
+
   MOVSD xmm0, [Zero]
   MOVSD EQUATION_PARAMS.Param[RDI], xmm0
   JMP @LoopTest
