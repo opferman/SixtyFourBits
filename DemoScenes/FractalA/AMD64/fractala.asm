@@ -205,7 +205,7 @@ ALIGN 16
                   db "x", 0 
                   db "y", 0
                   db "t",0
-
+   ColorJumpTable dq 7 DUP(?)
    StringSize     mmword 100000.0
    FormatString   db  "t = -3.00000", 0
    DoubleBuffer     dq ?
@@ -243,9 +243,9 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   MOV PIXEL_ENTRY.Color[RDI], EAX
 
 
-  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
+  ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
   ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type2
- 
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type3
  
   MOV RDI, OFFSET PixelHistory
   XOR R8, R8
@@ -486,6 +486,119 @@ NESTED_ENTRY FractalA_PixelColorInit_Type2, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END FractalA_PixelColorInit_Type2, _TEXT$00
+
+
+
+;*********************************************************
+;   FractalA_PixelColorInit_Type3
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_PixelColorInit_Type3, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  LEA RCX, [@FadeInRed]
+  MOV QWORD PTR [ColorJumpTable],  RCX
+  LEA RCX, [@FadeInBlue]
+  MOV QWORD PTR [ColorJumpTable+8],  RCX
+  LEA RCX, [@FadeInGreen]
+  MOV QWORD PTR [ColorJumpTable+16],  RCX
+  LEA RCX, [@FadeOutRed]
+  MOV QWORD PTR [ColorJumpTable+24],  RCX
+  LEA RCX, [@FadeOutBlue]
+  MOV QWORD PTR [ColorJumpTable+32],  RCX
+  LEA RCX, [@FadeOutGreen]
+  MOV QWORD PTR [ColorJumpTable+40],  RCX
+
+  XOR RSI, RSI
+  MOV RDI, OFFSET ColorArray
+@Init_Random_Value:
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND EAX, 0FFFFFFh
+  CMP EAX, 0
+  JE @Init_Random_Value
+  MOV EBX, EAX
+  OR EBX, 010000000h
+@ChooseNewPath:
+  MOV DWORD PTR [RDI], EBX
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  MOV RCX, 6
+  DIV ECX
+  SHL EDX, 3
+  MOV RCX, OFFSET ColorJumpTable
+  ADD RDX, RCX
+  XOR R12, R12
+  JMP @NextPix
+  
+@FadeInRed:
+  CMP BYTE PTR [RDI + 2], 255
+  JE @NextPix
+  INC BYTE PTR [RDI + 2]
+  JMP @NextPix
+
+@FadeInBlue:
+  CMP BYTE PTR [RDI], 255
+  JE @NextPix
+  INC BYTE PTR [RDI]
+  JMP @NextPix
+
+@FadeInGreen:
+  CMP BYTE PTR [RDI + 1], 255
+  JE @NextPix
+  INC BYTE PTR [RDI + 1]
+  JMP @NextPix
+
+
+@FadeOutRed:
+  CMP BYTE PTR [RDI + 2], 25
+  JBE @NextPix
+  DEC BYTE PTR [RDI + 2]
+  JMP @NextPix
+
+@FadeOutBlue:
+  CMP BYTE PTR [RDI], 25
+  JBE @NextPix
+  DEC BYTE PTR [RDI]
+  JMP @NextPix
+
+@FadeOutGreen:
+  CMP BYTE PTR [RDI + 1], 25
+  JBE @NextPix
+  DEC BYTE PTR [RDI + 1]
+  JMP @NextPix
+
+@NextPix:
+  MOV EBX, DWORD PTR [RDI]
+  ADD RDI, 4
+  INC RSI
+  CMP RSI, STEPS_FRAME*EQU_ITTERATIONS
+  JA @OuttaHere
+  INC R12
+  CMP R12, 1000
+;  JAE @Init_Random_Value
+  JAE @ChooseNewPath
+  MOV DWORD PTR [RDI], EBX
+  JMP QWORD PTR [RCX]
+@OuttaHere:
+
+  MOV R12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  MOV RBX, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_PixelColorInit_Type3, _TEXT$00
 
 
 ;*********************************************************
@@ -771,8 +884,8 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ;
   ; This just updates the color
   ;
-  CMP DWORD PTR [RDI+RAX], 0
-  JNE @DontPlotNonZero
+  ;CMP DWORD PTR [RDI+RAX], 0
+  ;JNE @DontPlotNonZero
   MOV DWORD PTR [RDI+RAX], ECX
 
 @DontPlotNonZero:
@@ -1181,7 +1294,7 @@ NESTED_ENTRY FractalA_DisplayT, _TEXT$00
    MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
    MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0
    MOV R9, 4
-   MOV R8, 600
+   MOV R8, 700
    MOV RDX, OFFSET FormatString
    MOV RSI, RCX
    DEBUG_FUNCTION_CALL FractalA_PrintWord
@@ -1219,7 +1332,7 @@ NESTED_ENTRY FractalA_DisplayT, _TEXT$00
    MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param6[RSP], 0
    MOV FRACTAL_DEMO_STRUCTURE.ParameterFrame.Param7[RSP], 0FFFFFFh
    MOV R9, 4
-   MOV R8, 600
+   MOV R8, 700
    MOV RDX, OFFSET FormatString
    MOV RCX, RSI
    DEBUG_FUNCTION_CALL FractalA_PrintWord
