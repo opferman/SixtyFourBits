@@ -132,25 +132,26 @@ EQU_ITTERATIONS EQU <800>
 EQU_PARAMETERS EQU <18>
 
 NEWX_X2 EQU <0 * SIZE EQUATION_PARAMS>
-NEWX_Y2 EQU <1 * SIZE EQUATION_PARAMS>
-NEWX_T2 EQU <2 * SIZE EQUATION_PARAMS>
-NEWX_XY EQU <3 * SIZE EQUATION_PARAMS>
-NEWX_XT EQU <4 * SIZE EQUATION_PARAMS>
-NEWX_YT EQU <5 * SIZE EQUATION_PARAMS>
-NEWX_X  EQU <6 * SIZE EQUATION_PARAMS>
-NEWX_Y  EQU <7 * SIZE EQUATION_PARAMS>
-NEWX_T  EQU <8 * SIZE EQUATION_PARAMS>
-NEWY_X2 EQU <9 * SIZE EQUATION_PARAMS>
-NEWY_Y2 EQU <10 * SIZE EQUATION_PARAMS>
-NEWY_T2 EQU <11 * SIZE EQUATION_PARAMS>
-NEWY_XY EQU <12 * SIZE EQUATION_PARAMS>
-NEWY_XT EQU <13 * SIZE EQUATION_PARAMS>
-NEWY_YT EQU <14 * SIZE EQUATION_PARAMS>
-NEWY_X  EQU <15 * SIZE EQUATION_PARAMS>
-NEWY_Y  EQU <16 * SIZE EQUATION_PARAMS>
+NEWX_Y2 EQU <2 * SIZE EQUATION_PARAMS>
+NEWX_T2 EQU <4 * SIZE EQUATION_PARAMS>
+NEWX_XY EQU <6 * SIZE EQUATION_PARAMS>
+NEWX_XT EQU <8 * SIZE EQUATION_PARAMS>
+NEWX_YT EQU <10 * SIZE EQUATION_PARAMS>
+NEWX_X  EQU <12 * SIZE EQUATION_PARAMS>
+NEWX_Y  EQU <14 * SIZE EQUATION_PARAMS>
+NEWX_T  EQU <16 * SIZE EQUATION_PARAMS>
+NEWY_X2 EQU <1 * SIZE EQUATION_PARAMS>
+NEWY_Y2 EQU <3 * SIZE EQUATION_PARAMS>
+NEWY_T2 EQU <5 * SIZE EQUATION_PARAMS>
+NEWY_XY EQU <7 * SIZE EQUATION_PARAMS>
+NEWY_XT EQU <9 * SIZE EQUATION_PARAMS>
+NEWY_YT EQU <11 * SIZE EQUATION_PARAMS>
+NEWY_X  EQU <13 * SIZE EQUATION_PARAMS>
+NEWY_Y  EQU <15 * SIZE EQUATION_PARAMS>
 NEWY_T  EQU <17 * SIZE EQUATION_PARAMS>
 
 
+BASIC_SSE2 EQU <1>
 RED_MIN   EQU <50>
 BLUE_MIN  EQU <50>
 GREEN_MIN EQU <50>
@@ -159,6 +160,16 @@ GREEN_MIN EQU <50>
 ; Data Segment
 ;*********************************************************
 .DATA
+ALIGN  16
+   Parameters     EQUATION_PARAMS EQU_PARAMETERS DUP(<>)
+ALIGN  16
+   PixelEntry     PIXEL_ENTRY NUM_PIXELS DUP(<>)
+ALIGN  16
+   PointFive      mmword 0.5
+                  mmword 0.5   
+ALIGN 16
+   PlotX          mmword 0.0
+   PlotY          mmword 0.0
    FrameCounter   dd ?
    EquationXString db "x' = -x^2 - y^2 - t^2 - xy - xt - yt - x - y - t ", 0
    EquationYString db "y' = -x^2 - y^2 - t^2 - xy - xt - yt - x - y - t ", 0
@@ -166,13 +177,9 @@ GREEN_MIN EQU <50>
    t_End          mmword 3.0
    t_Input        mmword -3.0
    t_Increment    mmword 0.01
-   PixelEntry     PIXEL_ENTRY NUM_PIXELS DUP(<>)
    ColorArray     dd     STEPS_FRAME*EQU_ITTERATIONS DUP(?)
    NegativeOne    mmword -1.0
    Scale          mmword 0.25
-   PlotX          mmword 0.0
-   PlotY          mmword 0.0
-   PointFive      mmword 0.5
    FiveHundred    mmword 500.0
    RollingDelta   mmword 0.00001
    DeltaPerStep   mmword 0.00001
@@ -185,12 +192,6 @@ GREEN_MIN EQU <50>
    Zero           mmword 0.0
    NineyNine      mmword 0.99
    PontOhOne      mmword 0.01
-   XSquared       mmword ?
-   YSquared       mmword ?
-   TSquared       mmword ?
-   XandY          mmword ?
-   XandT          mmword ?
-   YandT          mmword ?
    Red            db ?
    Green          db ?
    Blue           db ?
@@ -209,7 +210,6 @@ GREEN_MIN EQU <50>
    FormatString   db  "t = -3.00000", 0
    DoubleBuffer     dq ?
    PixelHistory   PIXEL_HISTORY EQU_ITTERATIONS DUP(<>)
-   Parameters     EQUATION_PARAMS EQU_PARAMETERS DUP(<>)
    IsOffScreen    dd ?
 .CODE
 
@@ -243,8 +243,8 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   MOV PIXEL_ENTRY.Color[RDI], EAX
 
 
-  ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
-  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type2
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
+  ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type2
  
  
   MOV RDI, OFFSET PixelHistory
@@ -673,28 +673,29 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   SHR EAX, 1
   CVTSI2SD xmm0, RAX                                    ; Screen Height / 2
   MULSD xmm0, [Scale]
+  MOVLHPS xmm0, xmm0 
 
   ;
-  ; NewX (xmm1) = Screen Width * 0.5 + (x - PlotX) * xmm0
+  ; NewX (xmm1.Low) = Screen Width * 0.5 + (x - PlotX) * xmm0
   ;
+  ;
+  ;  NewY (xmm1.High) = Screen Height * 0.5 + (y - PlotY) * xmm0
+  ;
+
   MOV RAX,MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   CVTSI2SD xmm1, RAX   
-  MULSD xmm1, [PointFive]
-  MOVSD xmm2, PIXEL_ENTRY.X[R9]
-  SUBSD xmm2, [PlotX]
-  MULSD xmm2, xmm0
-  ADDSD xmm1, xmm2
-
-  ;
-  ; NewY (xmm2) = Screen Height * 0.5 + (y - PlotY) * xmm0
-  ;
   MOV RAX,MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   CVTSI2SD xmm2, RAX   
-  MULSD xmm2, [PointFive]
-  MOVSD xmm3, PIXEL_ENTRY.Y[R9]
-  SUBSD xmm3, [PlotY]
-  MULSD xmm3, xmm0
-  ADDSD xmm2, xmm3
+
+  MOVLHPS xmm1, xmm2                    ; Move to pack [ Y | X ]
+  MULPD xmm1, [PointFive]
+
+  MOVAPD xmm2, PIXEL_ENTRY.X[R9]        ; Pack Y and X into xmm2
+  SUBPD xmm2, [PlotX]                   ; Subtract the Plot Y | Plot X
+
+  MULPD xmm2, xmm0                      ; * Scaler
+  ADDPD xmm1, xmm2                      ; Add to first variable.
+  MOVHLPS xmm2, xmm1                    ; xmm2 = Y, xmm1 - X
 
   ;
   ; Convert to integers and determine if they are on-screen to draw.
@@ -768,30 +769,13 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOV ECX, [R12]
 
   ;
-  ; What happens if we average out the colors?
-  ;
-  ;MOV EDX, DWORD PTR [RDI+RAX]
-  ;ADD CL, DL
-  ;SHR CL, 1
-  ;ADD CH, DH
-  ;SHR CH,1
-  ;MOV WORD PTR [RDI+RAX], CX
-  ;SHR ECX, 16
-  ;SHR EDX, 16
-  ;ADD ECX, EDX
-  ;SHR ECX, 1
-  ;SHL ECX, 16
-  ;MOV CX, WORD PTR [RDI+RAX]
-
-  ;
   ; This just updates the color
   ;
+  CMP DWORD PTR [RDI+RAX], 0
+  JNE @DontPlotNonZero
   MOV DWORD PTR [RDI+RAX], ECX
 
-  ;ADD ECX, PIXEL_ENTRY.ColorInc[R9]
-  ;AND ECX, 0FFFFFFh
-  ;MOV PIXEL_ENTRY.Color[R9], ECX
-
+@DontPlotNonZero:
 @PixelLoopUpdate:
 
   ADD R12, 4
@@ -832,130 +816,73 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm1, PIXEL_ENTRY.Y[R9]
   MOVSD xmm2, [t_Input]
 
-  MOVSD xmm3, xmm0
-  MULSD xmm3, xmm3              ; x^2
-  MOVSD [XSquared], xmm3
-
-  MOVSD xmm3, xmm1              
-  MULSD xmm3, xmm3              ; y^2
-  MOVSD [YSquared], xmm3
-
-  MOVSD xmm3, xmm2
-  MULSD xmm3, xmm3              ; t^2
-  MOVSD [TSquared], xmm3
-
-  MOVSD xmm3, xmm0
-  MULSD xmm3, xmm1
-  MOVSD [XandY], xmm3           ; x*y
-
-  MOVSD xmm3, xmm0
-  MULSD xmm3, xmm2
-  MOVSD [XandT], xmm3           ; x*t
-
-  MOVSD xmm3, xmm1
-  MULSD xmm3, xmm2
-  MOVSD [YandT], xmm3           ; y*t
+     ;**************
+     ; This is the optimzied SSE2 parallel code.
+     ;**************
+        ;
+        ; XMM0 = X
+        ; XMM1 = Y
+        ; XMM2 = T
+        ;
 
   MOV R15, OFFSET Parameters
+
+  MOVSD xmm3, xmm0
+  MULSD xmm3, xmm3              ; Create x^2 in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_X2]             
+  MOVUPD xmm5, xmm3             ; XMM5 will hold New X (X') in the lower 64 Bits and New Y (Y') in the upper 64 bits 
+
+  MOVSD xmm3, xmm1
+  MULSD xmm3, xmm3              ; Create y^2 in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_Y2]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2   / NewX = c*X^2 + c*Y^2
+
+  MOVSD xmm3, xmm2
+  MULSD xmm3, xmm3              ; Create t^2 in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_T2 ]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + t^2  / NewX = c*X^2 + c*Y^2 + t^2
+
+  MOVSD xmm3, xmm0
+  MULSD xmm3, xmm1              ; Create xy in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_XY ]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy
+
+
+  MOVSD xmm3, xmm0
+  MULSD xmm3, xmm2              ; Create xt in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_XT ]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt
+
+
+  MOVSD xmm3, xmm1
+  MULSD xmm3, xmm2              ; Create yt in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_YT]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt
+
+  MOVSD xmm3, xmm0              ; Create X in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_X]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x
+
+  MOVSD xmm3, xmm1              ; Create Y in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_Y]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y
   
-  MOVSD xmm3, [XSquared]
-  MULSD xmm3, EQUATION_PARAMS.Param[R15]        ; c*x^2
-  ADD R15, SIZE EQUATION_PARAMS
+  MOVSD xmm3, xmm2              ; Create t in xmm3
+  MOVLHPS xmm3, xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_T]             
+  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y + c*t  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y + c*t
 
-  MOVSD xmm4, [YSquared]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*y^2
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [TSquared]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*t^2
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [XandY]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*xy
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [XandT]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*xt
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [YandT]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*yt
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, PIXEL_ENTRY.X[R9]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*x
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, PIXEL_ENTRY.y[R9]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*y
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [t_Input]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*t
-  ADDSD xmm3, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  ;
-  ; New X = xmm3
-  ;
-  MOVSD xmm5, [XSquared]
-  MULSD xmm5, EQUATION_PARAMS.Param[R15]        ; c*x^2
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [YSquared]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*y^2
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [TSquared]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*t^2
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [XandY]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*xy
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [XandT]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*xt
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [YandT]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*yt
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, PIXEL_ENTRY.X[R9]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*x
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, PIXEL_ENTRY.y[R9]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*y
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  MOVSD xmm4, [t_Input]
-  MULSD xmm4, EQUATION_PARAMS.Param[R15]        ; c*t
-  ADDSD xmm5, xmm4
-  ADD R15, SIZE EQUATION_PARAMS
-
-  ;
-  ; xmm5 = New Y
-  ;
+  MOVAPD PIXEL_ENTRY.X[R9], xmm5         ; x' and Y'
 
 
-  MOVSD PIXEL_ENTRY.X[R9], xmm3         ; x'
-  MOVSD PIXEL_ENTRY.Y[R9], xmm5         ; y'
 
 ;
 ;  Originally we were doing per-pixel things, but now we are just itterative from one pixel to the next.
@@ -1090,6 +1017,7 @@ NESTED_ENTRY FractalA_NewEquationStrings, _TEXT$00
   MOV RDX, OFFSET Parameters
   ADD RDX, NEWY_X2
   MOV RCX, OFFSET EquationYString
+  ADD RCX, SIZE EQUATION_PARAMS
   DEBUG_FUNCTION_CALL FractalA_UpdateEquation
 
   MOV rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
@@ -1216,7 +1144,7 @@ NESTED_ENTRY FractalA_UpdateEquation, _TEXT$00
   JNE @SkipStringLoop
   INC RDI
 @FinishedAddition:
-  ADD RDX, SIZE EQUATION_PARAMS
+  ADD RDX, SIZE EQUATION_PARAMS*2
   INC R8
   CMP R8, 9
   JB @CreateEquationStringLoop
