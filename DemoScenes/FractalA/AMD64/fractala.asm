@@ -828,11 +828,6 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   CMP RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   JAE @CantPlotPixel
 
-  ;
-  ; This code is working if we do not save pixel history when values are offscreen since they can be -INF/+INF.
-  ; JMP @NoUpdateRollingDelta
-  ;
-  ;
   MOV [IsOffScreen], 0
 
   MOVAPD xmm3, PIXEL_HISTORY.X[R14]
@@ -841,26 +836,24 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ;
   ; Save Pixel History
   ;
-  MOVAPD PIXEL_HISTORY.X[R14], xmm2     ; xmm.h = Y, xmm.l = x
+  MOVAPD PIXEL_HISTORY.X[R14], xmm1     ; xmm.h = Y, xmm.l = x
   ADD R14, SIZE PIXEL_HISTORY 
 
+  MOVHLPS xmm4, xmm3
   MULPD xmm3, xmm3                      ; dy*dy dx*dx
   MOVHLPS xmm2, xmm3
   ADDSD xmm3, xmm2                      ; dx*dx + dy*dy
   SQRTSD xmm3, xmm3
   MULSD xmm3, [FiveHundred]             ; dist = sqrt(dx*dx + dy*dy) * 500
-
   MOVSD xmm1, [Delta]                   ; Delta
   ADDSD xmm3, [TenNegFive]              ; dist + 1e-5
   DIVSD xmm1, xmm3                      ; Delta / (dist + 1e-5) = xmm1
   MOVSD xmm0, [MinDelta]
   MULSD xmm0, [SpeedMult]               ; Delta Minimum * Speed Multiplier
-
-  MAXPD xmm3, xmm1                      ; MAX(Delta / (Dist + 1e5), delta_min*speedMult) = xmm3
-
-  MOVSD xmm1, [RollingDelta]
-  MINPD xmm1, xmm3                      ; MIN(Rolling Delta, xmm3)
-  MOVSD [RollingDelta], xmm1            ; No branches, just update.
+  MAXPD xmm0, xmm1                       ; MAX(Delta / (Dist + 1e5), delta_min*speedMult) = xmm0
+  MOVSD xmm1, [RollingDelta] 
+  MINPD xmm0, xmm1                       ; MIN(Rolling Delta, xmm3)
+  MOVSD [RollingDelta], xmm0
 
 @PlotPixelOnScreen:
 ;
