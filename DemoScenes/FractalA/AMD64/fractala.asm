@@ -162,14 +162,21 @@ GREEN_MIN EQU <50>
 .DATA
 ALIGN  16
    Parameters     EQUATION_PARAMS EQU_PARAMETERS DUP(<>)
+   ; End Align
 ALIGN  16
    PixelEntry     PIXEL_ENTRY NUM_PIXELS DUP(<>)
+   ; End Align
 ALIGN  16
    PointFive      mmword 0.5
                   mmword 0.5   
+   ; End Align
 ALIGN 16
    PlotX          mmword 0.0
    PlotY          mmword 0.0
+   ; End Align
+ALIGN 16
+   PixelHistory   PIXEL_HISTORY EQU_ITTERATIONS DUP(<>)
+   ; End Align
    FrameCounter   dd ?
    EquationXString db "x' = -x^2 - y^2 - t^2 - xy - xt - yt - x - y - t ", 0
    EquationYString db "y' = -x^2 - y^2 - t^2 - xy - xt - yt - x - y - t ", 0
@@ -209,7 +216,6 @@ ALIGN 16
    StringSize     mmword 100000.0
    FormatString   db  "t = -3.00000", 0
    DoubleBuffer     dq ?
-   PixelHistory   PIXEL_HISTORY EQU_ITTERATIONS DUP(<>)
    IsOffScreen    dd ?
 .CODE
 
@@ -829,46 +835,33 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   ;
   MOV [IsOffScreen], 0
 
-  MOVSD xmm3, PIXEL_HISTORY.X[R14]
-  MOVSD xmm4, PIXEL_HISTORY.Y[R14]
-  SUBSD xmm3, xmm1
-  SUBSD xmm4, xmm2
-  
+  MOVAPD xmm3, PIXEL_HISTORY.X[R14]
+  SUBPD xmm3, xmm1
+
   ;
   ; Save Pixel History
   ;
-  MOVSD PIXEL_HISTORY.X[R14], xmm1
-  MOVSD PIXEL_HISTORY.Y[R14], xmm2
+  MOVAPD PIXEL_HISTORY.X[R14], xmm2     ; xmm.h = Y, xmm.l = x
   ADD R14, SIZE PIXEL_HISTORY 
 
-  MULSD xmm3, xmm3                      ; dx*dx
-  MULSD xmm4, xmm4                      ; dy*dy
-  ADDSD xmm3, xmm3                      ; dx*dx + dy*dy
-  MOVSD xmm0, xmm3
-  SQRTSD xmm0, xmm0
-  MULSD xmm0, [FiveHundred]             ; dist = sqrt() * 500
+  MULPD xmm3, xmm3                      ; dy*dy dx*dx
+  MOVHLPS xmm2, xmm3
+  ADDSD xmm3, xmm2                      ; dx*dx + dy*dy
+  SQRTSD xmm3, xmm3
+  MULSD xmm3, [FiveHundred]             ; dist = sqrt(dx*dx + dy*dy) * 500
 
   MOVSD xmm1, [Delta]                   ; Delta
-  ADDSD xmm0, [TenNegFive]              ; dist + 1e-5
-  DIVSD xmm1, xmm0                      ; Delta / (dist + 1e-5) = xmm1
-
+  ADDSD xmm3, [TenNegFive]              ; dist + 1e-5
+  DIVSD xmm1, xmm3                      ; Delta / (dist + 1e-5) = xmm1
   MOVSD xmm0, [MinDelta]
-  MULSD xmm0, [SpeedMult]                ; Delta Minimum * Speed Multiplier
+  MULSD xmm0, [SpeedMult]               ; Delta Minimum * Speed Multiplier
 
-  UCOMISD  xmm0, xmm1                      ; Determine the Maximum
-  JA @CompareMin
+  MAXPD xmm3, xmm1                      ; MAX(Delta / (Dist + 1e5), delta_min*speedMult) = xmm3
 
-  MOVSD xmm0, xmm1
-
-@CompareMin:                              ; xmm0 will have the max of the previous two operations
   MOVSD xmm1, [RollingDelta]
-  UCOMISD  xmm0, xmm1                     ; Determine the minimum
-  JA @NoUpdateRollingDelta
+  MINPD xmm1, xmm3                      ; MIN(Rolling Delta, xmm3)
+  MOVSD [RollingDelta], xmm1            ; No branches, just update.
 
-  MOV RDX, [RollingDelta]
-  MOVSD [RollingDelta], xmm0              ; Update if it's less than.
-
-@NoUpdateRollingDelta:
 @PlotPixelOnScreen:
 ;
 ; Plot Pixel and Update ColorInc
@@ -880,7 +873,6 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   SHL RCX, 2
   ADD RAX, RCX
   MOV ECX, [R12]
-
   ;
   ; This just updates the color
   ;
