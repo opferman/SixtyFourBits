@@ -922,6 +922,8 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
         ; XMM1 = Y
         ; XMM2 = T
         ;
+        ;
+        ; C is in the set { -1, 0, 1 } currently.
 
   MOV R15, OFFSET Parameters
 
@@ -1115,7 +1117,6 @@ NESTED_ENTRY FractalA_NewEquationStrings, _TEXT$00
   MOV RDX, OFFSET Parameters
   ADD RDX, NEWY_X2
   MOV RCX, OFFSET EquationYString
-  ADD RCX, SIZE EQUATION_PARAMS
   DEBUG_FUNCTION_CALL FractalA_UpdateEquation
 
   MOV rdi, FRACTAL_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
