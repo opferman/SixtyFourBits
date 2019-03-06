@@ -913,6 +913,9 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
   MOVSD xmm0, PIXEL_ENTRY.X[R9]
   MOVSD xmm1, PIXEL_ENTRY.Y[R9]
   MOVSD xmm2, [t_Input]
+  MOVLHPS xmm0, xmm0
+  MOVLHPS xmm1, xmm1
+  MOVLHPS xmm2, xmm2
 
      ;**************
      ; This is the optimzied SSE2 parallel code.
@@ -927,63 +930,108 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
 
   MOV R15, OFFSET Parameters
 
+IF 0
+;
+; Timing Code to Compare algorithms
+;
+
+  ;
+  ; 7 Cycles
+  ; 
+  MOV R8, 50000
+  RDTSC 
+  MOV ECX, EDX
+  MOV EBX, EAX
+Loopie:
   MOVSD xmm3, xmm0
   MULSD xmm3, xmm3              ; Create x^2 in xmm3
   MOVLHPS xmm3, xmm3
   MULPD xmm3, mmword ptr [R15+ NEWX_X2]             
-  MOVUPD xmm5, xmm3             ; XMM5 will hold New X (X') in the lower 64 Bits and New Y (Y') in the upper 64 bits 
+  MOVUPD xmm5, xmm3             
+  DEC R8
+  JNZ Loopie
+  LFENCE
+  RDTSC
+  MOV R9D, EAX
+  MOV R10D, EDX
+  SUB R9D, EBX
+  SBB R10D, ECX
+  INT 3
+  MOV EDX, R10D
+  MOV EAX, R9D
+  MOV R9, 50000
+  DIV R9
+  INT 3
 
-  MOVSD xmm3, xmm1
-  MULSD xmm3, xmm3              ; Create y^2 in xmm3
-  MOVLHPS xmm3, xmm3
+  MOVLHPS xmm0, xmm0
+  ;
+  ; 1 Cycle
+  ; 
+  MOV R8, 50000
+  RDTSC 
+  MOV ECX, EDX
+  MOV EBX, EAX
+Loopie2:
+  MOVAPD xmm3, xmm0
+  MULPD xmm3, xmm3              ; Create x^2 in xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_X2]             
+  MOVUPD xmm5, xmm3             
+  DEC R8
+  JNZ Loopie2
+  LFENCE
+  RDTSC
+  MOV R9D, EAX
+  MOV R10D, EDX
+  SUB R9D, EBX
+  SBB R10D, ECX
+  INT 3
+  MOV EDX, R10D
+  MOV EAX, R9D
+  MOV R9, 50000
+  DIV R9
+  INT 3
+ENDIF
+
+  MOVAPD xmm3, xmm0
+  MULPD xmm3, xmm3              ; Create x^2 in xmm3
+  MULPD xmm3, mmword ptr [R15+ NEWX_X2]             
+  MOVAPD xmm5, xmm3             ; XMM5 will hold New X (X') in the lower 64 Bits and New Y (Y') in the upper 64 bits 
+
+  MOVAPD xmm3, xmm1
+  MULPD xmm3, xmm3              ; Create y^2 in xmm3
   MULPD xmm3, mmword ptr [R15+ NEWX_Y2]             
   ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2   / NewX = c*X^2 + c*Y^2
 
-  MOVSD xmm3, xmm2
-  MULSD xmm3, xmm3              ; Create t^2 in xmm3
-  MOVLHPS xmm3, xmm3
+  MOVAPD xmm3, xmm2
+  MULPD xmm3, xmm3              ; Create t^2 in xmm3
   MULPD xmm3, mmword ptr [R15+ NEWX_T2 ]             
   ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + t^2  / NewX = c*X^2 + c*Y^2 + t^2
 
-  MOVSD xmm3, xmm0
-  MULSD xmm3, xmm1              ; Create xy in xmm3
-  MOVLHPS xmm3, xmm3
+  MOVAPD xmm3, xmm0
+  MULPD xmm3, xmm1              ; Create xy in xmm3
   MULPD xmm3, mmword ptr [R15+ NEWX_XY ]             
   ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy
 
-
-  MOVSD xmm3, xmm0
-  MULSD xmm3, xmm2              ; Create xt in xmm3
-  MOVLHPS xmm3, xmm3
+  MOVAPD xmm3, xmm0
+  MULPD xmm3, xmm2              ; Create xt in xmm3
   MULPD xmm3, mmword ptr [R15+ NEWX_XT ]             
   ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt
 
-
-  MOVSD xmm3, xmm1
-  MULSD xmm3, xmm2              ; Create yt in xmm3
-  MOVLHPS xmm3, xmm3
+  MOVAPD xmm3, xmm1
+  MULPD xmm3, xmm2              ; Create yt in xmm3
   MULPD xmm3, mmword ptr [R15+ NEWX_YT]             
   ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt
 
-  MOVSD xmm3, xmm0              ; Create X in xmm3
-  MOVLHPS xmm3, xmm3
-  MULPD xmm3, mmword ptr [R15+ NEWX_X]             
-  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x
+  MULPD xmm0, mmword ptr [R15+ NEWX_X]             
+  ADDPD xmm5, xmm0              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x
 
-  MOVSD xmm3, xmm1              ; Create Y in xmm3
-  MOVLHPS xmm3, xmm3
-  MULPD xmm3, mmword ptr [R15+ NEWX_Y]             
-  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y
+  MULPD xmm1, mmword ptr [R15+ NEWX_Y]             
+  ADDPD xmm5, xmm1              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y
   
-  MOVSD xmm3, xmm2              ; Create t in xmm3
-  MOVLHPS xmm3, xmm3
-  MULPD xmm3, mmword ptr [R15+ NEWX_T]             
-  ADDPD xmm5, xmm3              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y + c*t  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y + c*t
+  MULPD xmm2, mmword ptr [R15+ NEWX_T]             
+  ADDPD xmm5, xmm2              ; NewY = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y + c*t  / NewX = c*X^2 + c*Y^2 + c*t^2 + c*xy + c*xt + c*yt + c*x + c*y + c*t
 
   MOVAPD PIXEL_ENTRY.X[R9], xmm5         ; x' and Y'
-
-
-
 ;
 ;  Originally we were doing per-pixel things, but now we are just itterative from one pixel to the next.
 ;  ADD R9, SIZE PIXEL_ENTRY
