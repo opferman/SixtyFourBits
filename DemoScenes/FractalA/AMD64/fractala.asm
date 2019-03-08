@@ -22,6 +22,7 @@
 include demoscene.inc
 include dbuffer_public.inc
 include font_public.inc
+include input_public.inc
 
 ;*********************************************************
 ; External WIN32/C Functions
@@ -251,7 +252,9 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
 
   ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
   ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type2
-  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type3
+  ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type3
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type4
+  ;DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type5
  
   MOV RDI, OFFSET PixelHistory
   XOR R8, R8
@@ -263,7 +266,7 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   CMP R8, EQU_ITTERATIONS
   JB @Init_To_Zero
 
-  ;DEBUG_FUNCTION_CALL FractalA_RandomInitParams
+ ; DEBUG_FUNCTION_CALL FractalA_RandomInitParams
   
   ;
   ; Initialize to a known algorithm and then randomize later
@@ -273,7 +276,14 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   XOR RDX, RDX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL FractalA_NewEquationStrings
+
+  MOV RDX, OFFSET FractalA_ResetNewEquation
+  MOV ECX, VK_R
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease
   
+  MOV RDX, OFFSET FractalA_RandomColorSequence
+  MOV ECX, VK_C
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease
 
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
@@ -281,6 +291,90 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   MOV EAX, 1
   RET
 NESTED_END FractalA_Init, _TEXT$00
+
+
+;*********************************************************
+;   FractalA_ResetNewEquation
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_ResetNewEquation, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV EAX, 1
+  MOVSD xmm0, [t_End]
+  MOVSD [t_Input], xmm0
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_ResetNewEquation, _TEXT$00
+
+
+;*********************************************************
+;   FractalA_RandomColorSequence
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_RandomColorSequence, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR EDX, EDX
+  MOV R8, 5
+  DIV R8
+  
+  CMP DL, 0
+  JE @Color0
+  CMP DL, 1
+  JE @Color1
+  CMP DL, 2
+  JE @Color2
+  CMP DL, 3
+  JE @Color3  
+
+ @Color4:
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type5
+  JMP @DoneColorChange
+
+ @Color3:
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type4
+  JMP @DoneColorChange
+
+ @Color2:
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type3
+  JMP @DoneColorChange
+
+ @Color1:
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type2
+  JMP @DoneColorChange
+
+ @Color0:
+  DEBUG_FUNCTION_CALL FractalA_PixelColorInit_Type1
+  
+@DoneColorChange:
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_RandomColorSequence, _TEXT$00
 
 
 
@@ -589,7 +683,7 @@ NESTED_ENTRY FractalA_PixelColorInit_Type3, _TEXT$00
   ADD RDI, 4
   INC RSI
   CMP RSI, STEPS_FRAME*EQU_ITTERATIONS
-  JA @OuttaHere
+  JAE @OuttaHere
   INC R12
   CMP R12, 1000
 ;  JAE @Init_Random_Value
@@ -605,6 +699,92 @@ NESTED_ENTRY FractalA_PixelColorInit_Type3, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END FractalA_PixelColorInit_Type3, _TEXT$00
+
+
+
+;*********************************************************
+;   FractalA_PixelColorInit_Type4
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_PixelColorInit_Type4, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  XOR RSI, RSI
+  MOV RDI, OFFSET ColorArray
+  MOV DWORD PTR [RDI], 01000073eh
+@FadeInRed:
+  CMP BYTE PTR [RDI + 2], 255
+  JE @NextPix
+  INC BYTE PTR [RDI + 2]
+@NextPix:
+  MOV EBX, DWORD PTR [RDI]
+  ADD RDI, 4
+  MOV DWORD PTR [RDI], EBX
+  INC RSI
+  CMP RSI, STEPS_FRAME*EQU_ITTERATIONS
+  JB @FadeInRed
+
+  MOV R12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  MOV RBX, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_PixelColorInit_Type4, _TEXT$00
+
+
+
+;*********************************************************
+;   FractalA_PixelColorInit_Type5
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_PixelColorInit_Type5, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  XOR RSI, RSI
+  MOV RDI, OFFSET ColorArray
+  MOV DWORD PTR [RDI], 01500700h
+@FadeInBlue:
+  CMP BYTE PTR [RDI], 255
+  JE @NextPix
+  INC BYTE PTR [RDI]
+@NextPix:
+  MOV EBX, DWORD PTR [RDI]
+  ADD RDI, 4
+  MOV DWORD PTR [RDI], EBX
+  INC RSI
+  CMP RSI, STEPS_FRAME*EQU_ITTERATIONS
+  JB @FadeInBlue
+
+  MOV R12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  MOV RBX, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_PixelColorInit_Type5, _TEXT$00
 
 
 ;*********************************************************
@@ -930,15 +1110,17 @@ NESTED_ENTRY FractalA_Demo, _TEXT$00
 
   MOV R15, OFFSET Parameters
 
-IF 0
+
 ;
 ; Timing Code to Compare algorithms
 ;
-
+IF 0
   ;
   ; 7 Cycles
   ; 
   MOV R8, 50000
+  MOV EAX, DWORD PTR  [R15+ NEWX_X2] 
+  LFENCE
   RDTSC 
   MOV ECX, EDX
   MOV EBX, EAX
@@ -968,6 +1150,8 @@ Loopie:
   ; 1 Cycle
   ; 
   MOV R8, 50000
+  MOV EAX, DWORD PTR  [R15+ NEWX_X2] 
+  LFENCE
   RDTSC 
   MOV ECX, EDX
   MOV EBX, EAX
@@ -1345,7 +1529,7 @@ NESTED_ENTRY FractalA_DisplayT, _TEXT$00
 @PositiveFont:
    MOVSD xmm2, [StringSize]
    MULSD xmm1, xmm2
-   CVTSD2SI RAX, xmm1
+   CVTSD2SI RAX, xmm1  
 @Display:
    CMP RAX, 1000000
    JAE @T_IS_TOO_BIG

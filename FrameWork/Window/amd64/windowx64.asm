@@ -16,11 +16,18 @@ public Windowx64_Setup
 public Windowx64_Loop
 
 ;*********************************************************
+; Key Interfaces
+;*********************************************************
+extern Inputx64_HandleKeyPress:proc
+extern Inputx64_HandleKeyRelease:proc
+
+;*********************************************************
 ; Included Files
 ;*********************************************************
 include ksamd64.inc
 include windowsx64.inc
 include init_vars.inc
+include debug_public.inc
 
 WM_TIMER EQU <0113h>
 TIMER_EMULATE_VRTRACE EQU <1>
@@ -117,7 +124,7 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
 
   
   XOR RCX, RCX
-  CALL GetModuleHandleA
+  DEBUG_FUNCTION_CALL GetModuleHandleA
   
   MOV W_SETUP_PARAMS.WndClassStruct.hInstance[RSP], RAX
   MOV RAX, OFFSET Windowx64_WinProc
@@ -127,13 +134,13 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   MOV W_SETUP_PARAMS.WndClassStruct.cbSize[RSP], SIZE WNDCLASSEX
  
   MOV RCX, BLACK_BRUSH
-  CALL GetStockObject                   
+  DEBUG_FUNCTION_CALL GetStockObject                   
  
   MOV W_SETUP_PARAMS.WndClassStruct.hbrBackground[RSP], RAX
 ; ***************
  
   LEA RCX, W_SETUP_PARAMS.WndClassStruct[RSP]
-  CALL RegisterClassExA   
+  DEBUG_FUNCTION_CALL RegisterClassExA   
 
   MOV W_SETUP_PARAMS.WinRect.left[RSP], 0
   MOV W_SETUP_PARAMS.WinRect.top[RSP], 0
@@ -149,7 +156,7 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   MOV RDX, WS_CAPTION
 
   LEA RCX,  W_SETUP_PARAMS.WinRect[RSP]
-  CALL AdjustWindowRectEx
+  DEBUG_FUNCTION_CALL AdjustWindowRectEx
 
     
   MOV RAX, W_SETUP_PARAMS.WndClassStruct.hInstance[RSP]
@@ -180,7 +187,7 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   
   MOV RDX, [pszWindowClass]
   MOV RCX, 8 ; WS_EX_TOPMOST  
-  CALL CreateWindowExA
+  DEBUG_FUNCTION_CALL CreateWindowExA
 
   TEST EAX, EAX
   JZ @FailedToCreateWindow
@@ -194,7 +201,7 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   MOV RDX, TIMER_EMULATE_VRTRACE
   MOV RDI, RAX
   MOV RCX, RAX
-  CALL SetTimer
+  DEBUG_FUNCTION_CALL SetTimer
   MOV RAX, RDI
 
 @SkipVRTraceEmulate:
@@ -227,7 +234,7 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
         XOR R8, R8
         XOR R9, R9
         LEA RCX, LOOP_STACK_FRAME.Message[RSP]
-        CALL PeekMessageA
+        DEBUG_FUNCTION_CALL PeekMessageA
   
         TEST RAX, RAX
         JNZ SHORT @Windowx64_DeliverMessage
@@ -252,7 +259,7 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
   JNE SHORT @SkipEmulateVRTrace
 
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
-  CALL TranslateMessage
+  DEBUG_FUNCTION_CALL TranslateMessage
   
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
   CALL DispatchMessageA
@@ -260,10 +267,10 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
 
 @SkipEmulateVRTrace:
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
-  CALL TranslateMessage
+  DEBUG_FUNCTION_CALL TranslateMessage
   
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
-  CALL DispatchMessageA
+  DEBUG_FUNCTION_CALL DispatchMessageA
                 
   JMP SHORT @Windowx64_MessageLoop
     
@@ -288,6 +295,9 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   CMP EDX, WM_CREATE
   JE @Windowx64_HandleCreate
 
+  CMP EDX, WM_KEYDOWN
+  JE @Windowx64_HandleKeyDown
+
   CMP EDX, WM_KEYUP
   JE @Windowx64_HandleKeyUp
   
@@ -306,7 +316,7 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   MOV WINPROG_STACK_FRAME.SaveParam4[RSP], R9
 
   XOR RDX, RDX
-  CALL ValidateRect 
+  DEBUG_FUNCTION_CALL ValidateRect 
 
   MOV RCX, WINPROG_STACK_FRAME.SaveParam1[RSP]
   MOV RDX, WINPROG_STACK_FRAME.SaveParam2[RSP]
@@ -314,7 +324,7 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   MOV R9, WINPROG_STACK_FRAME.SaveParam4[RSP]
 
 @Window_DefaultWindow:
-  CALL DefWindowProcA
+  DEBUG_FUNCTION_CALL DefWindowProcA
   ADD RSP, SIZE WINPROG_STACK_FRAME
   RET
 
@@ -323,13 +333,39 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   ADD RSP, SIZE WINPROG_STACK_FRAME
   RET
 
+@Windowx64_HandleKeyDown:
+
+  MOV WINPROG_STACK_FRAME.SaveParam1[RSP], RCX
+  MOV WINPROG_STACK_FRAME.SaveParam2[RSP], RDX
+  MOV WINPROG_STACK_FRAME.SaveParam3[RSP], R8
+  MOV WINPROG_STACK_FRAME.SaveParam4[RSP], R9
+
+  MOV RCX, R8
+  DEBUG_FUNCTION_CALL Inputx64_HandleKeyPress
+
+  MOV RCX, WINPROG_STACK_FRAME.SaveParam1[RSP]
+  MOV RDX, WINPROG_STACK_FRAME.SaveParam2[RSP]
+  MOV R8, WINPROG_STACK_FRAME.SaveParam3[RSP]
+  MOV R9, WINPROG_STACK_FRAME.SaveParam4[RSP]
+  JMP @Window_DefaultWindow
 
 @Windowx64_HandleKeyUp:
-  
+  MOV WINPROG_STACK_FRAME.SaveParam1[RSP], RCX
+  MOV WINPROG_STACK_FRAME.SaveParam2[RSP], RDX
+  MOV WINPROG_STACK_FRAME.SaveParam3[RSP], R8
+  MOV WINPROG_STACK_FRAME.SaveParam4[RSP], R9
+  MOV RCX, R8
+  DEBUG_FUNCTION_CALL Inputx64_HandleKeyRelease
+
+  MOV RCX, WINPROG_STACK_FRAME.SaveParam1[RSP]
+  MOV RDX, WINPROG_STACK_FRAME.SaveParam2[RSP]
+  MOV R8, WINPROG_STACK_FRAME.SaveParam3[RSP]
+  MOV R9, WINPROG_STACK_FRAME.SaveParam4[RSP]
+
   CMP R8D, VK_ESCAPE
   JNE SHORT @Window_DefaultWindow
 
-  CALL DestroyWindow
+  DEBUG_FUNCTION_CALL DestroyWindow
   
   XOR RAX, RAX
   ADD RSP, SIZE WINPROG_STACK_FRAME
@@ -340,10 +376,10 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
 @Windowx64_HandleClose:
 
   MOV ECX, 1
-  CALL ShowCursor
+  DEBUG_FUNCTION_CALL ShowCursor
   
   XOR RCX, RCX
-  CALL PostQuitMessage
+  DEBUG_FUNCTION_CALL PostQuitMessage
   
   XOR RAX, RAX  
   ADD RSP, SIZE WINPROG_STACK_FRAME
