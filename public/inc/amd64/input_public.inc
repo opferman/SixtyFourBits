@@ -96,7 +96,7 @@ VK_E EQU <045h> ; E key
 ;0x50 P key
 ;0x51 Q key
 VK_R EQU <052h> ;  R key
-;0x53 S key
+VK_S EQU <053h> ; S key
 ;0x54 T key
 ;0x55 U key
 ;0x56 V key

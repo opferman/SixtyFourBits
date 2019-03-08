@@ -57,6 +57,8 @@ pszWindowTitle       db 'Fractal A Demo', 0
 pszMsgCpt       db 'Fractal A Demo', 0
 pszMsgTxt       db 'Do you want to view in full screen?', 0
 
+pszMsgCpt2       db 'Key Presses', 0
+pszMsgTxt2       db '[R] - Reset [C] - Color Change [S] - Switch Equation', 0
 .CODE
 
 ;*********************************************************
@@ -85,6 +87,12 @@ NESTED_ENTRY WinMain, _TEXT$00
   MOV WINMAIN_FRAME.InitializationStruct.pszWindowClass[RSP], RCX
   LEA RCX, [GlobalDemoStructure]    
   MOV WINMAIN_FRAME.InitializationStruct.GlobalDemoStructure[RSP], RCX
+
+  MOV R9, 0h    ;   MB_OK
+  LEA R8, [pszMsgCpt2]
+  LEA RDX, [pszMsgTxt2]
+  XOR RCX, RCX
+  CALL MessageBoxA
 
   MOV R9, 24h ; MB_YESNO | MB_ICONQUESTION
   LEA R8, [pszMsgCpt]

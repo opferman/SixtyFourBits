@@ -203,6 +203,7 @@ ALIGN 16
    Red            db ?
    Green          db ?
    Blue           db ?
+   MasterCtx      dq ?
    Ten            mmword 10.0
    ParameterText  db "x^2", 0 
                   db "y^2", 0
@@ -237,6 +238,7 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
    
   MOV RSI, RCX
+  MOV [MasterCtx], RCX
 
   MOV RDX, 4
   MOV RCX, RSI
@@ -285,12 +287,46 @@ NESTED_ENTRY FractalA_Init, _TEXT$00
   MOV ECX, VK_C
   DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease
 
+  MOV RDX, OFFSET FractalA_SwitchEquations
+  MOV ECX, VK_S
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease
+  
+
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   MOV EAX, 1
   RET
 NESTED_END FractalA_Init, _TEXT$00
+
+
+;*********************************************************
+;   FractalA_SwitchEquations
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY FractalA_SwitchEquations, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  DEBUG_FUNCTION_CALL FractalA_RandomInitParams 
+
+  MOV EDX, 1
+  MOV RCX, [MasterCtx]
+  DEBUG_FUNCTION_CALL FractalA_NewEquationStrings
+
+  MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END FractalA_SwitchEquations, _TEXT$00
 
 
 ;*********************************************************
@@ -318,7 +354,6 @@ NESTED_ENTRY FractalA_ResetNewEquation, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END FractalA_ResetNewEquation, _TEXT$00
-
 
 ;*********************************************************
 ;   FractalA_RandomColorSequence
