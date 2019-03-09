@@ -21,133 +21,146 @@ include master.inc
 include debug_public.inc
 include paramhelp_public.inc
 
+;*********************************************************
+; Constant Equates 
+;*********************************************************
+COLOR_MAP_SIZE       EQU <256>
+PACK_BLOCK_PTR_ARRAY EQU <5000>
+STRING_SIZE          EQU <4096>
+STRING_TABLE_SIZE    EQU <4096>
+NUMBER_OF_IMAGES     EQU <256>
 
-typedef struct _GIF_HEADER {
+;*********************************************************
+; Macros  
+;*********************************************************
 
-      UCHAR Signature[3]; /* 'GIF' */
-      UCHAR Version[3];   /* i.e. 87a, 89a, etc. */
+BITS_PER_PIXEL_MASK  macro ByteInput
+  AND ByteInput, 03h
+BITS_PER_PIXEL_MASK endm
 
-  } GIF_HEADER, *PGIF_HEADER;
+CR_BITS_MASK  macro ByteInput
+  AND ByteInput, 030h
+  SHR ByteInput, 4
+CR_BITS_MASK endm
 
-#pragma pack(1)
-  typedef struct _SCREEN_DESCRIPTOR {
+GLOBAL_MAP_DEFINED_MASK macro ByteInput
+  AND ByteInput, 080h
+  SHR ByteInput, 7
+GLOBAL_MAP_DEFINED_MASK endm
+  
+IMAGE_IS_INTERLACED_MASK macro ByteInput
+  AND ByteInput, 040h
+  SHR ByteInput, 6
+IMAGE_IS_INTERLACED_MASK endm
 
-       USHORT ScreenWidth;
-       USHORT ScreenHeight;
-       union {
-               UCHAR  Byte;
-               struct {
-                   UCHAR BitsPerPixel:3;
-                   UCHAR ReservedBit:1;
-                   UCHAR CrBits:3;
-                   UCHAR GlobalMapDefined:1;
-               };
-       };
+USE_LOCAL_MAP_MASK macro ByteInput
+  AND ByteInput, 080h
+  SHR ByteInput, 7
+USE_LOCAL_MAP_MASK endm
 
-       UCHAR   ScreenBackgroundColorIndex;
-       UCHAR   Reserved;
 
-  } SCREEN_DESCRIPTOR, *PSCREEN_DESCRIPTOR;
+;*********************************************************
+; Structures
+;*********************************************************
 
-#pragma pack(1)
-  typedef struct _GIFRGB {
+GIF_HEADER struct
 
-      UCHAR Red;
-      UCHAR Green;
-      UCHAR Blue;
+   Signature db 3 DUP(<?>)
+   Version   db 3 DUP(<?>)
+GIF_HEADER ends
 
-  } GIFRGB, *PGIFRGB;
+SCREEN_DESCRIPTOR struct
+  ScreenWidth                dw ?
+  ScreenHeight               dw ?
+  SpecialByte                db ?
+  ScreenBackgroundColorIndex db ?
+  Reserved                   db ?
+SCREEN_DESCRIPTOR ends 
 
-#pragma pack(1)
-    typedef struct _GLOBAL_COLOR_MAP { /* Defined only if m=1*/
+GIFRGB struct
+  Red   db ?
+  Green db ?
+  Blue  db ?
+GIFRGB ends
 
-      GIFRGB   GifRgbIndex[256];
+GLOBAL_COLOR_MAP struct
+  GifRgbIndex GIFRGB COLOR_MAP_SIZE DUP(<?>)
+GLOBAL_COLOR_MAP ends
 
-  } GLOBAL_COLOR_MAP, *PGLOBAL_COLOR_MAP;
 
-#pragma pack(1)
-  typedef struct _IMAGE_DESCRIPTOR {
-      char ImageSeperator; /* , */
-      USHORT ImageStartLeft;
-      USHORT ImageStartTop;
-      USHORT ImageWidth;
-      USHORT ImageHeight;
-       union {
-               UCHAR  Byte;
-               struct {
-                   UCHAR BitsPerPixel:3;
-                   UCHAR ReservedBit:3;
-                   UCHAR ImageIsInterlaced:1;
-                   UCHAR UseLocalMap:1;
-               };
-       };
+IMAGE_DESCRIPTOR struct
+  ImageSeperator db ?
+  ImageStartLeft dw ?
+  ImageStartTop  dw ?
+  ImageWidth     dw ?
+  ImageHeight    dw ?
+  SpecialByte    db ?
+IMAGE_DESCRIPTOR ends
+  
 
-  } IMAGE_DESCRIPTOR, *PIMAGE_DESCRIPTOR;
+LOCAL_COLOR_MAP struct
+   GifRgbIndex GIFRGB COLOR_MAP_SIZE DUP(<?>)
+LOCAL_COLOR_MAP ends
 
-#pragma pack(1)
-  typedef struct _LOCAL_COLOR_MAP {
+PACKED_BLOCK struct
+   BlockByteCount db ?
+   DataBytes      db ?   ; Variable Sized Array
+PACKED_BLOCK ends
 
-      GIFRGB   GifRgbIndex[256];
 
-  } LOCAL_COLOR_MAP, *PLOCAL_COLOR_MAP;
+RASTER_DATA struct
+   CodeSize       db ?
+   NumberOfBlocks dd ?
+   PackBlocksPtr  dq PACK_BLOCK_PTR_ARRAY  DUP(<?>)
+RASTER_DATA ends
 
-  #pragma pack(1)
-  typedef struct _PACKED_BLOCK
-  {
-      UCHAR BlockByteCount;
-      UCHAR DataBytes[];
-  } PACKED_BLOCK, *PPACKED_BLOCK;
 
-#pragma pack(1) 
-  typedef struct _RASTER_DATA
-  {
-      UCHAR CodeSize;
-      UINT  NumberOfBlocks;
-      PPACKED_BLOCK pPackBlocks[5000];
+IMAGE_DATA struct
+  ImageDescriptorPtr dq ?
+  LocalColorMapPtr   db ?
+  RasterData         RASTER_DATA ?
+IMAGE_DATA ends 
 
-  } RASTER_DATA, *PRASTER_DATA;
 
-#pragma pack(1)
-  typedef struct _IMAGE_DATA {
-      PIMAGE_DESCRIPTOR  pImageDescriptor;
-      PLOCAL_COLOR_MAP   pLocalColorMap;
-      RASTER_DATA        RasterData;
-  } IMAGE_DATA, *PIMAGE_DATA;
 
-#pragma pack(1)
-  typedef struct _STRING_TABLE
-  {
-      UCHAR DecodeString[4096];
-      UINT  Length;
-  } STRING_TABLE, *PSTRING_TABLE;
+STRING_TABLE struct
+   DecodeString db STRING_SIZE DUP(<?>)
+   StringLength dd ?
+STRING_TABLE ends
 
-#pragma pack(1)
-  typedef struct _DECODE_STRING_TABLE
-  {
-      UINT  ClearCode;
-      UINT  EndOfInformation;
-      UINT  FirstAvailable;
-      UINT  CurrentIndex;
-      UINT  CurrentCodeBits;
-      UINT  Stride;	  
-      STRING_TABLE StringTable[4096];
+DECODE_STRING_TABLE struct
+   ClearCode         dd ?
+   EndOfInformation  dd ?
+   FirstAvailable    dd ?
+   CurrentIndex      dd ?
+   CurrentCodeBits   dd ?
+   Stride            dd ?
+   StringTable       STRING_TABLE STRING_TABLE_SIZE DUP(<?>)
+   LastCodeWord      dd ?
+   NewCodeWord       dd ?
+   BitIncrement      dd ?
+   RasterDataBufferPtr  dq ?
+   RasterDataSize    dd ?
+   CurrentPixel      dd ?
+   ImageWidth        dd ?
+   ImagePalettePtr   GIFRGB ?
+   ImageX            dd ?
+   ImageY            dd ?
+   ImageStartLeft    dd ? 
+DECODE_STRING_TABLE ends
 
-      UINT  LastCodeWord;
-      UINT  NewCodeWord;
-      UINT  BitIncrement;
-      UCHAR *pRasterDataBuffer;
-      UINT  RasterDataSize;
+GIF_INTERNAL struct
+   hGifFile         dq ?
+   hMemoryMapping   dq ?
+   StartOfGifPtr    dq ?
+   GifHeaderPtr     dq ?
+   ScreenDescriptorPtr  dq ?
+   GlobalColorMapPtr    dq ?
+   NumberOfImages       dd ?
+   ImageData            IMAGE_DATA NUMBER_OF_IMAGES DUP(<?>)
+GIF_INTERNAL ends
 
-      UINT  CurrentPixel;
-      UINT  ImageWidth;
-      DWORD *pImageBuffer32bpp;
-      PGIFRGB pImagePalette;
 
-      UINT  ImageX;
-      UINT  ImageY;
-      UINT  ImageStartLeft;
-      
-  } DECODE_STRING_TABLE, *PDECODE_STRING_TABLE;
 
 public Gif_DecodeFile
 
@@ -172,9 +185,44 @@ NESTED_ENTRY Gif_DecodeFile, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
 .ENDPROLOG 
+DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX				; Gif File Name
   
+  MOV RDX, SIZE GIF_INTERNAL
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
   
+  CMP RAX, 0
+  JE @FailureExit
+  
+  MOV RDX, RSI
+  MOV RSI, RAX				; Save Gif Internal Pointer
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL Gif_OpenAndValidateFile
+  CMP RAX, 0
+  JE @FailureExit
+  
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_ParseFile
+  
+  CMP RAX, 0
+  JE @FailureCloseFileExit
+  
+  MOV RAX, RSI
+  JMP @SuccessExit  
 
+@FailureCloseFileExit:
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_CloseFile
+  MOV RAX, RSI
+@FailureExit:
+  CMP RAX, 0
+  JE @DoNotDeAllocate
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL LocalFree
+  XOR RAX, RAX  
+@DoNotDeAllocate:
+@SuccesExit:
   
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
   ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
@@ -184,6 +232,280 @@ NESTED_END Gif_DecodeFile, _TEXT$00
 
 
 
+;*********************************************************
+;   Gif_Close
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_Close, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX				
+  
+  DEBUG_FUNCTION_CALL Gif_CloseFile
+  
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL LocalFree
+    
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+
+NESTED_END Gif_Close, _TEXT$00
+
+
+
+;*********************************************************
+;   Gif_CloseFile
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_CloseFile, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX				
+  
+  CMP GIF_INTERNAL.StartOfGifPtr[RSI], 0
+  JE @SkipFreeingMemoryMap
+  MOV RAX, INVALID_HANDLE_VALUE
+  CMP GIF_INTERNAL.StartOfGifPtr[RSI], RAX
+  JE @SkipFreeingMemoryMap
+  MOV RCX, GIF_INTERNAL.StartOfGifPtr[RSI]
+  DEBUG_FUNCTION_CALL UnmapViewOfFile
+  XOR RAX, RAX
+  MOV GIF_INTERNAL.StartOfGifPtr[RSI], RAX
+
+@SkipFreeingMemoryMap: 
+  
+  
+  CMP GIF_INTERNAL.hMemoryMapping[RSI], 0
+  JE @SkipFreeingMemoryMapHandle
+  MOV RAX, INVALID_HANDLE_VALUE
+  CMP GIF_INTERNAL.hMemoryMapping[RSI], RAX
+  JE @SkipFreeingMemoryMapHandle
+  MOV RCX, GIF_INTERNAL.hMemoryMapping[RSI]
+  DEBUG_FUNCTION_CALL CloseHandle
+  XOR RAX, RAX
+  MOV GIF_INTERNAL.hMemoryMapping[RSI], RAX
+
+@SkipFreeingMemoryMapHandle: 
+
+  
+  CMP GIF_INTERNAL.hGifFile[RSI], 0
+  JE @SkipFreeingFileHandle
+  MOV RAX, INVALID_HANDLE_VALUE
+  CMP GIF_INTERNAL.hGifFile[RSI], RAX
+  JE @SkipFreeingFileHandle
+  MOV RCX, GIF_INTERNAL.hGifFile[RSI]
+  DEBUG_FUNCTION_CALL CloseHandle
+  XOR RAX, RAX
+  MOV GIF_INTERNAL.hGifFile[RSI], RAX
+
+@SkipFreeingFileHandle:
+    
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+
+NESTED_END Gif_CloseFile, _TEXT$00
+
+
+
+;*********************************************************
+;   Gif_OpenAndValidateFile
+;
+;        Parameters: Gif Handle, File Name
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  MOV RSI, RCX				
+  MOV RCX, RDX
+  MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param7[RSP], 0
+  MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param5[RSP], OPEN_EXISTING
+  XOR R9, R9`
+  XOR R8, R8
+  MOV RDX, GENERIC_READ
+  DEBUG_FUNCTION_CALL CreateFile  
+  
+  CMP RAX, 0
+  JE @FailureExit
+  
+  MOV RCX, INVALID_HANDLE_VALUE
+  CMP RAX, RCX  
+  JE @FailureExit
+  
+  MOV GIF_INTERNAL.hGifFile[RSI], RAX
+  
+  MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param5[RSP], 0
+  XOR R9, R9
+  MOV R8, PAGE_READONLY
+  XOR RDX, RDX  
+  MOV RCX, GIF_INTERNAL.hGifFile[RSI]  
+  DEBUG_FUNCTION_CALL CreateFileMapping
+    
+  CMP RAX, 0
+  JE @FailureExitWithCloseFile
+  
+  MOV RCX, INVALID_HANDLE_VALUE
+  CMP RAX, RCX  
+  JE @FailureExitWithCloseFile
+  
+  MOV GIF_INTERNAL.hMemoryMapping[RSI], RAX
+  
+  MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param5[RSP], 0
+  XOR R9, R9
+  XOR R8, R8
+  MOV RDX, FILE_MAP_READ
+  MOV RCX, GIF_INTERNAL.hMemoryMapping[RSI]
+  DEBUG_FUNCTION_CALL MapViewOfFile
+  CMP RAX, 0
+  JE @FailureExitWithCloseFile
+  
+  MOV GIF_INTERNAL.StartOfGifPtr[RSP], RAX
+  MOV GIF_INTERNAL.GifHeaderPtr[RSP], RAX
+  LEA RAX, GIF_HEADER.Signature[RAX]
+  
+  CMP BYTE PTR [RAX], 'G'
+  JNE @FailureExitWithCloseFile
+ 
+  CMP BYTE PTR [RAX+1], 'I'
+  JNE @FailureExitWithCloseFile
+
+  CMP BYTE PTR [RAX+2], 'F'
+  JNE @FailureExitWithCloseFile  
+  
+  JMP @SuccessExit
+
+@FailureExitWithCloseFile:
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_CloseFile
+@FailureExit:
+  XOR RAX, RAX
+  JMP @FinalExit
+@SuccessExit:
+  MOV EAX, 1
+  
+@FinalExit: 
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_OpenAndValidateFile, _TEXT$00
+
+
+
+
+;*********************************************************
+;   Gif_ParseFile
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: TRUE / FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_ParseFile, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX				
+  
+  DEBUG_FUNCTION_CALL Gif_CloseFile
+  
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL LocalFree
+    
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+
+NESTED_END Gif_ParseFile, _TEXT$00
+
+BOOL WINAPI Gif_ParseFile(PGIF_INTERNAL pGifInternal)
+{
+    UINT CurrentOffset;
+    UINT CurrentRasterBlock;
+    BOOL bFileParseSuccessful = TRUE;
+    BOOL bMoreImages;
+    BOOL bMoreBlocks;
+
+    CurrentOffset = sizeof(GIF_HEADER);
+    pGifInternal->pScreenDescriptor = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PSCREEN_DESCRIPTOR);
+    CurrentOffset += sizeof(SCREEN_DESCRIPTOR);
+
+    if(pGifInternal->pScreenDescriptor->GlobalMapDefined)
+    {
+        pGifInternal->pGlobalColorMap = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PGLOBAL_COLOR_MAP);
+        CurrentOffset += (UINT)(3*pow(2, ((int)pGifInternal->pScreenDescriptor->BitsPerPixel + 1)));
+    }
+
+    do {
+        UINT CurrentIndex = pGifInternal->NumberOfImages;
+
+        /*
+         * Remove Extension Data
+         */
+        while(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) != ';' && *((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) != ',')
+        {
+            CurrentOffset += 2;
+            Gif_ParsePackedBlock(pGifInternal, NULL, &CurrentOffset);
+        }
+
+        if(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) == ',')
+        {
+            pGifInternal->ImageData[CurrentIndex].pImageDescriptor = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PIMAGE_DESCRIPTOR);
+            CurrentOffset += sizeof(IMAGE_DESCRIPTOR);
+           
+            if(pGifInternal->ImageData[CurrentIndex].pImageDescriptor->UseLocalMap)
+            {
+                pGifInternal->ImageData[CurrentIndex].pLocalColorMap = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PLOCAL_COLOR_MAP);
+                CurrentOffset += (UINT)(3*pow(2, pGifInternal->ImageData[CurrentIndex].pImageDescriptor->BitsPerPixel + 1));
+            }
+                        
+            CurrentRasterBlock = 0;
+            bMoreBlocks = TRUE;
+
+            pGifInternal->ImageData[CurrentIndex].RasterData.CodeSize = *((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset);
+            CurrentOffset++;			
+            pGifInternal->ImageData[CurrentIndex].RasterData.NumberOfBlocks = Gif_ParsePackedBlock(pGifInternal, pGifInternal->ImageData[CurrentIndex].RasterData.pPackBlocks, &CurrentOffset);
+        }
+
+        if(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) == ';')
+        {
+            bMoreImages = FALSE;
+        }
+
+        pGifInternal->NumberOfImages++;
+    } while(bMoreImages);   
+
+#if 0
+    Gif_DisplayDebugInformation(pGifInternal);
+#endif
+
+    return bFileParseSuccessful;
+}
 
 END
 
@@ -204,20 +526,6 @@ END
 /*********************************************************
  * Internal Functions
  *********************************************************/
- typedef struct _GIF_INTERNAL {
-
-     HANDLE hGifFile;
-     HANDLE hMemoryMapping;
-     PVOID  pStartOfGif;
-
-     PGIF_HEADER        pGifHeader;
-     PSCREEN_DESCRIPTOR pScreenDescriptor;
-     PGLOBAL_COLOR_MAP  pGlobalColorMap;
-     
-     UINT               NumberOfImages;
-     IMAGE_DATA         ImageData[256]; /* Support up to 256 Images, Dynamic support could be added later  */
-
- } GIF_INTERNAL, *PGIF_INTERNAL;
 
 
 
@@ -237,92 +545,7 @@ BOOL WINAPI Gif_ProcessNewCode(PDECODE_STRING_TABLE pDecodeStringTable, UINT Las
 BOOL WINAPI Gif_AddNewEntry(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord);
 
 
- /********************************************************
-  *  Gif_Open
-  *
-  *     Open The Gif
-  *   
-  *
-  *
-  ********************************************************/
-HGIF WINAPI Gif_Open(char *pszFileName)
-{
-    PGIF_INTERNAL pGifInternal = NULL;
-    BOOL bFileIsGif;
-    BOOL bFileParseSuccessful;
-
-    pGifInternal = (PGIF_INTERNAL)LocalAlloc(LMEM_ZEROINIT, sizeof(GIF_INTERNAL));
-
-    if(pGifInternal)
-    {
-        bFileIsGif = Gif_OpenAndValidateFile(pGifInternal, pszFileName);
-
-        if(bFileIsGif)
-        {
-            bFileParseSuccessful = Gif_ParseFile(pGifInternal);
-
-            if(bFileParseSuccessful == FALSE)
-            {
-                Gif_CloseFile(pGifInternal);
-                LocalFree(pGifInternal);
-                pGifInternal = NULL;
-            }
-        }
-        else
-        {
-            LocalFree(pGifInternal);
-            pGifInternal = NULL;
-        }		
-    }
-
-    return pGifInternal;
-}
-
-
- /********************************************************
-  *  Gif_Close
-  *
-  *     Close the GIF
-  *   
-  *
-  *
-  ********************************************************/
-void WINAPI Gif_Close(HGIF hGif)
-{
-    PGIF_INTERNAL pGifInternal = (PGIF_INTERNAL)hGif;
-    Gif_CloseFile(pGifInternal);
-    LocalFree(pGifInternal);
-}
-
-
- /********************************************************
-  *  Gif_CloseFile
-  *
-  *     Close the GIF
-  *   
-  *
-  *
-  ********************************************************/
-void WINAPI Gif_CloseFile(PGIF_INTERNAL pGifInternal)
-{
-
-    if(pGifInternal->pStartOfGif)
-    {
-        UnmapViewOfFile(pGifInternal->pStartOfGif);
-        pGifInternal->pStartOfGif = NULL;
-    }
-    if(HANDLE_IS_VALID(pGifInternal->hMemoryMapping))
-    {
-        CloseHandle(pGifInternal->hMemoryMapping);
-        pGifInternal->hMemoryMapping = NULL;
-    }
-
-    if(HANDLE_IS_VALID(pGifInternal->hGifFile))
-    {
-        CloseHandle(pGifInternal->hGifFile);
-        pGifInternal->hGifFile = NULL;
-    }
-}
+ 
 
 
  /********************************************************
@@ -333,46 +556,6 @@ void WINAPI Gif_CloseFile(PGIF_INTERNAL pGifInternal)
   *
   *
   ********************************************************/
-BOOL WINAPI Gif_OpenAndValidateFile(PGIF_INTERNAL pGifInternal, char *pszFileName)
-{
-    BOOL bFileIsValid = FALSE;
-
-    pGifInternal->hGifFile = CreateFile(pszFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
-
-    if(HANDLE_IS_VALID(pGifInternal->hGifFile))
-    {
-        pGifInternal->hMemoryMapping = CreateFileMapping(pGifInternal->hGifFile, NULL, PAGE_READONLY, 0, 0, NULL);
-
-        if(HANDLE_IS_VALID(	pGifInternal->hMemoryMapping))
-        {
-            pGifInternal->pStartOfGif = MapViewOfFile(pGifInternal->hMemoryMapping, FILE_MAP_READ, 0, 0, 0);
-
-            if(pGifInternal->pStartOfGif)
-            {
-                pGifInternal->pGifHeader = (PGIF_HEADER)pGifInternal->pStartOfGif;
-                bFileIsValid = TRUE;
-                if(pGifInternal->pGifHeader->Signature[0] != 'G' || 
-                   pGifInternal->pGifHeader->Signature[1] != 'I' ||
-                   pGifInternal->pGifHeader->Signature[2] != 'F')
-                {
-                    bFileIsValid = FALSE;
-                    Gif_CloseFile(pGifInternal);
-                }
-            }
-            else
-            {
-                Gif_CloseFile(pGifInternal);
-            }
-        }
-        else
-        {
-            Gif_CloseFile(pGifInternal);
-        }
-    }
-
-    return bFileIsValid;
-}
-
 /***********************************************************************
  * Gif_ParseFile
  *  
