@@ -9,4 +9,5 @@ dirs=DDraw \
      Brownian \
      FrameLoop \
      Dbuffer \
-     Primatives
+     Primatives \
+     Gif

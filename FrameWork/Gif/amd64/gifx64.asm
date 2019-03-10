@@ -22,6 +22,18 @@ include debug_public.inc
 include paramhelp_public.inc
 
 ;*********************************************************
+; External Functions
+;*********************************************************
+extern CloseHandle:proc
+extern CreateFileA:proc
+extern CreateFileMappingA:proc
+extern MapViewOfFile:proc
+extern LocalAlloc:proc
+extern LocalFree:proc
+extern UnmapViewOfFile:proc
+extern memcpy:proc
+
+;*********************************************************
 ; Constant Equates 
 ;*********************************************************
 COLOR_MAP_SIZE       EQU <256>
@@ -29,39 +41,74 @@ PACK_BLOCK_PTR_ARRAY EQU <5000>
 STRING_SIZE          EQU <4096>
 STRING_TABLE_SIZE    EQU <4096>
 NUMBER_OF_IMAGES     EQU <256>
+LMEM_ZEROINIT        EQU <40h>
+INVALID_HANDLE_VALUE EQU <-1>
+FILE_MAP_READ        EQU <4>
+PAGE_READONLY        EQU <2>
+GENERIC_READ         EQU <080000000h>
+OPEN_EXISTING        EQU <3>
+
 
 ;*********************************************************
 ; Macros  
 ;*********************************************************
 
 BITS_PER_PIXEL_MASK  macro ByteInput
-  AND ByteInput, 03h
-BITS_PER_PIXEL_MASK endm
+  AND ByteInput, 07h
+endm
 
 CR_BITS_MASK  macro ByteInput
-  AND ByteInput, 030h
+  AND ByteInput, 070h
   SHR ByteInput, 4
-CR_BITS_MASK endm
+endm
 
 GLOBAL_MAP_DEFINED_MASK macro ByteInput
   AND ByteInput, 080h
   SHR ByteInput, 7
-GLOBAL_MAP_DEFINED_MASK endm
+endm
   
 IMAGE_IS_INTERLACED_MASK macro ByteInput
   AND ByteInput, 040h
   SHR ByteInput, 6
-IMAGE_IS_INTERLACED_MASK endm
+endm
 
 USE_LOCAL_MAP_MASK macro ByteInput
   AND ByteInput, 080h
   SHR ByteInput, 7
-USE_LOCAL_MAP_MASK endm
+endm
+
+
 
 
 ;*********************************************************
 ; Structures
 ;*********************************************************
+LOCAL_VARIABLES struct
+    LocalVar1         dq            ?
+    LocalVar2         dq            ?
+    LocalVar3         dq            ?
+    LocalVar4         dq            ?
+    LocalVar5         dq            ?
+    LocalVar6         dq            ?
+LOCAL_VARIABLES ends
+
+STD_FUNCTION_LV_STACK struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    LocalVars   LOCAL_VARIABLES           <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    Padding     dq                         ?
+STD_FUNCTION_LV_STACK ends
+
+STD_FUNCTION_LV_STACK_FUNC struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    LocalVars   LOCAL_VARIABLES           <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+STD_FUNCTION_LV_STACK_FUNC ends
+
 
 GIF_HEADER struct
 
@@ -117,10 +164,9 @@ RASTER_DATA ends
 
 IMAGE_DATA struct
   ImageDescriptorPtr dq ?
-  LocalColorMapPtr   db ?
-  RasterData         RASTER_DATA ?
+  LocalColorMapPtr   dq ?
+  RasterData         RASTER_DATA <?>
 IMAGE_DATA ends 
-
 
 
 STRING_TABLE struct
@@ -129,25 +175,27 @@ STRING_TABLE struct
 STRING_TABLE ends
 
 DECODE_STRING_TABLE struct
-   ClearCode         dd ?
-   EndOfInformation  dd ?
-   FirstAvailable    dd ?
-   CurrentIndex      dd ?
-   CurrentCodeBits   dd ?
-   Stride            dd ?
-   StringTable       STRING_TABLE STRING_TABLE_SIZE DUP(<?>)
-   LastCodeWord      dd ?
-   NewCodeWord       dd ?
-   BitIncrement      dd ?
-   RasterDataBufferPtr  dq ?
-   RasterDataSize    dd ?
-   CurrentPixel      dd ?
-   ImageWidth        dd ?
-   ImagePalettePtr   GIFRGB ?
-   ImageX            dd ?
-   ImageY            dd ?
-   ImageStartLeft    dd ? 
+   ClearCode           dd ?
+   EndOfInformation    dd ?
+   FirstAvailable      dd ?
+   CurrentIndex        dd ?
+   CurrentCodeBits     dd ?
+   Stride              dd ?
+   StringTableListPtr  dq ?   
+   LastCodeWord        dd ?
+   NewCodeWord         dd ?
+   BitIncrement        dd ?
+   RasterDataBufferPtr dq ?
+   RasterDataSize      dd ?
+   CurrentPixel        dd ?
+   ImageWidth          dd ?
+   ImageBuffer32bppPtr dq ?
+   ImagePalettePtr     GIFRGB <?>
+   ImageX              dd ?
+   ImageY              dd ?
+   ImageStartLeft      dd ? 
 DECODE_STRING_TABLE ends
+
 
 GIF_INTERNAL struct
    hGifFile         dq ?
@@ -162,8 +210,13 @@ GIF_INTERNAL ends
 
 
 
-public Gif_DecodeFile
-
+public Gif_Open
+public Gif_Close
+public Gif_NumberOfImages
+public Gif_GetImageSize
+public Gif_GetImageWidth
+public Gif_GetImageHeight
+public Gif_GetImage32bpp
 
 .DATA
 
@@ -173,7 +226,7 @@ public Gif_DecodeFile
 
 
 ;*********************************************************
-;   Gif_DecodeFile
+;   Gif_Open
 ;
 ;        Parameters: File Name
 ;
@@ -181,7 +234,7 @@ public Gif_DecodeFile
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Gif_DecodeFile, _TEXT$00
+NESTED_ENTRY Gif_Open, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
 .ENDPROLOG 
@@ -194,7 +247,9 @@ DEBUG_RSP_CHECK_MACRO
   
   CMP RAX, 0
   JE @FailureExit
-  
+  ;
+  ; Open the file, create the memory mapping and verify it it as .GIF file.
+  ;
   MOV RDX, RSI
   MOV RSI, RAX				; Save Gif Internal Pointer
   MOV RCX, RAX
@@ -202,6 +257,11 @@ DEBUG_RSP_CHECK_MACRO
   CMP RAX, 0
   JE @FailureExit
   
+  ;
+  ;  Parse the initial file contents to split the memory map into
+  ;  it's base components and determine how many images are in the 
+  ;  file.
+  ;
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Gif_ParseFile
   
@@ -222,13 +282,13 @@ DEBUG_RSP_CHECK_MACRO
   DEBUG_FUNCTION_CALL LocalFree
   XOR RAX, RAX  
 @DoNotDeAllocate:
-@SuccesExit:
+@SuccessExit:
   
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
   ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
   RET
 
-NESTED_END Gif_DecodeFile, _TEXT$00
+NESTED_END Gif_Open, _TEXT$00
 
 
 
@@ -277,6 +337,9 @@ NESTED_ENTRY Gif_CloseFile, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				
   
+  ;   
+  ;  Free the memory mapping address allocation
+  ;
   CMP GIF_INTERNAL.StartOfGifPtr[RSI], 0
   JE @SkipFreeingMemoryMap
   MOV RAX, INVALID_HANDLE_VALUE
@@ -289,7 +352,9 @@ NESTED_ENTRY Gif_CloseFile, _TEXT$00
 
 @SkipFreeingMemoryMap: 
   
-  
+  ;   
+  ;  Free the memory mapping handle
+  ;  
   CMP GIF_INTERNAL.hMemoryMapping[RSI], 0
   JE @SkipFreeingMemoryMapHandle
   MOV RAX, INVALID_HANDLE_VALUE
@@ -302,7 +367,9 @@ NESTED_ENTRY Gif_CloseFile, _TEXT$00
 
 @SkipFreeingMemoryMapHandle: 
 
-  
+  ;   
+  ;  Close the file handle
+  ; 
   CMP GIF_INTERNAL.hGifFile[RSI], 0
   JE @SkipFreeingFileHandle
   MOV RAX, INVALID_HANDLE_VALUE
@@ -338,15 +405,18 @@ NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   
+  ;   
+  ;  Open the .GIF file
+  ;
   MOV RSI, RCX				
   MOV RCX, RDX
   MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param7[RSP], 0
   MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param6[RSP], 0
   MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param5[RSP], OPEN_EXISTING
-  XOR R9, R9`
+  XOR R9, R9
   XOR R8, R8
   MOV RDX, GENERIC_READ
-  DEBUG_FUNCTION_CALL CreateFile  
+  DEBUG_FUNCTION_CALL CreateFileA  
   
   CMP RAX, 0
   JE @FailureExit
@@ -356,14 +426,16 @@ NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
   JE @FailureExit
   
   MOV GIF_INTERNAL.hGifFile[RSI], RAX
-  
+  ;
+  ; Create the File Mapping Handle
+  ;
   MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param6[RSP], 0
   MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param5[RSP], 0
   XOR R9, R9
   MOV R8, PAGE_READONLY
   XOR RDX, RDX  
   MOV RCX, GIF_INTERNAL.hGifFile[RSI]  
-  DEBUG_FUNCTION_CALL CreateFileMapping
+  DEBUG_FUNCTION_CALL CreateFileMappingA
     
   CMP RAX, 0
   JE @FailureExitWithCloseFile
@@ -373,7 +445,9 @@ NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
   JE @FailureExitWithCloseFile
   
   MOV GIF_INTERNAL.hMemoryMapping[RSI], RAX
-  
+  ;
+  ; Create the map view of file into memory
+  ;
   MOV STD_FUNCTION_STACK_PARAMS.Parameters.Param5[RSP], 0
   XOR R9, R9
   XOR R8, R8
@@ -383,8 +457,11 @@ NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
   CMP RAX, 0
   JE @FailureExitWithCloseFile
   
-  MOV GIF_INTERNAL.StartOfGifPtr[RSP], RAX
-  MOV GIF_INTERNAL.GifHeaderPtr[RSP], RAX
+ ;
+ ; Verify the FILE signature is actually a .GIF file.
+ ;
+  MOV GIF_INTERNAL.StartOfGifPtr[RSI], RAX
+  MOV GIF_INTERNAL.GifHeaderPtr[RSI], RAX
   LEA RAX, GIF_HEADER.Signature[RAX]
   
   CMP BYTE PTR [RAX], 'G'
@@ -426,865 +503,1010 @@ NESTED_END Gif_OpenAndValidateFile, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_ParseFile, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_LV_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_LV_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  ;
+  ; The Screen Descriptor follows the .GIF signature, save this location
+  ; as a pointer.
+  ;
+  MOV RCX, SIZE GIF_HEADER
+  ADD RCX, GIF_INTERNAL.StartOfGifPtr[RSI]
+  MOV GIF_INTERNAL.ScreenDescriptorPtr[RSI], RCX
+  MOV STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], SIZE GIF_HEADER + SIZE SCREEN_DESCRIPTOR
+
+  ;
+  ; The Screen Descriptor contains a byte of the following format:
+  ;
+  ;   Bits Per Pixel      [     XXX] 2-0
+  ;   Reserved Bit        [....X...] 3
+  ;   Cr Bits             [.XXX....] 6-4
+  ;   Global Map Defined  [X.......] 7
+  ;
+  ;
+
+  MOV AL, SCREEN_DESCRIPTOR.SpecialByte[RCX]
+  GLOBAL_MAP_DEFINED_MASK AL
+  CMP AL, 0
+  JE @NoGlobalMap
+
+  ;
+  ; A Global Color Map was found, so save the
+  ; pointer location.
+  ;
+  MOV RDX, GIF_INTERNAL.StartOfGifPtr[RSI]
+  ADD RDX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV GIF_INTERNAL.GlobalColorMapPtr[RSI], RDX
+
+  ;
+  ; Determine the bits per pixel to offset the
+  ; size of the map.
+  ;
+  XOR RAX, RAX
+  MOV AL, SCREEN_DESCRIPTOR.SpecialByte[RCX]
+  BITS_PER_PIXEL_MASK AL
+  ;
+  ;  3 * 2^(Bits Per Pixel + 1) = Size Of Map
+  ;
+  INC RAX
+  MOV RCX, RAX
+  MOV EAX, 3
+  SHL EAX,CL           
+
+  ADD STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], RAX
+@NoGlobalMap:
+@ParseGifFileLoop:
+  ;
+  ; Set RBX to the current position.
+  ;
+  MOV RBX, GIF_INTERNAL.StartOfGifPtr[RSI]
+  ADD RBX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+
+  ;
+  ; Remove Extended Data until we hit ; or ,
+  ;
+@RemoveExtensionDataLoop:
+  CMP BYTE PTR[RBX], ';'
+  JE @CompletedExtensionRemoval
+  CMP BYTE PTR[RBX], ','
+  JE @CompletedExtensionRemoval
+
+    ;
+    ; Update the current offset by 2
+    ;
+    ADD STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], 2
+   
+    ;
+    ; Parse the packed block but we are only doing this to advance the
+    ; pointer.  We are ignoring these blocks.
+    ;
+    LEA R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+    XOR RDX, RDX
+    MOV RCX, RSI
+    DEBUG_FUNCTION_CALL Gif_ParsePackedBlock
+    
+    ;
+    ;  Update RBX pointer to the block with the current offset.
+    ;
+    MOV RBX, GIF_INTERNAL.StartOfGifPtr[RSI]
+    ADD RBX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+    
+  
+  JMP @RemoveExtensionDataLoop
+@CompletedExtensionRemoval:
+  
+  ;
+  ; Determine if we have a block we need to process.
+  ;
+  CMP BYTE PTR[RBX], ','
+  JNE @SkipImageData
+    
+    ;
+    ; Index the correct Image Data and update the pointer
+    ; to the image descriptor
+    ;    
+    MOV R8D,GIF_INTERNAL.NumberOfImages[RSI]
+    XOR RDX, RDX
+    MOV RAX, SIZE IMAGE_DATA
+    MUL R8
+    LEA RDX, GIF_INTERNAL.ImageData[RSI]
+    ADD RDX, RAX
+    MOV IMAGE_DATA.ImageDescriptorPtr[RDX], RBX
+
+    ADD STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], SIZE IMAGE_DESCRIPTOR     ; Update Local Variable Offset
+    MOV RCX, RBX
+    MOV R8, RDX
+    ;
+    ; Check if there is a local map.
+    ;
+    XOR RAX, RAX
+    MOV AL, IMAGE_DESCRIPTOR.SpecialByte[RBX]
+    USE_LOCAL_MAP_MASK AL
+
+    CMP AL, 0
+    JE @SkipLocalColorMap
+
+        MOV RCX, RBX
+        ;
+        ;  Refresh RBX with current pointer offset
+        ;
+        MOV RBX, GIF_INTERNAL.StartOfGifPtr[RSI]
+        ADD RBX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+        MOV IMAGE_DATA.LocalColorMapPtr[R8], RBX
+
+        XOR RAX, RAX
+        MOV AL, IMAGE_DESCRIPTOR.SpecialByte[RCX]
+        MOV RBX, RCX
+        BITS_PER_PIXEL_MASK AL
+        ;
+        ;  3 * 2^(Bits Per Pixel + 1) = Size Of Map
+        ;
+        INC RAX
+        MOV RCX, RAX
+        MOV EAX, 3
+        SHL EAX,CL           ; 2^(BIts Per Pixel + 1
+        ADD STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], RAX
+
+@SkipLocalColorMap:
+    ;
+    ;  Refresh RCX with current pointer offset
+    ;
+    MOV RCX, GIF_INTERNAL.StartOfGifPtr[RSI]
+    ADD RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+
+    MOV AL, BYTE PTR [RCX]
+    MOV IMAGE_DATA.RasterData.CodeSize[R8], AL
+    
+    ;
+    ; Increment past the CodeSize byte.
+    ;
+    INC STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+
+    MOV RBX, R8
+    LEA R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+    LEA RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RBX]
+    MOV RCX, RSI
+    DEBUG_FUNCTION_CALL Gif_ParsePackedBlock
+    
+    ;
+    ; Save the number of blocks created
+    ;
+    MOV IMAGE_DATA.RasterData.NumberOfBlocks[RBX], EAX
+
+@SkipImageData:
+
+   INC GIF_INTERNAL.NumberOfImages[RSI]
+
+   MOV RBX, GIF_INTERNAL.StartOfGifPtr[RSI]
+   ADD RBX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+   
+   ;
+   ; Terminate the parsing
+   ;
+   CMP BYTE PTR[RBX], ';'
+   JNE @ParseGifFileLoop
+
+@ParsingComplete:
+    MOV EAX, 1
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_LV_STACK
+  ADD RSP, SIZE STD_FUNCTION_LV_STACK
+  RET
+
+NESTED_END Gif_ParseFile, _TEXT$00
+
+
+;*********************************************************
+;   Gif_ParsePackedBlock
+;
+;        Parameters: Gif Handle, packed block, Offset
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_ParsePackedBlock, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				
+  XOR R9, R9
+
+@ParsingPackedBlocks:
+
+  ;
+  ; Get the current Packed Block Pointer
+  ;
+  MOV RCX, GIF_INTERNAL.StartOfGifPtr[RSI]
+  MOV EAX, DWORD PTR [R8]
+  ADD RCX, RAX
   
-  DEBUG_FUNCTION_CALL Gif_CloseFile
+  ;
+  ; Update the new Offset to be the block count + 1
+  ;
+  INC DWORD PTR [R8]
+  XOR RAX, RAX
+  MOV AL, PACKED_BLOCK.BlockByteCount[RCX]
+  ADD DWORD PTR [R8], EAX
+
+  ;
+  ; If no pointer was passed in to save the packed block, then skip.
+  ;
+  CMP RDX, 0
+  JE @SkipReturningPackedBlock
+
+  MOV QWORD PTR [RDX], RCX
+  ADD RDX, SIZE QWORD
   
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL LocalFree
-    
+@SkipReturningPackedBlock:
+
+  ;
+  ;  Increment the block count
+  ;
+  INC R9
+
+  ;
+  ; If the BLock Byte Count was 0, then there are no more blocks.
+  ;
+  CMP PACKED_BLOCK.BlockByteCount[RCX], 0
+  JNE @ParsingPackedBlocks
+
+  ;
+  ; Return the count of blocks
+  ;
+  MOV RAX, R9
+  
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
   ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
   RET
 
-NESTED_END Gif_ParseFile, _TEXT$00
+NESTED_END Gif_ParsePackedBlock, _TEXT$00
 
-BOOL WINAPI Gif_ParseFile(PGIF_INTERNAL pGifInternal)
+
+;*********************************************************
+;   Gif_NumberOfImages
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: Number of Images
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_NumberOfImages, _TEXT$00
+.ENDPROLOG 
+  MOV EAX, GIF_INTERNAL.NumberOfImages[RCX]				
+  RET
+NESTED_END Gif_NumberOfImages, _TEXT$00
+
+
+;*********************************************************
+;   Gif_GetImageWidth
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: Image Width
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetImageWidth, _TEXT$00
+.ENDPROLOG 
+  MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RCX]
+  MOVZX EAX, SCREEN_DESCRIPTOR.ScreenWidth[RCX]				
+  RET
+NESTED_END Gif_GetImageWidth, _TEXT$00
+
+;*********************************************************
+;   Gif_GetImageHeight
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: Image Height
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetImageHeight, _TEXT$00
+.ENDPROLOG 
+  MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RCX]
+  MOVZX EAX, SCREEN_DESCRIPTOR.ScreenHeight[RCX]				
+  RET
+NESTED_END Gif_GetImageHeight, _TEXT$00
+
+;*********************************************************
+;   Gif_GetImageSize
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: Image Size
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetImageSize, _TEXT$00
+.ENDPROLOG 
+  MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RCX]
+  MOVZX EAX, SCREEN_DESCRIPTOR.ScreenHeight[RCX]				
+  MOVZX R8D, SCREEN_DESCRIPTOR.ScreenWidth[RCX]
+  XOR RDX, RDX
+  MUL R8D
+  SHL RAX, 2
+  RET
+NESTED_END Gif_GetImageSize, _TEXT$00
+
+
+;*********************************************************
+;   Gif_GetImage32bpp
+;
+;        Parameters: Gif Handle, Image Index, Return Buffer
+;
+;        Return Value: TRUE or FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  XOR RAX, RAX
+  ;
+  ; Save the parameters in non-volatile registers
+  ;
+  MOV RSI, RCX
+  MOV RDI, R8
+  MOV RBX, RDX
+
+  CMP GIF_INTERNAL.NumberOfImages[RCX], EDX
+  JAE @IndexTooHigh
+    ;
+    ; Pass through parameters, they have not yet been destroyed.
+    ;
+    DEBUG_FUNCTION_CALL Gif_SetBackgroundColor
+    ;
+    ; Get the Image Index being created
+    ;    
+    XOR RDX, RDX
+    MOV RAX, SIZE IMAGE_DATA
+    MUL RBX
+    LEA R11, GIF_INTERNAL.ImageData[RSI]
+    ADD RDX, RAX
+    
+    MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RSI]
+    MOV RAX, IMAGE_DATA.ImageDescriptorPtr[R11]
+    
+    ;
+    ; Create the Stride of ScreenWidth - ImageWidth
+    ;
+    MOVZX R8D, SCREEN_DESCRIPTOR.ScreenWidth[RCX]
+    SUB R8W, IMAGE_DESCRIPTOR.ImageWidth[RAX]
+
+    ;
+    ; Create the Start Offset = ImageStartLeft + (ImageStartTop*ScreenWidth)
+    ;   Buffer += Offset*4
+    ;
+    MOVZX R10D, IMAGE_DESCRIPTOR.ImageStartLeft[RAX]
+    MOVZX R9D, IMAGE_DESCRIPTOR.ImageStartTop[RAX]
+    MOVZX EAX, SCREEN_DESCRIPTOR.ScreenWidth[RCX]
+    XOR RDX, RDX
+    MUL R9
+    ADD R10, R9
+    MOV R9, RDI
+    SHL R10, 2
+    ; R8 = Stride
+    ADD R9, R10    ; Image Buffer
+    MOV RDX, R11   ; IMAGE_DATA     
+    MOV RCX, RSI   ; GIF_INTERNAL
+    DEBUG_FUNCTION_CALL Gif_Decode
+@Success:
+  MOV EAX, 1
+
+@IndexTooHigh:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_GetImage32bpp, _TEXT$00
+
+
+
+;*********************************************************
+;   Gif_SetBackgroundColor
+;
+;        Parameters: Gif Handle, Image Index, Return Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_SetBackgroundColor, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV R14, RDX
+  MOV R13, R8
+  MOV R12, GIF_INTERNAL.ScreenDescriptorPtr[RCX]
+  XOR R8, R8
+  MOVZX R8W, SCREEN_DESCRIPTOR.ScreenBackgroundColorIndex[R12]
+  DEBUG_FUNCTION_CALL Gif_GetPaletteColorByIndex
+
+  MOV RCX, RAX                                     ; Save Background Color Value
+
+  MOVZX EAX, SCREEN_DESCRIPTOR.ScreenWidth[R12]
+  MOVZX EBX, SCREEN_DESCRIPTOR.ScreenHeight[R12]
+  XOR RDX, RDX
+  MUL EBX                                          ; Assume Screen Height * Screen Width != 0
+
+  XOR R8, R8
+@SetBackgroundColor:    
+  MOV DWORD PTR [R13], ECX                         ; Update Background Color
+  ADD R13, 4                                       ; 32-bit pixels
+  INC R8
+  CMP R8, RAX                                      ; Test if we filled the entire image yet
+  JB @SetBackgroundColor
+@BackgroundComplete:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_SetBackgroundColor, _TEXT$00
+
+
+;*********************************************************
+;   Gif_GetPaletteColorByIndex
+;
+;        Parameters: Gif Handle, Image Index, Color Index
+;
+;        Return Value: Color 32 bit
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetPaletteColorByIndex, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  LEA R9, GIF_INTERNAL.ImageData[RCX]
+  MOV RBX, RDX
+  
+  XOR RDX, RDX
+  MOV RAX, SIZE IMAGE_DATA
+  MUL RBX
+  ADD R9, RAX
+  MOV R10, IMAGE_DATA.ImageDescriptorPtr[R9]
+  MOV AL, IMAGE_DESCRIPTOR.SpecialByte[R10]
+  ;
+  ; The Image Descriptor contains a byte of the following format:
+  ;
+  ;   Bits Per Pixel      [     XXX] 2-0
+  ;   Reserved Bits       [..XXX...] 5-3
+  ;   Image Is Interlaced [.X......] 6
+  ;   Use Local Map       [X.......] 7
+  ;
+  ;
+  USE_LOCAL_MAP_MASK AL
+
+  CMP AL, 0
+  JE @UseGlobalColorTable
+@UseLocalColorTable:
+  MOV RDX, IMAGE_DATA.LocalColorMapPtr[R9]
+  JMP @ReturnColor
+@UseGlobalColorTable:
+  MOV RDX, GIF_INTERNAL.GlobalColorMapPtr[RCX]
+@ReturnColor:
+  ADD RDX, RBX
+  SHL RBX, 1
+  ADD RDX, RBX                        ; Trick to 3*n + Address where n + n<<1 + Address.  
+                                        ;  2^0 = 1   2^1 = 2 = 1+2 = 3
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RDX]              ; Red
+  SHL EAX, 16
+  MOV AL, BYTE PTR [RDX+1]            ; Green
+  SHL AX, 8
+  MOV AL, BYTE PTR [RAX+2]            ; Blue
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_GetPaletteColorByIndex, _TEXT$00
+
+
+;*********************************************************
+;   Gif_InitializeStringTable
+;
+;        Parameters: Gif Handle, Image Data, Decode String Table
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_InitializeStringTable, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV RBX, R8
+
+  MOV CL, IMAGE_DATA.RasterData.CodeSize[RDI]
+  MOV EAX, 1
+  SHL EAX, CL
+  MOV DECODE_STRING_TABLE.ClearCode[RBX], EAX
+
+  MOV DECODE_STRING_TABLE.LastCodeWord[RBX], EAX
+
+  INC EAX
+  MOV DECODE_STRING_TABLE.EndOfInformation[RBX], EAX
+
+  INC EAX
+  MOV DECODE_STRING_TABLE.FirstAvailable[RBX], EAX
+
+  MOV DECODE_STRING_TABLE.CurrentIndex[RBX], 0
+
+  XOR RAX, RAX
+  MOV AL, IMAGE_DATA.RasterData.CodeSize[RDI]
+  INC EAX
+  MOV DECODE_STRING_TABLE.CurrentCodeBits[RBX], EAX
+
+  MOV RCX, IMAGE_DATA.ImageDescriptorPtr[RDI]
+  MOVZX EAX, IMAGE_DESCRIPTOR.ImageWidth[RCX]
+  MOV DECODE_STRING_TABLE.ImageWidth[RBX], EAX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_InitializeStringTable, _TEXT$00
+
+;*********************************************************
+;   Gif_Decode
+;
+;        Parameters: Gif Handle, Image Data, Stride, Image Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_Decode, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX                                                                  ; RSI = GIF_INTERNAL
+  MOV RDI, RDX                                                                  ; RDI = IMAGE_DATA
+  MOV RBX, R9                                                                   ; RBX = Image Buffer
+  MOV R12, R8                                                                   ; R12 = Stride
+  MOV R14, IMAGE_DATA.ImageDescriptorPtr[RDI]                                   ; R14 = IMAGE_DESCRIPTOR
+
+  
+  MOV RDX, SIZE DECODE_STRING_TABLE
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalALloc
+
+  CMP RAX, 0
+  JE @Failed
+  MOV STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], RAX                       ; Save the String Decode in a Local Variable
+  
+  ;
+  ; Initialize the String Decode Table
+  ;
+  MOVZX ECX, IMAGE_DESCRIPTOR.ImageStartLeft[R14]
+  MOV DECODE_STRING_TABLE.ImageX[RAX], ECX
+  MOV DECODE_STRING_TABLE.ImageStartLeft[RAX], ECX
+
+  MOVZX ECX, IMAGE_DESCRIPTOR.ImageStartTop[R14]
+  MOV DECODE_STRING_TABLE.ImageY[RAX], ECX
+
+  MOV DECODE_STRING_TABLE.ImageBuffer32bppPtr[RAX], RBX
+
+  MOV DECODE_STRING_TABLE.Stride[RAX], R12D
+
+  ;
+  ; Determine Color Map to use
+  ;
+  MOV AL, IMAGE_DESCRIPTOR.SpecialByte[R14]
+  USE_LOCAL_MAP_MASK AL
+  CMP AL, 0
+  JE @UseGlobalMap
+  MOV RCX, IMAGE_DATA.LocalColorMapPtr[RDI]
+  JMP @UpdateColorMap
+@UseGlobalMap:
+  MOV RCX, GIF_INTERNAL.GlobalColorMapPtr[RSI]
+@UpdateColorMap:
+  MOV DECODE_STRING_TABLE.ImagePalettePtr[RAX], RCX
+  
+  MOV R8,RAX
+  MOV RDX,RDI
+  MOV RCX,RSI
+  DEBUG_FUNCTION_CALL Gif_InitializeStringTable
+
+  MOV RAX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV DECODE_STRING_TABLE.BitIncrement[RAX], 0
+  MOV DECODE_STRING_TABLE.RasterDataSize[RAX], 0
+
+  ;
+  ; Build the Raster Block Size
+  ;
+  XOR R8, R8
+@NextRasterBlockSize:
+  CMP R8D, IMAGE_DATA.RasterData.NumberOfBlocks[RDI]
+  JAE @FinishedRasterBlocks
+
+  MOV R9, R8
+  SHL R9, 4
+  MOV RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
+  ADD RDX, R9
+  MOVZX ECX, PACKED_BLOCK.BlockByteCount[RDX]
+
+  ADD DECODE_STRING_TABLE.RasterDataSize[RAX], ECX
+  INC R8
+  JMP @NextRasterBlockSize
+@FinishedRasterBlocks:
+
+  MOV EDX, DECODE_STRING_TABLE.RasterDataSize[RAX]
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JE @DeallocateStringDecode
+
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV DECODE_STRING_TABLE.RasterDataBufferPtr[RCX], RAX
+
+  XOR R13, R13     
+                               ; Non-Volatile Counter
+
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV R15, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
+
+@MemoryCopyUpdater:
+  CMP R13D, IMAGE_DATA.RasterData.NumberOfBlocks[RDI]
+  JAE @CopyComplete
+    
+  MOV RCX, R15
+
+  MOV R9, R13
+  SHL R9, 4
+  MOV RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
+  ADD RDX, R9
+  MOVZX R8D, PACKED_BLOCK.BlockByteCount[RDX]
+  LEA RDX, PACKED_BLOCK.DataBytes[RDX]
+  
+  DEBUG_FUNCTION_CALL memcpy
+
+  MOV R9, R13
+  SHL R9, 4
+  MOV RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
+  ADD RDX, R9
+  MOVZX R8D, PACKED_BLOCK.BlockByteCount[RDX]
+  ADD R15, R8
+
+@CopyComplete:
+  MOV R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_DecodePackedBlock
+
+@DeallocateRasterdataBuffer:
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
+  DEBUG_FUNCTION_CALL LocalFree
+@DeallocateStringDecode:
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL LocalFree
+@Failed:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_Decode, _TEXT$00
+
+
+
+
+
+;*********************************************************
+;   Gif_DecodePackedBlock
+;
+;        Parameters: Gif Handle, Image Data, Decode String Table
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX   ; GIF_INTERNAL        (RSI)
+  MOV RDI, RDX   ; IMAGE DATA          (RDI)
+  MOV RBX, R8    ; DECODE STRING TABLE (RBX)
+
+  MOV RAX, DECODE_STRING_TABLE.RasterDataBufferPtr[RBX]
+  MOV STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], RAX
+
+  XOR R12, R12
+@DecodePackedBlockLoop:
+  CMP R12D, DECODE_STRING_TABLE.RasterDataSize[RBX]
+  JAE @FinishedDecoding
+  
+  MOV R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  LEA RDX, DECODE_STRING_TABLE.BitIncrement[RBX]
+  MOV RCX, RBX
+  DEBUG_FUNCTION_CALL Gif_RetrieveCodeWord
+  MOV DECODE_STRING_TABLE.NewCodeWord[RBX], EAX
+  
+  CMP EAX, DECODE_STRING_TABLE.ClearCode[RBX]
+  JNE @NotAClearCode
+  
+  MOV R8, RBX
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_InitializeStringTable
+  JMP  @DoneProcessingNewCode
+@NotAClearCode:
+  CMP EAX, DECODE_STRING_TABLE.EndOfInformation[RBX]
+  JE @FinishedDecoding
+
+  MOV R8, RAX
+  MOV EDX, DECODE_STRING_TABLE.LastCodeWord[RBX]
+  MOV RCX, RBX
+ ; DEBUG_FUNCTION_CALL Gif_ProcessNewCode
+   
+  CMP RAX, 0
+  JE @UpdateLastWord
+
+  MOV R8, RBX
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_InitializeStringTable
+
+  JMP @DoneProcessingNewCode
+@UpdateLastWord:
+  
+  MOV EAX, DECODE_STRING_TABLE.NewCodeWord[RBX]
+  MOV DECODE_STRING_TABLE.LastCodeWord[RBX], EAX
+@DoneProcessingNewCode:
+  XOR R8, R8
+@BitIncrementLoop:  
+  CMP DECODE_STRING_TABLE.BitIncrement[RBX], 8
+  JB @CompleteBitIncrementLoop
+  INC R12
+  INC STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  SUB DECODE_STRING_TABLE.BitIncrement[RBX], 8
+  JMP @BitIncrementLoop
+@CompleteBitIncrementLoop:
+  INC R12
+  JMP @DecodePackedBlockLoop
+@FinishedDecoding:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_DecodePackedBlock, _TEXT$00
+
+
+;*********************************************************
+;   Gif_RetrieveCodeWord
+;
+;        Parameters: Decode String Table, Bit Increment Ptr, Packed Block Bytes Ptr
+;
+;        Return Value: Code Word
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_RetrieveCodeWord, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV ECX, DWORD PTR [RDX]
+  MOV R9D, DWORD PTR [R8]
+  SHR R9D, CL          ; PackedBlock >> BitIncrement
+
+  MOV R11D, DECODE_STRING_TABLE.CurrentCodeBits[RSI]
+  MOV ECX, R11D
+  MOV EAX, 1
+  SHL EAX, CL
+  SUB EAX,1             ; ((1<<CurrentCodeBits)-1)
+
+  AND EAX, R9D          ; New Code Word  = ((1<<CurrentCodeBits)-1) & (PackedBlock >>BitIncrmenet)
+   
+  ADD DWORD PTR [RDX], R11D
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_RetrieveCodeWord, _TEXT$00
+
+
+;*********************************************************
+;   Gif_ProcessNewCode
+;
+;        Parameters: Decode String Table, LastCodeWord, NewCodeWord
+;
+;        Return Value: TRUE or FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  CMP R8D, DECODE_STRING_TABLE.ClearCode[RBX]
+  JB @NewCodeWord_LessThanClearCode
+
+
+  JMP @ExitFunction
+@NewCodeWord_LessThanClearCode:
+
+@ExitFunction:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_ProcessNewCode, _TEXT$00
+
+
+
+
+
+BOOL WINAPI Gif_ProcessNewCode(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord)
 {
-    UINT CurrentOffset;
-    UINT CurrentRasterBlock;
-    BOOL bFileParseSuccessful = TRUE;
-    BOOL bMoreImages;
-    BOOL bMoreBlocks;
+	DWORD Pixel;
+	BOOL ReinitializeStringTable = FALSE;
 
-    CurrentOffset = sizeof(GIF_HEADER);
-    pGifInternal->pScreenDescriptor = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PSCREEN_DESCRIPTOR);
-    CurrentOffset += sizeof(SCREEN_DESCRIPTOR);
+	if(NewCodeWord < pDecodeStringTable->ClearCode)
+	{
+		Pixel = Gif_GetPaletteColorByIndexSpecifyPalette(pDecodeStringTable->pImagePalette, NewCodeWord);
+		pDecodeStringTable->pImageBuffer32bpp[pDecodeStringTable->CurrentPixel] = Pixel;
+		pDecodeStringTable->CurrentPixel++;
 
-    if(pGifInternal->pScreenDescriptor->GlobalMapDefined)
-    {
-        pGifInternal->pGlobalColorMap = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PGLOBAL_COLOR_MAP);
-        CurrentOffset += (UINT)(3*pow(2, ((int)pGifInternal->pScreenDescriptor->BitsPerPixel + 1)));
-    }
+		if(pDecodeStringTable->CurrentPixel >= pDecodeStringTable->ImageWidth)
+		{
+			pDecodeStringTable->pImageBuffer32bpp += pDecodeStringTable->Stride + pDecodeStringTable->ImageWidth;
+			pDecodeStringTable->CurrentPixel = 0;
+		}
 
-    do {
-        UINT CurrentIndex = pGifInternal->NumberOfImages;
+		if(LastCodeWord != pDecodeStringTable->ClearCode)
+		{
+			ReinitializeStringTable = Gif_AddNewEntry(pDecodeStringTable, LastCodeWord, NewCodeWord);			
+		}
+	}
+	else
+	{	
+		UINT PixelIndex;
+		
+		ReinitializeStringTable = Gif_AddNewEntry(pDecodeStringTable, LastCodeWord, NewCodeWord);		
 
-        /*
-         * Remove Extension Data
-         */
-        while(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) != ';' && *((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) != ',')
-        {
-            CurrentOffset += 2;
-            Gif_ParsePackedBlock(pGifInternal, NULL, &CurrentOffset);
-        }
+		for(PixelIndex = 0; PixelIndex < pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].Length; PixelIndex++)
+		{
+			Pixel = Gif_GetPaletteColorByIndexSpecifyPalette(pDecodeStringTable->pImagePalette, pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].DecodeString[PixelIndex]);
+			pDecodeStringTable->pImageBuffer32bpp[pDecodeStringTable->CurrentPixel] = Pixel;
+			pDecodeStringTable->CurrentPixel++;
+			pDecodeStringTable->ImageX++;
 
-        if(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) == ',')
-        {
-            pGifInternal->ImageData[CurrentIndex].pImageDescriptor = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PIMAGE_DESCRIPTOR);
-            CurrentOffset += sizeof(IMAGE_DESCRIPTOR);
-           
-            if(pGifInternal->ImageData[CurrentIndex].pImageDescriptor->UseLocalMap)
-            {
-                pGifInternal->ImageData[CurrentIndex].pLocalColorMap = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PLOCAL_COLOR_MAP);
-                CurrentOffset += (UINT)(3*pow(2, pGifInternal->ImageData[CurrentIndex].pImageDescriptor->BitsPerPixel + 1));
-            }
-                        
-            CurrentRasterBlock = 0;
-            bMoreBlocks = TRUE;
+			
+			if(pDecodeStringTable->CurrentPixel >= pDecodeStringTable->ImageWidth)
+			{
+				pDecodeStringTable->pImageBuffer32bpp += pDecodeStringTable->Stride + pDecodeStringTable->ImageWidth;
+				pDecodeStringTable->CurrentPixel = 0;
+				
+				pDecodeStringTable->ImageX = pDecodeStringTable->ImageStartLeft;
+				pDecodeStringTable->ImageY++;
+			}
+			
+		}
+	}
 
-            pGifInternal->ImageData[CurrentIndex].RasterData.CodeSize = *((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset);
-            CurrentOffset++;			
-            pGifInternal->ImageData[CurrentIndex].RasterData.NumberOfBlocks = Gif_ParsePackedBlock(pGifInternal, pGifInternal->ImageData[CurrentIndex].RasterData.pPackBlocks, &CurrentOffset);
-        }
-
-        if(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) == ';')
-        {
-            bMoreImages = FALSE;
-        }
-
-        pGifInternal->NumberOfImages++;
-    } while(bMoreImages);   
-
-#if 0
-    Gif_DisplayDebugInformation(pGifInternal);
-#endif
-
-    return bFileParseSuccessful;
+	return ReinitializeStringTable;
 }
+
+
+;*********************************************************
+;   Gif_AddNewEntry
+;
+;        Parameters: Decode String Table, LastCodeWord, NewCodeWord
+;
+;        Return Value: TRUE or FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RET
+NESTED_END Gif_AddNewEntry, _TEXT$00
+.
+BOOL WINAPI Gif_AddNewEntry(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord)
+{
+	STRING_TABLE FrontString;
+	STRING_TABLE BackString;
+	BOOL ReinitializeStringTable = FALSE;
+
+	if(NewCodeWord < pDecodeStringTable->ClearCode || CODE_TO_INDEX(NewCodeWord,pDecodeStringTable) < pDecodeStringTable->CurrentIndex)
+	{
+		if(NewCodeWord < pDecodeStringTable->ClearCode)
+		{
+			BackString.DecodeString[0] = (UCHAR)NewCodeWord;
+			BackString.Length          = 1;
+		}
+		else
+		{
+			BackString.DecodeString[0] = pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].DecodeString[0];
+			BackString.Length          = 1;
+		}
+
+		if(LastCodeWord < pDecodeStringTable->ClearCode)
+		{
+			FrontString.DecodeString[0] = (UCHAR)LastCodeWord;
+			FrontString.Length          = 1;
+		}
+		else
+		{
+			memcpy(&FrontString, &pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)], sizeof(STRING_TABLE));
+		}
+	}
+	else
+	{
+		if(LastCodeWord < pDecodeStringTable->ClearCode)
+		{
+			BackString.DecodeString[0] = (UCHAR)LastCodeWord;
+			BackString.Length          = 1;
+
+            FrontString.DecodeString[0] = (UCHAR)LastCodeWord;
+			FrontString.Length          = 1;
+		}
+		else
+		{
+			BackString.DecodeString[0] = pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)].DecodeString[0];
+			BackString.Length          = 1;
+
+			memcpy(&FrontString, &pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)], sizeof(STRING_TABLE));
+		}
+	}
+
+	memcpy(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].DecodeString, FrontString.DecodeString, FrontString.Length);
+	memcpy(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].DecodeString + FrontString.Length, BackString.DecodeString, BackString.Length);
+	pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].Length = FrontString.Length + BackString.Length;
+    
+	if(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].Length >= 4096)
+	{
+		DebugBreak();
+	}
+
+	if(INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable) == 4096)
+	{
+		ReinitializeStringTable = TRUE;
+		DEBUGPRINT2(" Re-Initialize String Table %i %i\n", pDecodeStringTable->CurrentIndex, INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable));
+	}
+
+	pDecodeStringTable->CurrentIndex++; 
+
+	if(INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable) == (UINT)pow(2, pDecodeStringTable->CurrentCodeBits))
+	{
+		if(pDecodeStringTable->CurrentCodeBits < 12)
+		{
+			pDecodeStringTable->CurrentCodeBits++;
+		}
+		DEBUGPRINT2(" Code Bits Increase %i\n", pDecodeStringTable->CurrentCodeBits);
+	}
+
+	return ReinitializeStringTable;
+}
+
+
+
 
 END
 
-#define HANDLE_IS_VALID(x) (x != INVALID_HANDLE_VALUE && x != NULL)
-#define GET_NEXT_POINTER(x, y, z) (z)((char *)x + y)
-
-#define DEBUGPRINT  
-#define DEBUGPRINT2 
-
-#define CREATE_RGB(x) (x.Red<<16 | x.Green<<8 | x.Blue)
-#define Gif_IsClearCode(x, y) (x->ClearCode == y)
-#define Gif_IsEndOfImageCode(x, y) (x->EndOfInformation == y)
-#define CREATE_BIT_MASK(x) ((1<<x)-1)
-#define Gif_GetPaletteColorByIndexSpecifyPalette(x, y)  CREATE_RGB(x[y])
-#define CODE_TO_INDEX(x,y) (x - y->FirstAvailable)
-#define INDEX_TO_CODE(x,y) (x + y->FirstAvailable)
-
-/*********************************************************
- * Internal Functions
- *********************************************************/
-
-
-
-void WINAPI Gif_DisplayDebugInformation(PGIF_INTERNAL pGifInternal);
-void WINAPI Gif_Debug(char *pszFormatString, ...);
-BOOL WINAPI Gif_OpenAndValidateFile(PGIF_INTERNAL pGifInternal, char *pszFileName);
-BOOL WINAPI Gif_ParseFile(PGIF_INTERNAL pGifInternal);
-UINT WINAPI Gif_ParsePackedBlock(PGIF_INTERNAL pGifInternal, PPACKED_BLOCK *pPackedBlocks, UINT *pOffset);
-void WINAPI Gif_CloseFile(PGIF_INTERNAL pGifInternal);
-void WINAPI Gif_InitializeStringTable(PGIF_INTERNAL pGifInternal, PIMAGE_DATA pImageData, PDECODE_STRING_TABLE pDecodeStringTable);
-DWORD WINAPI Gif_GetPaletteColorByIndex(PGIF_INTERNAL pGifInternal, UINT ImageIndex, UINT ColorIndex);
-void WINAPI Gif_SetBackgroundColor(PGIF_INTERNAL pGifInternal, UINT ImageIndex, UCHAR *pImageBuffer32bpp);
-void WINAPI Gif_Decode(PGIF_INTERNAL pGifInternal, PIMAGE_DATA pImageData, UINT Stride, UCHAR *pImageBuffer32bpp);
-BOOL WINAPI Gif_DecodePackedBlock(PGIF_INTERNAL pGifInternal, PIMAGE_DATA pImageData, PDECODE_STRING_TABLE pDecodeStringTable);
-UINT WINAPI Gif_RetrieveCodeWord(PDECODE_STRING_TABLE pDecodeStringTable, UINT *pBitIncrement, UCHAR *pPackedBlockBytes);
-BOOL WINAPI Gif_ProcessNewCode(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord);
-BOOL WINAPI Gif_AddNewEntry(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord);
-
-
- 
-
-
- /********************************************************
-  *  Gif_OpenAndValidateFile
-  *
-  *     
-  *   
-  *
-  *
-  ********************************************************/
-/***********************************************************************
- * Gif_ParseFile
- *  
- *    Gif_ParseFile 
- *
- *    
- *
- * Parameters
- *     Gif Internal
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-BOOL WINAPI Gif_ParseFile(PGIF_INTERNAL pGifInternal)
-{
-    UINT CurrentOffset;
-    UINT CurrentRasterBlock;
-    BOOL bFileParseSuccessful = TRUE;
-    BOOL bMoreImages;
-    BOOL bMoreBlocks;
-
-    CurrentOffset = sizeof(GIF_HEADER);
-    pGifInternal->pScreenDescriptor = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PSCREEN_DESCRIPTOR);
-    CurrentOffset += sizeof(SCREEN_DESCRIPTOR);
-
-    if(pGifInternal->pScreenDescriptor->GlobalMapDefined)
-    {
-        pGifInternal->pGlobalColorMap = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PGLOBAL_COLOR_MAP);
-        CurrentOffset += (UINT)(3*pow(2, ((int)pGifInternal->pScreenDescriptor->BitsPerPixel + 1)));
-    }
-
-    do {
-        UINT CurrentIndex = pGifInternal->NumberOfImages;
-
-        /*
-         * Remove Extension Data
-         */
-        while(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) != ';' && *((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) != ',')
-        {
-            CurrentOffset += 2;
-            Gif_ParsePackedBlock(pGifInternal, NULL, &CurrentOffset);
-        }
-
-        if(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) == ',')
-        {
-            pGifInternal->ImageData[CurrentIndex].pImageDescriptor = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PIMAGE_DESCRIPTOR);
-            CurrentOffset += sizeof(IMAGE_DESCRIPTOR);
-           
-            if(pGifInternal->ImageData[CurrentIndex].pImageDescriptor->UseLocalMap)
-            {
-                pGifInternal->ImageData[CurrentIndex].pLocalColorMap = GET_NEXT_POINTER(pGifInternal->pStartOfGif, CurrentOffset, PLOCAL_COLOR_MAP);
-                CurrentOffset += (UINT)(3*pow(2, pGifInternal->ImageData[CurrentIndex].pImageDescriptor->BitsPerPixel + 1));
-            }
-                        
-            CurrentRasterBlock = 0;
-            bMoreBlocks = TRUE;
-
-            pGifInternal->ImageData[CurrentIndex].RasterData.CodeSize = *((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset);
-            CurrentOffset++;			
-            pGifInternal->ImageData[CurrentIndex].RasterData.NumberOfBlocks = Gif_ParsePackedBlock(pGifInternal, pGifInternal->ImageData[CurrentIndex].RasterData.pPackBlocks, &CurrentOffset);
-        }
-
-        if(*((UCHAR *)pGifInternal->pStartOfGif + CurrentOffset) == ';')
-        {
-            bMoreImages = FALSE;
-        }
-
-        pGifInternal->NumberOfImages++;
-    } while(bMoreImages);   
-
-#if 0
-    Gif_DisplayDebugInformation(pGifInternal);
-#endif
-
-    return bFileParseSuccessful;
-}
-
-
-/***********************************************************************
- * Gif_ParsePackedBlock
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Offset
- *
- ***********************************************************************/
-UINT WINAPI Gif_ParsePackedBlock(PGIF_INTERNAL pGifInternal, PPACKED_BLOCK *pPackedBlocks, UINT *pOffset)
-{
-    BOOL bMoreBlocks = TRUE;
-    PPACKED_BLOCK pPackedBlock;
-    UINT CurrentRasterBlock = 0;
-
-
-    do {
-
-        pPackedBlock = GET_NEXT_POINTER(pGifInternal->pStartOfGif, (*pOffset), PPACKED_BLOCK);
-        (*pOffset) += pPackedBlock->BlockByteCount + 1;
-
-        if(pPackedBlocks)
-        {
-             *pPackedBlocks = pPackedBlock;
-             pPackedBlocks++;
-        }
-
-        if(pPackedBlock->BlockByteCount == 0)
-        {
-            bMoreBlocks = FALSE;
-        }
-
-        CurrentRasterBlock++;			
-    } while(bMoreBlocks);
-
-    return CurrentRasterBlock;
-}
-
-
-/***********************************************************************
- * Gif_DisplayDebugInformation
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-void WINAPI Gif_DisplayDebugInformation(PGIF_INTERNAL pGifInternal)
-{
-    UINT Index;
-
-    DEBUGPRINT2("Signature (%c%c%c%c%c%c)\n", pGifInternal->pGifHeader->Signature[0], pGifInternal->pGifHeader->Signature[1], pGifInternal->pGifHeader->Signature[2],pGifInternal->pGifHeader->Version[0], pGifInternal->pGifHeader->Version[1], pGifInternal->pGifHeader->Version[2]);
-    DEBUGPRINT2("Resolution (%i, %i)\n", pGifInternal->pScreenDescriptor->ScreenWidth, pGifInternal->pScreenDescriptor->ScreenHeight);
-    DEBUGPRINT2("Bits Per Pixel (%i)\n", (int)(pGifInternal->pScreenDescriptor->BitsPerPixel + 1));
-    DEBUGPRINT2("Global Color Map Defined (%i)\n", (int)(pGifInternal->pScreenDescriptor->GlobalMapDefined));
-    DEBUGPRINT2("Background Color Index (%i)\n", pGifInternal->pScreenDescriptor->ScreenBackgroundColorIndex);
-
-    Index = 0;
-    do {
-        DEBUGPRINT2("\nImage # %i\n", Index);
-        DEBUGPRINT2(" Image Signature (%c)\n", pGifInternal->ImageData[Index].pImageDescriptor->ImageSeperator);
-        DEBUGPRINT2(" Image Position (%i, %i)\n", pGifInternal->ImageData[Index].pImageDescriptor->ImageStartLeft, pGifInternal->ImageData[Index].pImageDescriptor->ImageStartTop);
-        DEBUGPRINT2(" Image Size (%i, %i)\n", pGifInternal->ImageData[Index].pImageDescriptor->ImageWidth, pGifInternal->ImageData[Index].pImageDescriptor->ImageHeight);
-        DEBUGPRINT2(" Bits Per Pixel (%i)\n", pGifInternal->ImageData[Index].pImageDescriptor->BitsPerPixel + 1);
-        DEBUGPRINT2(" Image is Interlaced (%i)\n", pGifInternal->ImageData[Index].pImageDescriptor->ImageIsInterlaced);
-        DEBUGPRINT2(" Image uses Local Map (%i)\n", pGifInternal->ImageData[Index].pImageDescriptor->UseLocalMap);
-        DEBUGPRINT2(" Raster Data contains (%i) blocks\n", pGifInternal->ImageData[Index].RasterData.NumberOfBlocks);
-
-        Index++;
-    } while(Index < pGifInternal->NumberOfImages);
-
-}
-
-/***********************************************************************
- * Gif_NumberOfImages
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-UINT WINAPI Gif_NumberOfImages(HGIF hGif)
-{
-    PGIF_INTERNAL pGifInternal = (PGIF_INTERNAL)hGif;
-
-    return pGifInternal->NumberOfImages;
-}
-
-
-
-/***********************************************************************
- * Gif_NumberOfImages
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-UINT WINAPI Gif_GetImageSize(HGIF hGif, UINT Index)
-{
-    PGIF_INTERNAL pGifInternal = (PGIF_INTERNAL)hGif;
-    UINT SizeCalculation;
-
-    SizeCalculation = pGifInternal->pScreenDescriptor->ScreenWidth*pGifInternal->pScreenDescriptor->ScreenHeight*4;
-
-    return SizeCalculation;
-}
-
-/***********************************************************************
- * Gif_GetImageWidth
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-UINT WINAPI Gif_GetImageWidth(HGIF hGif, UINT Index)
-{
-    PGIF_INTERNAL pGifInternal = (PGIF_INTERNAL)hGif;
-
-    return pGifInternal->pScreenDescriptor->ScreenWidth;
-}
-
-
-/***********************************************************************
- * Gif_GetImageHeight
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-UINT WINAPI Gif_GetImageHeight(HGIF hGif, UINT Index)
-{
-    PGIF_INTERNAL pGifInternal = (PGIF_INTERNAL)hGif;
-
-    return pGifInternal->pScreenDescriptor->ScreenHeight;
-}
-
-
-
-/***********************************************************************
- * Gif_GetImage32bpp
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     Nothing
- *                                                   
- ***********************************************************************/
-void WINAPI Gif_GetImage32bpp(HGIF hGif, UINT Index, UCHAR *pImageBuffer32bpp)
-{
-    PGIF_INTERNAL pGifInternal = (PGIF_INTERNAL)hGif;
-    PIMAGE_DATA pImageData;
-    UINT Stride;
-    UINT Width;
-    UINT StartOffset;
-
-    if(Index < pGifInternal->NumberOfImages)
-    {
-        pImageData = &pGifInternal->ImageData[Index];
-        Gif_SetBackgroundColor(pGifInternal, Index, pImageBuffer32bpp);
-
-        StartOffset = pImageData->pImageDescriptor->ImageStartLeft + (pImageData->pImageDescriptor->ImageStartTop*pGifInternal->pScreenDescriptor->ScreenWidth);
-        pImageBuffer32bpp += (StartOffset*4);
-
-        Stride = (pGifInternal->pScreenDescriptor->ScreenWidth - pImageData->pImageDescriptor->ImageWidth);
-
-        Gif_Decode(pGifInternal, pImageData, Stride, pImageBuffer32bpp);
-    }
-} 
-
-
-/***********************************************************************
- * Gif_InitializeStringTable
- *  
- *    Gif_InitializeStringTable 
- *
- *    
- *
- * Parameters
- *     Gif_InitializeStringTable
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
-void WINAPI Gif_InitializeStringTable(PGIF_INTERNAL pGifInternal, PIMAGE_DATA pImageData, PDECODE_STRING_TABLE pDecodeStringTable)
-{
-    pDecodeStringTable->ClearCode        = (UINT)(pow(2, pImageData->RasterData.CodeSize));
-    pDecodeStringTable->EndOfInformation = pDecodeStringTable->ClearCode + 1;
-    pDecodeStringTable->FirstAvailable   = pDecodeStringTable->ClearCode + 2;
-    pDecodeStringTable->CurrentIndex     = 0;
-    pDecodeStringTable->CurrentCodeBits  = pImageData->RasterData.CodeSize + 1;
-    pDecodeStringTable->ImageWidth       = pImageData->pImageDescriptor->ImageWidth;
-    pDecodeStringTable->LastCodeWord     = pDecodeStringTable->ClearCode;
-}
-
-/***********************************************************************
- * Gif_Debug
- *  
- *    Debug 
- *
- *    
- *
- * Parameters
- *     Debug
- *
- * Return Value
- *     Nothing
- *
- ***********************************************************************/
- void Gif_Debug(char *pszFormatString, ...)
- {
-     char DebugString[256];
-     va_list vl;
-
-     va_start(vl, pszFormatString);
-     vsprintf(DebugString, pszFormatString, vl);
-     va_end(vl);
-
-     OutputDebugStringA(DebugString);
- }
-
-
-/***********************************************************************
- * Gif_GetPaletteColorByIndex
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
- DWORD WINAPI Gif_GetPaletteColorByIndex(PGIF_INTERNAL pGifInternal, UINT ImageIndex, UINT ColorIndex)
- {
-     DWORD Color32Bit = 0;
-
-     if(pGifInternal->ImageData[ImageIndex].pImageDescriptor->UseLocalMap)
-     {
-         Color32Bit = CREATE_RGB(pGifInternal->ImageData[ImageIndex].pLocalColorMap->GifRgbIndex[ColorIndex]);
-     }
-     else
-     {
-         Color32Bit = CREATE_RGB(pGifInternal->pGlobalColorMap->GifRgbIndex[ColorIndex]);
-
-     }
-
-     return Color32Bit;
- }
-
-
-/***********************************************************************
- * Gif_SetBackgroundColor
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
- void WINAPI Gif_SetBackgroundColor(PGIF_INTERNAL pGifInternal, UINT ImageIndex, UCHAR *pImageBuffer32bpp)
- {
-     DWORD BackgroundColor;
-     UINT Index;
-
-     BackgroundColor = Gif_GetPaletteColorByIndex(pGifInternal, ImageIndex, pGifInternal->pScreenDescriptor->ScreenBackgroundColorIndex);
-
-     Index = 0;
-     while(Index < ((UINT)pGifInternal->pScreenDescriptor->ScreenWidth*(UINT)pGifInternal->pScreenDescriptor->ScreenHeight))
-     {
-         *((DWORD *)pImageBuffer32bpp) = BackgroundColor;
-         pImageBuffer32bpp += 4;
-         Index++;
-     }
-
- }
-
-
-
-
-
-/***********************************************************************
- * Gif_Decode
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
- void WINAPI Gif_Decode(PGIF_INTERNAL pGifInternal, PIMAGE_DATA pImageData, UINT Stride, UCHAR *pImageBuffer32bpp)
- {
-     PDECODE_STRING_TABLE pDecodeStringTable = NULL;
-     UINT Index = 0;
-     UCHAR *pRasterDataBuffer;
-
-     pDecodeStringTable = (PDECODE_STRING_TABLE)LocalAlloc(LMEM_ZEROINIT, sizeof(DECODE_STRING_TABLE));
-
-     if(pDecodeStringTable)
-     {
-         pDecodeStringTable->ImageX            = pImageData->pImageDescriptor->ImageStartLeft;
-         pDecodeStringTable->ImageStartLeft    = pImageData->pImageDescriptor->ImageStartLeft;
-         pDecodeStringTable->ImageY            = pImageData->pImageDescriptor->ImageStartTop;
-         pDecodeStringTable->pImageBuffer32bpp = (DWORD *)pImageBuffer32bpp;
-         pDecodeStringTable->Stride            = Stride;
-
-         if(pImageData->pImageDescriptor->UseLocalMap)
-         {
-             pDecodeStringTable->pImagePalette = pImageData->pLocalColorMap->GifRgbIndex;
-         }
-         else
-         {
-             pDecodeStringTable->pImagePalette = pGifInternal->pGlobalColorMap->GifRgbIndex;
-         }
-
-         Gif_InitializeStringTable(pGifInternal, pImageData, pDecodeStringTable);
-         pDecodeStringTable->BitIncrement = 0;
-         pDecodeStringTable->RasterDataSize = 0;
-                  
-         for(Index = 0; Index < pImageData->RasterData.NumberOfBlocks; Index++)
-         {
-             pDecodeStringTable->RasterDataSize += pImageData->RasterData.pPackBlocks[Index]->BlockByteCount;
-         }
-
-         pDecodeStringTable->pRasterDataBuffer = (PCHAR)LocalAlloc(LMEM_ZEROINIT, pDecodeStringTable->RasterDataSize);
-
-         if(pDecodeStringTable->pRasterDataBuffer)
-         {
-             pRasterDataBuffer = pDecodeStringTable->pRasterDataBuffer;
-             for(Index = 0; Index < pImageData->RasterData.NumberOfBlocks; Index++)
-             {
-                memcpy(pRasterDataBuffer, &pImageData->RasterData.pPackBlocks[Index]->DataBytes[0], pImageData->RasterData.pPackBlocks[Index]->BlockByteCount);
-                pRasterDataBuffer += pImageData->RasterData.pPackBlocks[Index]->BlockByteCount;
-             }
-
-             Gif_DecodePackedBlock(pGifInternal, pImageData, pDecodeStringTable);
-             LocalFree(pDecodeStringTable->pRasterDataBuffer);
-         }
-
-         LocalFree(pDecodeStringTable);
-     }
- }
-
-
-
- /***********************************************************************
- * Gif_Decode
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
-BOOL WINAPI Gif_DecodePackedBlock(PGIF_INTERNAL pGifInternal, PIMAGE_DATA pImageData, PDECODE_STRING_TABLE pDecodeStringTable)
-{
-    UINT Index;
-    UINT EndOfBlock;
-    BOOL ContinueProcessing = TRUE;
-    UCHAR *pPackedBlockBytes;
-    
-    EndOfBlock = pDecodeStringTable->RasterDataSize;
-    pPackedBlockBytes = pDecodeStringTable->pRasterDataBuffer;
-
-    for(Index = 0; Index < EndOfBlock && ContinueProcessing;)
-    {
-        pDecodeStringTable->NewCodeWord = Gif_RetrieveCodeWord(pDecodeStringTable, &pDecodeStringTable->BitIncrement, pPackedBlockBytes);
-
-        if(Gif_IsClearCode(pDecodeStringTable, pDecodeStringTable->NewCodeWord))
-        {
-            Gif_InitializeStringTable(pGifInternal, pImageData, pDecodeStringTable);
-        }
-        else
-        {
-            if(Gif_IsEndOfImageCode(pDecodeStringTable, pDecodeStringTable->NewCodeWord))
-            {
-                DEBUGPRINT2(" EOI Command\n");
-                ContinueProcessing = FALSE;
-            }
-            else
-            {
-                if(Gif_ProcessNewCode(pDecodeStringTable, pDecodeStringTable->LastCodeWord, pDecodeStringTable->NewCodeWord))
-                {
-                    Gif_InitializeStringTable(pGifInternal, pImageData, pDecodeStringTable);
-                }
-                else
-                {
-                    pDecodeStringTable->LastCodeWord = pDecodeStringTable->NewCodeWord;
-                }
-            }
-        }
-
-        while(pDecodeStringTable->BitIncrement >= 8)
-        {
-            pPackedBlockBytes++;
-            Index++;
-            pDecodeStringTable->BitIncrement = pDecodeStringTable->BitIncrement - 8;
-        }
-        
-    }
-
-    DEBUGPRINT2(" Processed %i of %i\n", Index, EndOfBlock);
-
-    return ContinueProcessing;
-}
-
-
-
- /***********************************************************************
- * Gif_ProcessNewCode
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
-BOOL WINAPI Gif_ProcessNewCode(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord)
-{
-    DWORD Pixel;
-    BOOL ReinitializeStringTable = FALSE;
-
-    if(NewCodeWord < pDecodeStringTable->ClearCode)
-    {
-        Pixel = Gif_GetPaletteColorByIndexSpecifyPalette(pDecodeStringTable->pImagePalette, NewCodeWord);
-        pDecodeStringTable->pImageBuffer32bpp[pDecodeStringTable->CurrentPixel] = Pixel;
-        pDecodeStringTable->CurrentPixel++;
-
-        if(pDecodeStringTable->CurrentPixel >= pDecodeStringTable->ImageWidth)
-        {
-            pDecodeStringTable->pImageBuffer32bpp += pDecodeStringTable->Stride + pDecodeStringTable->ImageWidth;
-            pDecodeStringTable->CurrentPixel = 0;
-        }
-
-        if(LastCodeWord != pDecodeStringTable->ClearCode)
-        {
-            ReinitializeStringTable = Gif_AddNewEntry(pDecodeStringTable, LastCodeWord, NewCodeWord);			
-        }
-    }
-    else
-    {	
-        UINT PixelIndex;
-        
-        ReinitializeStringTable = Gif_AddNewEntry(pDecodeStringTable, LastCodeWord, NewCodeWord);		
-
-        for(PixelIndex = 0; PixelIndex < pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].Length; PixelIndex++)
-        {
-            Pixel = Gif_GetPaletteColorByIndexSpecifyPalette(pDecodeStringTable->pImagePalette, pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].DecodeString[PixelIndex]);
-            pDecodeStringTable->pImageBuffer32bpp[pDecodeStringTable->CurrentPixel] = Pixel;
-            pDecodeStringTable->CurrentPixel++;
-            pDecodeStringTable->ImageX++;
-
-            
-            if(pDecodeStringTable->CurrentPixel >= pDecodeStringTable->ImageWidth)
-            {
-                pDecodeStringTable->pImageBuffer32bpp += pDecodeStringTable->Stride + pDecodeStringTable->ImageWidth;
-                pDecodeStringTable->CurrentPixel = 0;
-                
-                pDecodeStringTable->ImageX = pDecodeStringTable->ImageStartLeft;
-                pDecodeStringTable->ImageY++;
-            }
-            
-        }
-    }
-
-    return ReinitializeStringTable;
-}
-
-
- /***********************************************************************
- * Gif_ProcessNewCode
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
-BOOL WINAPI Gif_AddNewEntry(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord)
-{
-    STRING_TABLE FrontString;
-    STRING_TABLE BackString;
-    BOOL ReinitializeStringTable = FALSE;
-
-    if(NewCodeWord < pDecodeStringTable->ClearCode || CODE_TO_INDEX(NewCodeWord,pDecodeStringTable) < pDecodeStringTable->CurrentIndex)
-    {
-        if(NewCodeWord < pDecodeStringTable->ClearCode)
-        {
-            BackString.DecodeString[0] = (UCHAR)NewCodeWord;
-            BackString.Length          = 1;
-        }
-        else
-        {
-            BackString.DecodeString[0] = pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].DecodeString[0];
-            BackString.Length          = 1;
-        }
-
-        if(LastCodeWord < pDecodeStringTable->ClearCode)
-        {
-            FrontString.DecodeString[0] = (UCHAR)LastCodeWord;
-            FrontString.Length          = 1;
-        }
-        else
-        {
-            memcpy(&FrontString, &pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)], sizeof(STRING_TABLE));
-        }
-    }
-    else
-    {
-        if(LastCodeWord < pDecodeStringTable->ClearCode)
-        {
-            BackString.DecodeString[0] = (UCHAR)LastCodeWord;
-            BackString.Length          = 1;
-
-            FrontString.DecodeString[0] = (UCHAR)LastCodeWord;
-            FrontString.Length          = 1;
-        }
-        else
-        {
-            BackString.DecodeString[0] = pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)].DecodeString[0];
-            BackString.Length          = 1;
-
-            memcpy(&FrontString, &pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)], sizeof(STRING_TABLE));
-        }
-    }
-
-    memcpy(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].DecodeString, FrontString.DecodeString, FrontString.Length);
-    memcpy(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].DecodeString + FrontString.Length, BackString.DecodeString, BackString.Length);
-    pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].Length = FrontString.Length + BackString.Length;
-    
-    if(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].Length >= 4096)
-    {
-        DebugBreak();
-    }
-
-    if(INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable) == 4096)
-    {
-        ReinitializeStringTable = TRUE;
-        DEBUGPRINT2(" Re-Initialize String Table %i %i\n", pDecodeStringTable->CurrentIndex, INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable));
-    }
-
-    pDecodeStringTable->CurrentIndex++; 
-
-    if(INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable) == (UINT)pow(2, pDecodeStringTable->CurrentCodeBits))
-    {
-        if(pDecodeStringTable->CurrentCodeBits < 12)
-        {
-            pDecodeStringTable->CurrentCodeBits++;
-        }
-        DEBUGPRINT2(" Code Bits Increase %i\n", pDecodeStringTable->CurrentCodeBits);
-    }
-
-    return ReinitializeStringTable;
-}
-
-
-
-
- /***********************************************************************
- * Gif_RetrieveCodeWord
- *  
- *     
- *
- *    
- *
- * Parameters
- *     
- *
- * Return Value
- *     
- *
- ***********************************************************************/
-UINT WINAPI Gif_RetrieveCodeWord(PDECODE_STRING_TABLE pDecodeStringTable, UINT *pBitIncrement, UCHAR *pPackedBlockBytes)
-{
-    UINT CodeWord;
-
-    CodeWord = (UINT)(*((UINT *)pPackedBlockBytes) >> *pBitIncrement) & CREATE_BIT_MASK(pDecodeStringTable->CurrentCodeBits);
-
-    *pBitIncrement += pDecodeStringTable->CurrentCodeBits;
-
-    return CodeWord;
-}

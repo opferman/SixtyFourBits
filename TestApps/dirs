@@ -12,5 +12,6 @@ TemplateTest \
 CopperTest \
 TttTest \
 YourDemo \
-FractalATest
+FractalATest \
+GifTest
 
