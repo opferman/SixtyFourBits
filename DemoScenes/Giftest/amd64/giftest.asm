@@ -49,6 +49,8 @@ public Gif_Free
    GifHandle     dq ?
    ImageBuffer   dq ?
    DoubleBuffer  dq ?
+   ImageStride   dq ?
+   ScreenStride  dq ?
 
 .CODE
 
@@ -154,16 +156,74 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
 
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV RAX, 0
   MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
   MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV RSI, RCX
 
+  MOV RCX, [GifHandle]
+  DEBUG_FUNCTION_CALL Gif_GetImageWidth
+  MOV R12, RAX
+
+  MOV RCX, [GifHandle]
+  DEBUG_FUNCTION_CALL Gif_GetImageHeight
+  MOV R13, RAX
+
+  MOV [ImageStride], 0
+  MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SUB R8,R12
+  SHL R8, 2
+  MOV [ScreenStride], R8
+
+  CMP R12, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  JB @NoUpdateToWidth
+
+  MOV R8, R12
+  SUB R8,MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R8, 2
+  MOV [ImageStride], R8
+
+  MOV R12, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV [ScreenStride], 0
+  
+@NoUpdateToWidth:
+
+  CMP R13, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  JB @NoUpdateToHeight
+  MOV R13, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+@NoUpdateToHeight:
+  MOV RDX, [DoubleBuffer]
+  MOV R11, [ImageBuffer]
+  XOR R8, R8
+@IncrementHeight:
+  CMP R8, R13
+  JAE @ImageDrawingComplete
+  XOR R9, R9
+@IncrementWidth:
+  CMP R9, R12
+  JAE @NextItteration
+  MOV EAX, DWORD PTR [R11]
+  MOV DWORD PTR [RDX], EAX
+  ADD R11, 4
+  ADD RDX, 4
+  INC R9
+  JMP @IncrementWidth
+@NextItteration:
+  INC R8
+  ADD R11, [ImageStride]
+  ADD RDX, [ScreenStride]
+  JMP @IncrementHeight
+
+@ImageDrawingComplete:
+  XOR R8, R8
+  XOR RDX, RDX
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+  MOV RAX, 1
   MOV r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14[RSP]
   MOV r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15[RSP]
   MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
   MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
-
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 NESTED_END Gif_Demo, _TEXT$00

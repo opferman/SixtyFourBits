@@ -24,6 +24,8 @@ include engdbg_internal.inc
 include ddraw_internal.inc
 
 extern LocalAlloc:proc
+extern vsprintf:proc
+extern OutputDebugStringA:proc
 
 FUNC_PARAMS struct
     ReturnAddress  dq ?
@@ -48,7 +50,43 @@ SAVEFRAME struct
     SaveRsi        dq ?
 SAVEFRAME ends
 
+SAVEFRAME_TOTAL struct
+    SaveRax        dq ?
+    SaveRbx        dq ?
+    SaveRcx        dq ?
+    SaveRdx        dq ?
+    SaveR8         dq ?
+    SaveR9         dq ?
+    SaveR10        dq ?
+    SaveR11        dq ?
+    SaveR12        dq ?
+    SaveR13        dq ?
+    SaveR14        dq ?
+    SaveR15        dq ?
+    SaveRdi        dq ?
+    SaveRsi        dq ?
+    SaveRbp        dq ?
+SAVEFRAME_TOTAL ends
 
+SAVEFRAME_TOTAL_XMM struct
+    SaveXmm0       oword ?
+    SaveXmm1       oword ?
+    SaveXmm2       oword ?
+    SaveXmm3       oword ?
+    SaveXmm4       oword ?
+    SaveXmm5       oword ?
+    SaveXmm6       oword ?
+    SaveXmm7       oword ?
+    SaveXmm8       oword ?
+    SaveXmm9       oword ?
+    SaveXmm10      oword ?
+    SaveXmm11      oword ?
+    SaveXmm12      oword ?
+    SaveXmm13      oword ?
+    SaveXmm14      oword ?
+    SaveXmm15      oword ?
+    SaveRflags     dq ?
+SAVEFRAME_TOTAL_XMM ends
 
 ENGINE_LOOP_LOCALS struct
    ParamFrameArea PARAMFRAME    <?>
@@ -61,10 +99,32 @@ ENGINE_LOOP_LOCALS ends
 ENGINE_FREE_LOCALS struct
    ParamFrameArea PARAMFRAME    <?>
    Param5                dq      ?
-   Padding               dq      ?
    Param6                dq      ?
+   Padding               dq      ?
    SaveFrameCtx         SAVEFRAME <?>
 ENGINE_FREE_LOCALS ends
+
+ENGINE_SAVE_TOTAL struct
+   ParamFrameArea PARAMFRAME            <?>
+   Param5                dq              ?
+   Param6                dq              ?
+   StringBuffer          db    256     DUP(<?>)
+   Padding               dq  ?
+   SaveRegs           SAVEFRAME_TOTAL <?>
+   SaveXmmRegs        SAVEFRAME_TOTAL_XMM <?>
+ENGINE_SAVE_TOTAL ends
+
+ENGINE_SAVE_TOTAL_FUNC struct
+   ParamFrameArea PARAMFRAME            <?>
+   Param5                dq              ?
+   Param6                dq              ?
+   StringBuffer          db    256     DUP(<?>)
+   Padding               dq  ?
+   SaveRegs           SAVEFRAME_TOTAL   <?>
+   SaveXmmRegs        SAVEFRAME_TOTAL_XMM <?>
+   Func               FUNC_PARAMS       <?>
+ENGINE_SAVE_TOTAL_FUNC ends
+
 
 ENGINE_INIT_LOCALS struct
    ParamFrameArea PARAMFRAME    <?>
@@ -74,6 +134,83 @@ ENGINE_INIT_LOCALS struct
    SaveFrameCtx         SAVEFRAME <?>
 ENGINE_INIT_LOCALS ends
 
+SAVE_COMPLETE_STD_REGS MACRO Structure
+ save_reg r8, Structure.SaveRegs.SaveR8
+ save_reg r9, Structure.SaveRegs.SaveR9
+ save_reg r10, Structure.SaveRegs.SaveR10
+ save_reg r11, Structure.SaveRegs.SaveR11
+ save_reg rax, Structure.SaveRegs.SaveRax
+ save_reg rcx, Structure.SaveRegs.SaveRcx
+ save_reg rdx, Structure.SaveRegs.SaveRdx
+ save_reg r12, Structure.SaveRegs.SaveR12
+ save_reg r13, Structure.SaveRegs.SaveR13
+ save_reg r14, Structure.SaveRegs.SaveR14
+ save_reg r15, Structure.SaveRegs.SaveR15
+ save_reg rdi, Structure.SaveRegs.SaveRdi
+ save_reg rsi, Structure.SaveRegs.SaveRsi
+ save_reg rbx, Structure.SaveRegs.SaveRbx
+ save_reg rbp, Structure.SaveRegs.SaveRbp
+ENDM
+
+RESTORE_COMPLETE_STD_REGS MACRO Structure
+ MOV rax, Structure.SaveRegs.SaveRax[RSP]
+ MOV rbx, Structure.SaveRegs.SaveRbx[RSP]
+ MOV rcx, Structure.SaveRegs.SaveRcx[RSP]
+ MOV rdx, Structure.SaveRegs.SaveRdx[RSP]
+ MOV rdi, Structure.SaveRegs.SaveRdi[RSP]
+ MOV rsi, Structure.SaveRegs.SaveRsi[RSP]
+ MOV r8, Structure.SaveRegs.SaveR8[RSP]
+ MOV r9, Structure.SaveRegs.SaveR9[RSP]
+ MOV r10, Structure.SaveRegs.SaveR10[RSP]
+ MOV r11, Structure.SaveRegs.SaveR11[RSP]
+ MOV r12, Structure.SaveRegs.SaveR12[RSP]
+ MOV r13, Structure.SaveRegs.SaveR13[RSP]
+ MOV r14, Structure.SaveRegs.SaveR14[RSP]
+ MOV r15, Structure.SaveRegs.SaveR15[RSP]
+ MOV rdi, Structure.SaveRegs.SaveRdi[RSP]
+ MOV rsi, Structure.SaveRegs.SaveRsi[RSP]
+ MOV rbp, Structure.SaveRegs.SaveRbp[RSP]
+ENDM
+
+SAVE_COMPLETE_XMM_REGS MACRO Structure
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm0[RSP], xmm0
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm1[RSP], xmm1  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm2[RSP], xmm2  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm3[RSP], xmm3  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm4[RSP], xmm4  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm5[RSP], xmm5  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm6[RSP], xmm6  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm7[RSP], xmm7  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm8[RSP], xmm8  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm9[RSP], xmm9  
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm10[RSP], xmm10 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm11[RSP], xmm11 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm12[RSP], xmm12 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm13[RSP], xmm13 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm14[RSP], xmm14 
+ MOVAPS  Structure.SaveXmmRegs.SaveXmm15[RSP], xmm15 
+ENDM
+
+RESTORE_COMPLETE_XMM_REGS MACRO Structure
+ MOVAPS  xmm0, Structure.SaveXmmRegs.SaveXmm0[RSP]
+ MOVAPS  xmm1, Structure.SaveXmmRegs.SaveXmm1[RSP]
+ MOVAPS  xmm2, Structure.SaveXmmRegs.SaveXmm2[RSP]
+ MOVAPS  xmm3, Structure.SaveXmmRegs.SaveXmm3[RSP]
+ MOVAPS  xmm5, Structure.SaveXmmRegs.SaveXmm4[RSP]
+ MOVAPS  xmm6, Structure.SaveXmmRegs.SaveXmm5[RSP]
+ MOVAPS  xmm6, Structure.SaveXmmRegs.SaveXmm6[RSP]
+ MOVAPS  xmm7, Structure.SaveXmmRegs.SaveXmm7[RSP]
+ MOVAPS  xmm8, Structure.SaveXmmRegs.SaveXmm8[RSP]
+ MOVAPS  xmm9, Structure.SaveXmmRegs.SaveXmm9[RSP]
+ MOVAPS  xmm10, Structure.SaveXmmRegs.SaveXmm10[RSP]
+ MOVAPS  xmm11, Structure.SaveXmmRegs.SaveXmm11[RSP]
+ MOVAPS  xmm12, Structure.SaveXmmRegs.SaveXmm12[RSP]
+ MOVAPS  xmm13, Structure.SaveXmmRegs.SaveXmm13[RSP]
+ MOVAPS  xmm14, Structure.SaveXmmRegs.SaveXmm14[RSP]
+ MOVAPS  xmm15, Structure.SaveXmmRegs.SaveXmm15[RSP]
+ENDM
+
+public Engine_Debug
 
 NESTED_FUNCTIONS_FOR_DEBUG EQU <10>
 
@@ -92,17 +229,17 @@ GlobalDemoStructure  dq ?
  SaveRbpRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveRspRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
 
- SaveXmm6Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm7Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm8Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm9Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm10Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm11Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm12Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm13Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm14Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm15Register     xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- CompareXmmRegister    xmmword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm6Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm7Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm8Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm9Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm10Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm11Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm12Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm13Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm14Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm15Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ CompareXmmRegister    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SpecialSaveRegister1    dq ?
  SpecialSaveRegister2    dq ?
 
@@ -208,7 +345,42 @@ NESTED_ENTRY Engine_Free, _TEXT$00
   RET
 NESTED_END Engine_Free, _TEXT$00
 
+;*********************************************************
+;  Engine_Debug
+;
+;        Parameters: Format String, ...
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Engine_Debug, _TEXT$00
+ PUSHFQ
+ alloc_stack(SIZEOF ENGINE_SAVE_TOTAL - 8)
+.ENDPROLOG 
+ SAVE_COMPLETE_XMM_REGS  ENGINE_SAVE_TOTAL
+ SAVE_COMPLETE_STD_REGS  ENGINE_SAVE_TOTAL
 
+  ENGINE_DEBUG_RSP_CHECK_MACRO
+  ;MOV ENGINE_SAVE_TOTAL_FUNC.Func.Param1[RSP], RCX  Caller to use Parameters Instead of Regiters.
+  ;MOV ENGINE_SAVE_TOTAL_FUNC.Func.Param2[RSP], RDX
+  ;MOV ENGINE_SAVE_TOTAL_FUNC.Func.Param3[RSP], R8
+  ;MOV ENGINE_SAVE_TOTAL_FUNC.Func.Param4[RSP], R9
+
+  LEA R8, ENGINE_SAVE_TOTAL_FUNC.Func.Param2[RSP]
+  MOV RDX, ENGINE_SAVE_TOTAL_FUNC.Func.Param1[RSP]
+  LEA RCX, ENGINE_SAVE_TOTAL_FUNC.StringBuffer[RSP]
+  CALL vsprintf
+
+  LEA RCX, ENGINE_SAVE_TOTAL_FUNC.StringBuffer[RSP]
+  CALL OutputDebugStringA
+  
+  RESTORE_COMPLETE_STD_REGS  ENGINE_SAVE_TOTAL
+  RESTORE_COMPLETE_XMM_REGS  ENGINE_SAVE_TOTAL
+  ADD RSP, SIZEOF ENGINE_SAVE_TOTAL - 8
+  POPFQ 
+  RET
+NESTED_END Engine_Debug, _TEXT$00
 
 ;*********************************************************
 ;  Engine_Loop

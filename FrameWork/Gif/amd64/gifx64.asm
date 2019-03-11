@@ -49,6 +49,7 @@ GENERIC_READ         EQU <080000000h>
 OPEN_EXISTING        EQU <3>
 
 
+
 ;*********************************************************
 ; Macros  
 ;*********************************************************
@@ -158,7 +159,7 @@ PACKED_BLOCK ends
 RASTER_DATA struct
    CodeSize       db ?
    NumberOfBlocks dd ?
-   PackBlocksPtr  dq PACK_BLOCK_PTR_ARRAY  DUP(<?>)
+   PackBlocksPtr  dq PACK_BLOCK_PTR_ARRAY  DUP({})
 RASTER_DATA ends
 
 
@@ -190,7 +191,7 @@ DECODE_STRING_TABLE struct
    CurrentPixel        dd ?
    ImageWidth          dd ?
    ImageBuffer32bppPtr dq ?
-   ImagePalettePtr     GIFRGB <?>
+   ImagePalettePtr     dq ?
    ImageX              dd ?
    ImageY              dd ?
    ImageStartLeft      dd ? 
@@ -208,7 +209,14 @@ GIF_INTERNAL struct
    ImageData            IMAGE_DATA NUMBER_OF_IMAGES DUP(<?>)
 GIF_INTERNAL ends
 
-
+STD_FUNCTION_STRING_LOCALS_STACK struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    FrontString STRING_TABLE              {}
+    BackString  STRING_TABLE              {}
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    ; Padding     dq                         ?
+STD_FUNCTION_STRING_LOCALS_STACK ends
 
 public Gif_Open
 public Gif_Close
@@ -219,9 +227,14 @@ public Gif_GetImageHeight
 public Gif_GetImage32bpp
 
 .DATA
-
+;GifEntryString db "Gif_AddNewEntry(%x, %x)",10, 13, 0
+;GifRetriveCode db "%x = Gif_RetrieveCodeWord( bit = %i, new bit = %i)",10, 13, 0
+ProcessNewCode db "Gif_ProcessNewCode( Last = %x, New = %x)",10, 13, 0
+;GifRetriveCode2 db "Gif_RetrieveCodeWord( Packed Block %x CurrentCodeBits %x blockaddress %p)", 13, 10, 0
+PlotPixel db "Pixel = %x",10, 13, 0
    
-
+FirstAvailable db "First Available %x, LastCode %x, NewCodeWord %x", 13, 10, 0
+StringTableRef db "String Table Number %i", 10, 13, 0
 .CODE
 
 
@@ -235,8 +248,8 @@ public Gif_GetImage32bpp
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_Open, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
 DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				; Gif File Name
@@ -284,8 +297,8 @@ DEBUG_RSP_CHECK_MACRO
 @DoNotDeAllocate:
 @SuccessExit:
   
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END Gif_Open, _TEXT$00
@@ -302,8 +315,8 @@ NESTED_END Gif_Open, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_Close, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				
@@ -313,8 +326,8 @@ NESTED_ENTRY Gif_Close, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL LocalFree
     
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END Gif_Close, _TEXT$00
@@ -331,8 +344,8 @@ NESTED_END Gif_Close, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_CloseFile, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				
@@ -382,8 +395,8 @@ NESTED_ENTRY Gif_CloseFile, _TEXT$00
 
 @SkipFreeingFileHandle:
     
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END Gif_CloseFile, _TEXT$00
@@ -400,8 +413,8 @@ NESTED_END Gif_CloseFile, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   
@@ -485,8 +498,8 @@ NESTED_ENTRY Gif_OpenAndValidateFile, _TEXT$00
   MOV EAX, 1
   
 @FinalExit: 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_OpenAndValidateFile, _TEXT$00
 
@@ -709,8 +722,8 @@ NESTED_END Gif_ParseFile, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_ParsePackedBlock, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				
@@ -760,8 +773,8 @@ NESTED_ENTRY Gif_ParsePackedBlock, _TEXT$00
   ;
   MOV RAX, R9
   
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END Gif_ParsePackedBlock, _TEXT$00
@@ -846,8 +859,8 @@ NESTED_END Gif_GetImageSize, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   XOR RAX, RAX
@@ -858,7 +871,7 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
   MOV RDI, R8
   MOV RBX, RDX
 
-  CMP GIF_INTERNAL.NumberOfImages[RCX], EDX
+  CMP EDX, GIF_INTERNAL.NumberOfImages[RCX]
   JAE @IndexTooHigh
     ;
     ; Pass through parameters, they have not yet been destroyed.
@@ -903,8 +916,8 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
   MOV EAX, 1
 
 @IndexTooHigh:
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_GetImage32bpp, _TEXT$00
 
@@ -920,8 +933,8 @@ NESTED_END Gif_GetImage32bpp, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_SetBackgroundColor, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -948,8 +961,8 @@ NESTED_ENTRY Gif_SetBackgroundColor, _TEXT$00
   JB @SetBackgroundColor
 @BackgroundComplete:
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_SetBackgroundColor, _TEXT$00
 
@@ -964,8 +977,8 @@ NESTED_END Gif_SetBackgroundColor, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_GetPaletteColorByIndex, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   LEA R9, GIF_INTERNAL.ImageData[RCX]
@@ -1005,10 +1018,10 @@ NESTED_ENTRY Gif_GetPaletteColorByIndex, _TEXT$00
   SHL EAX, 16
   MOV AL, BYTE PTR [RDX+1]            ; Green
   SHL AX, 8
-  MOV AL, BYTE PTR [RAX+2]            ; Blue
+  MOV AL, BYTE PTR [RDX+2]            ; Blue
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_GetPaletteColorByIndex, _TEXT$00
 
@@ -1023,8 +1036,8 @@ NESTED_END Gif_GetPaletteColorByIndex, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_InitializeStringTable, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -1055,8 +1068,8 @@ NESTED_ENTRY Gif_InitializeStringTable, _TEXT$00
   MOVZX EAX, IMAGE_DESCRIPTOR.ImageWidth[RCX]
   MOV DECODE_STRING_TABLE.ImageWidth[RBX], EAX
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_InitializeStringTable, _TEXT$00
 
@@ -1070,8 +1083,8 @@ NESTED_END Gif_InitializeStringTable, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_Decode, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX                                                                  ; RSI = GIF_INTERNAL
@@ -1083,12 +1096,28 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   
   MOV RDX, SIZE DECODE_STRING_TABLE
   MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalALloc
+  DEBUG_FUNCTION_CALL LocalAlloc
 
   CMP RAX, 0
   JE @Failed
   MOV STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], RAX                       ; Save the String Decode in a Local Variable
-  
+
+  ;
+  ; Allocate String Table Pointer
+  ;
+  MOV RDX, SIZE STRING_TABLE*STRING_TABLE_SIZE
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JE @DeallocateStringDecode
+
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV DECODE_STRING_TABLE.StringTableListPtr[RCX], RAX
+
+  ;
+  ; Set RAX to DECODE_STRING_TABLE
+  ;
+  MOV RAX, RCX
   ;
   ; Initialize the String Decode Table
   ;
@@ -1115,9 +1144,8 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
 @UseGlobalMap:
   MOV RCX, GIF_INTERNAL.GlobalColorMapPtr[RSI]
 @UpdateColorMap:
-  MOV DECODE_STRING_TABLE.ImagePalettePtr[RAX], RCX
-  
-  MOV R8,RAX
+  MOV R8,STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV DECODE_STRING_TABLE.ImagePalettePtr[R8], RCX
   MOV RDX,RDI
   MOV RCX,RSI
   DEBUG_FUNCTION_CALL Gif_InitializeStringTable
@@ -1130,17 +1158,15 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   ; Build the Raster Block Size
   ;
   XOR R8, R8
+  LEA RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
+
 @NextRasterBlockSize:
   CMP R8D, IMAGE_DATA.RasterData.NumberOfBlocks[RDI]
   JAE @FinishedRasterBlocks
-
-  MOV R9, R8
-  SHL R9, 4
-  MOV RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
-  ADD RDX, R9
-  MOVZX ECX, PACKED_BLOCK.BlockByteCount[RDX]
-
+  MOV R9, QWORD PTR [RDX]
+  MOVZX ECX, PACKED_BLOCK.BlockByteCount[R9]
   ADD DECODE_STRING_TABLE.RasterDataSize[RAX], ECX
+  ADD RDX, 8
   INC R8
   JMP @NextRasterBlockSize
 @FinishedRasterBlocks:
@@ -1149,17 +1175,16 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
   CMP RAX, 0
-  JE @DeallocateStringDecode
+  JE @DeallocateStringTableDecode
 
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV DECODE_STRING_TABLE.RasterDataBufferPtr[RCX], RAX
 
-  XOR R13, R13     
-                               ; Non-Volatile Counter
-
+  XOR R13, R13     ; Non-Volatile Counter
+                               
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-  MOV R15, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
-
+  MOV R15, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]                 ; R15 = Raster Table
+  int 3
 @MemoryCopyUpdater:
   CMP R13D, IMAGE_DATA.RasterData.NumberOfBlocks[RDI]
   JAE @CopyComplete
@@ -1167,20 +1192,19 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   MOV RCX, R15
 
   MOV R9, R13
-  SHL R9, 4
-  MOV RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
+  SHL R9, 3
+  LEA RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
   ADD RDX, R9
+  MOV RDX, QWORD PTR [RDX]
+  XOR R8, R8
   MOVZX R8D, PACKED_BLOCK.BlockByteCount[RDX]
   LEA RDX, PACKED_BLOCK.DataBytes[RDX]
-  
+
+  ADD R15, R8
   DEBUG_FUNCTION_CALL memcpy
 
-  MOV R9, R13
-  SHL R9, 4
-  MOV RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RDI]
-  ADD RDX, R9
-  MOVZX R8D, PACKED_BLOCK.BlockByteCount[RDX]
-  ADD R15, R8
+  INC R13
+  JMP @MemoryCopyUpdater
 
 @CopyComplete:
   MOV R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
@@ -1192,12 +1216,19 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
   DEBUG_FUNCTION_CALL LocalFree
+
+@DeallocateStringTableDecode:
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RCX]
+  DEBUG_FUNCTION_CALL LocalFree
+
 @DeallocateStringDecode:
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   DEBUG_FUNCTION_CALL LocalFree
+
 @Failed:
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_Decode, _TEXT$00
 
@@ -1215,8 +1246,8 @@ NESTED_END Gif_Decode, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX   ; GIF_INTERNAL        (RSI)
@@ -1247,12 +1278,12 @@ NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
   JMP  @DoneProcessingNewCode
 @NotAClearCode:
   CMP EAX, DECODE_STRING_TABLE.EndOfInformation[RBX]
-  JE @FinishedDecoding
+  JE @BitIncrementLoop
 
   MOV R8, RAX
   MOV EDX, DECODE_STRING_TABLE.LastCodeWord[RBX]
   MOV RCX, RBX
- ; DEBUG_FUNCTION_CALL Gif_ProcessNewCode
+  DEBUG_FUNCTION_CALL Gif_ProcessNewCode
    
   CMP RAX, 0
   JE @UpdateLastWord
@@ -1268,7 +1299,6 @@ NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
   MOV EAX, DECODE_STRING_TABLE.NewCodeWord[RBX]
   MOV DECODE_STRING_TABLE.LastCodeWord[RBX], EAX
 @DoneProcessingNewCode:
-  XOR R8, R8
 @BitIncrementLoop:  
   CMP DECODE_STRING_TABLE.BitIncrement[RBX], 8
   JB @CompleteBitIncrementLoop
@@ -1281,8 +1311,8 @@ NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
   JMP @DecodePackedBlockLoop
 @FinishedDecoding:
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_DecodePackedBlock, _TEXT$00
 
@@ -1297,8 +1327,8 @@ NESTED_END Gif_DecodePackedBlock, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_RetrieveCodeWord, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -1313,17 +1343,36 @@ NESTED_ENTRY Gif_RetrieveCodeWord, _TEXT$00
   SHL EAX, CL
   SUB EAX,1             ; ((1<<CurrentCodeBits)-1)
 
+
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], RCX
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param4[RSP], R8
+;  MOV ECX, DWORD PTR [R8]
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RCX
+;  MOV RCX, OFFSET GifRetriveCode2
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
+;  CALL Engine_Debug
+
   AND EAX, R9D          ; New Code Word  = ((1<<CurrentCodeBits)-1) & (PackedBlock >>BitIncrmenet)
-   
+
+  MOV ECX, [RDX]
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], RCX
   ADD DWORD PTR [RDX], R11D
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+;  MOV ECX, [RDX]
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param4[RSP], RCX
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RAX
+;  MOV RCX, OFFSET GifRetriveCode
+;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
+;  CALL Engine_Debug
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_RetrieveCodeWord, _TEXT$00
 
 
-;*********************************************************
+ 
+;***********************************
 ;   Gif_ProcessNewCode
 ;
 ;        Parameters: Decode String Table, LastCodeWord, NewCodeWord
@@ -1333,79 +1382,197 @@ NESTED_END Gif_RetrieveCodeWord, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RCX          ; RBX is Decode String Table
+
+  MOV RAX, OFFSET ProcessNewCode
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RAX
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RDX
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], R8
+  CALL Engine_Debug
 
   CMP R8D, DECODE_STRING_TABLE.ClearCode[RBX]
-  JB @NewCodeWord_LessThanClearCode
+  JAE @NewCodeWord_EqualOrGreater
+
+     MOV RCX, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
+
+     MOV R10, R8
+     SHL R10, 1
+     ADD R10, R8                        ; 2^0 + 2^1 = 3*n
+     ADD RCX, R10
+
+     XOR RAX, RAX                       ; Create Pixel
+     MOV AL, BYTE PTR [RCX]
+     SHL EAX, 16
+     MOV AL, BYTE PTR [RCX+1]
+     SHL AX, 8
+     MOV AL, BYTE PTR [RCX+2]
+
+     ;
+     ; Update Pixel On Screen and Increment Current Pixel
+     ;
+     MOV RCX, DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX]
+     MOV R10D, DECODE_STRING_TABLE.CurrentPixel[RBX]
+     SHL R10D, 2                                                ; Need to Multiply by 4* to get to DWORD
+     ADD RCX, R10
+     MOV DWORD PTR [RCX], EAX
+
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RAX
+  MOV RAX, OFFSET PlotPixel
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RAX
+  MOV RAX, STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP]
+  CALL Engine_Debug
 
 
-  JMP @ExitFunction
-@NewCodeWord_LessThanClearCode:
+     INC DECODE_STRING_TABLE.CurrentPixel[RBX]
 
+     MOV R10D, DECODE_STRING_TABLE.ImageWidth[RBX]
+
+     CMP DECODE_STRING_TABLE.CurrentPixel[RBX], R10D
+     JB @SkipStrideUpdateWidth
+
+     ;
+     ; Update Image Buffer to point to the next screen line. and reset pixel counter
+     ;
+     MOV RCX, DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX]
+     MOV R11D, DECODE_STRING_TABLE.Stride[RBX]
+     ADD R10, R11
+     SHL R10, 2                                 ; Need to multiply by 4 since this is 32 bit color
+     ADD RCX, R10
+     MOV DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX], RCX
+     MOV DECODE_STRING_TABLE.CurrentPixel[RBX], 0
+
+@SkipStrideUpdateWidth:
+
+     XOR RAX, RAX                                       ; Return FALSE unless updated below
+     ;
+     ;  Compare Last Code word with Clear Code.
+     ;
+     CMP EDX, DECODE_STRING_TABLE.ClearCode[RBX]
+     JE @ExitFunction
+
+     ;
+     ; R8 and RDX should be preserved so pass them through.
+     ;
+     MOV RCX, RBX
+     DEBUG_FUNCTION_CALL Gif_AddNewEntry
+
+     ;
+     ; Return RAX to caller.
+     ;
+     JMP @ExitFunction
+;
+; Else Code Path
+;
+@NewCodeWord_EqualOrGreater:
+     ;
+     ; Need to preserve NewCodeWord
+     ;
+     MOV R12, R8
+     ;
+     ; Pass through paramters have not been modified yet.
+     ;
+     DEBUG_FUNCTION_CALL Gif_AddNewEntry
+     ;
+     ; Preserve RAX to return to caller!
+     ;
+     XOR R8, R8
+     MOV EDX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+     MOV R10, R12
+     SUB R10, RDX                               ; NewCode - First Available
+     MOV RSI, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+     SHL R10, 3
+     ADD RSI, R10
+
+
+
+  MOV ECX, STRING_TABLE.StringLength[RSI]
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RCX
+  MOV RCX, OFFSET StringTableRef
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
+  CALL Engine_Debug
+     ;
+     ; RSI = STRING_TABLE[Index]
+     ;
+     ; DO NOT MODIFY RAX it is the return value!
+     ;
+@PixelUpdateScreenLoop:
+     CMP R8D, STRING_TABLE.StringLength[RSI]
+     JAE @ExitFunction
+
+     ;
+     ; Get Pixel from Look up Table
+     ;
+     LEA RDX, STRING_TABLE.DecodeString[RSI]
+     ADD RDX, R8
+     XOR RCX, RCX
+     MOV CL, BYTE PTR [RDX]
+     MOV R10, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
+     ADD R10, RCX
+     SHL RCX, 1
+     ADD R10, RCX
+
+     MOV CL, BYTE PTR [R10]
+     SHL ECX, 16
+     MOV CL, BYTE PTR [R10+1]
+     SHL CX, 8
+     MOV CL, BYTE PTR [R10+2]
+
+     ;
+     ; Update Pixel On Screen and Increment Current Pixel
+     ;
+     MOV R9, DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX]
+     MOV R10D, DECODE_STRING_TABLE.CurrentPixel[RBX]
+     SHL R10, 2                                         ; Need to multiply by 4 to get correct 32 bit color
+     ADD R9, R10
+     MOV DWORD PTR [R9], ECX
+
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RCX
+  MOV RCX, OFFSET PlotPixel
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
+  MOV RCX, STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP]
+  CALL Engine_Debug
+
+     INC DECODE_STRING_TABLE.CurrentPixel[RBX]
+     INC DECODE_STRING_TABLE.ImageX[RBX]
+     INC R8                                     ; Incremet Current Index for next itteration
+
+     ;
+     ; Check Pixel Bounds
+     ;
+     MOV R10D, DECODE_STRING_TABLE.ImageWidth[RBX]
+     CMP DECODE_STRING_TABLE.CurrentPixel[RBX], R10D
+     JB @PixelUpdateScreenLoop
+
+     ;
+     ; Our Pixel Location is now out of bounds, so we need to fix it up.
+     ;
+     MOV RCX, DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX]
+     MOV R11D, DECODE_STRING_TABLE.Stride[RBX]
+     ADD R10, R11
+     SHL R10, 2                                         ; Needt to mulitpy by 4 to get correct color.
+     ADD RCX, R10
+     MOV DECODE_STRING_TABLE.CurrentPixel[RBX], 0
+     MOV DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX], RCX
+     
+     MOV ECX, DECODE_STRING_TABLE.ImageStartLeft[RBX]
+     MOV DECODE_STRING_TABLE.ImageX[RBX], ECX
+
+     INC DECODE_STRING_TABLE.ImageY[RBX]
+     
+     JMP @PixelUpdateScreenLoop
+
+@ExitLoopComplete:
 @ExitFunction:
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Gif_ProcessNewCode, _TEXT$00
 
 
-
-
-
-BOOL WINAPI Gif_ProcessNewCode(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord)
-{
-	DWORD Pixel;
-	BOOL ReinitializeStringTable = FALSE;
-
-	if(NewCodeWord < pDecodeStringTable->ClearCode)
-	{
-		Pixel = Gif_GetPaletteColorByIndexSpecifyPalette(pDecodeStringTable->pImagePalette, NewCodeWord);
-		pDecodeStringTable->pImageBuffer32bpp[pDecodeStringTable->CurrentPixel] = Pixel;
-		pDecodeStringTable->CurrentPixel++;
-
-		if(pDecodeStringTable->CurrentPixel >= pDecodeStringTable->ImageWidth)
-		{
-			pDecodeStringTable->pImageBuffer32bpp += pDecodeStringTable->Stride + pDecodeStringTable->ImageWidth;
-			pDecodeStringTable->CurrentPixel = 0;
-		}
-
-		if(LastCodeWord != pDecodeStringTable->ClearCode)
-		{
-			ReinitializeStringTable = Gif_AddNewEntry(pDecodeStringTable, LastCodeWord, NewCodeWord);			
-		}
-	}
-	else
-	{	
-		UINT PixelIndex;
-		
-		ReinitializeStringTable = Gif_AddNewEntry(pDecodeStringTable, LastCodeWord, NewCodeWord);		
-
-		for(PixelIndex = 0; PixelIndex < pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].Length; PixelIndex++)
-		{
-			Pixel = Gif_GetPaletteColorByIndexSpecifyPalette(pDecodeStringTable->pImagePalette, pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].DecodeString[PixelIndex]);
-			pDecodeStringTable->pImageBuffer32bpp[pDecodeStringTable->CurrentPixel] = Pixel;
-			pDecodeStringTable->CurrentPixel++;
-			pDecodeStringTable->ImageX++;
-
-			
-			if(pDecodeStringTable->CurrentPixel >= pDecodeStringTable->ImageWidth)
-			{
-				pDecodeStringTable->pImageBuffer32bpp += pDecodeStringTable->Stride + pDecodeStringTable->ImageWidth;
-				pDecodeStringTable->CurrentPixel = 0;
-				
-				pDecodeStringTable->ImageX = pDecodeStringTable->ImageStartLeft;
-				pDecodeStringTable->ImageY++;
-			}
-			
-		}
-	}
-
-	return ReinitializeStringTable;
-}
 
 
 ;*********************************************************
@@ -1418,92 +1585,200 @@ BOOL WINAPI Gif_ProcessNewCode(PDECODE_STRING_TABLE pDecodeStringTable, UINT Las
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK_PARAMS)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
+  alloc_stack(SIZEOF STD_FUNCTION_STRING_LOCALS_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STRING_LOCALS_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  XOR R12, R12                                  ; R12 will hold the return value of TRUE or FALSE
+  MOV RBX, RCX                                  ; RBX will hold the DECODE_STRING_TABLE
+  MOV RDI, R8                                   ; RDI will hold the NewCOdeWord
+  MOV RSI, RDX                                  ; RSI will hold the LastCOdeWord
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
-  ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 0
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 0
+  
+  MOV RAX, OFFSET FirstAvailable 
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RAX
+  MOV EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]   
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RAX
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], RDX
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param4[RSP], R8
+  CALL Engine_Debug
+
+  CMP EDI, DECODE_STRING_TABLE.ClearCode[RBX]   
+  JB @UpdateBackStringWIthNewCodeWord
+    
+  MOV ECX, EDI
+  SUB ECX, DECODE_STRING_TABLE.FirstAvailable[RBX] 
+  CMP ECX, DECODE_STRING_TABLE.CurrentIndex[RBX] 
+  JAE @CheckLastCodeWord
+
+  ;
+  ; Use the index to the string table to update the Back String decode.
+  ; 
+  MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  SHL ECX, 3
+  ADD RDX, RCX
+  LEA R8, STRING_TABLE.DecodeString[RDX]
+  MOV CL, BYTE PTR [R8]
+  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
+  MOV BYTE PTR [R8], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
+  JMP @CheckClearAndLastCode
+  
+@UpdateBackStringWIthNewCodeWord:
+  ;
+  ; Update BackString with newCodeword
+  ;
+  MOV RCX, RDI
+  LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
+  MOV BYTE PTR [RCX], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
+
+@CheckClearAndLastCode:
+   
+  ;
+  ; Check if LastCodeWord and ClearCode.
+  ;
+  CMP ESI, DECODE_STRING_TABLE.ClearCode[RBX]  
+  JAE @PerformMemCopyToFrontString
+
+  MOV RCX, RSI
+  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
+  MOV BYTE PTR [R8], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 1
+
+  JMP @UpdateStringDecodeBuffersWithMemCopy
+@PerformMemCopyToFrontString:
+   ;
+   ; Copy Last Word Index String Table to FrontString.
+   ;   
+   LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString[RSP]
+   MOV R8, SIZE STRING_TABLE
+   MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+   MOV RAX, RSI
+   SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+   SHL RAX, 3
+   ADD RDX, RAX
+   DEBUG_FUNCTION_CALL memcpy
+
+  JMP @UpdateStringDecodeBuffersWithMemCopy
+
+@CheckLastCodeWord:
+  ;
+  ; Check if LastCodeWord and ClearCode.
+  ;
+  CMP ESI, DECODE_STRING_TABLE.ClearCode[RBX]  
+  JAE @UpdateBackStringAndMemCpy
+
+  ;
+  ;  Update Front and Back string to use Last Code Word
+  ;
+
+  MOV RCX, RSI
+  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
+  MOV BYTE PTR [R8], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
+
+  MOV RCX, RSI
+  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
+  MOV BYTE PTR [R8], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 1
+
+  JMP @UpdateStringDecodeBuffersWithMemCopy
+@UpdateBackStringAndMemCpy:
+
+  MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV RAX, RSI
+  SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+  SHL RAX, 3
+  ADD RDX, RAX
+  LEA RDX, STRING_TABLE.DecodeString[RDX]
+  MOV CL, BYTE PTR [RDX]
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
+
+  LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString[RSP]
+  MOV R8, SIZE STRING_TABLE
+
+  MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV RAX, RSI
+  SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+  SHL RAX, 3
+  ADD RDX, RAX
+  DEBUG_FUNCTION_CALL memcpy
+
+@UpdateStringDecodeBuffersWithMemCopy:
+  MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
+  LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
+
+  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  SHL EAX, 3
+  ADD RCX, RAX
+  LEA RCX, STRING_TABLE.DecodeString[RCX]
+  DEBUG_FUNCTION_CALL memcpy
+
+
+  MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
+  LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
+
+  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  SHL EAX, 3
+  ADD RCX, RAX
+  LEA RCX, STRING_TABLE.DecodeString[RCX]
+  MOV R9D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
+  ADD RCX, R9
+  DEBUG_FUNCTION_CALL memcpy
+
+  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  SHL EAX, 3
+  ADD RCX, RAX
+  MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
+  MOV STRING_TABLE.StringLength[RCX], EAX
+  MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
+  ADD STRING_TABLE.StringLength[RCX], EAX
+  CMP EAX, 500
+  JB @noIssue
+  int 3
+@noIssue:
+  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV EDX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  SHL RDX, 3
+  ADD RCX, RDX
+
+@NoOutOfBounds:
+  MOV ECX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  ADD ECX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+  CMP ECX, STRING_TABLE_SIZE
+  JB @StringTableWithinBounds
+      MOV R12, 1                           ; need to re-initialize string tabel
+
+@StringTableWithinBounds:
+
+  INC DECODE_STRING_TABLE.CurrentIndex[RBX]
+  INC RCX
+  MOV RAX, RCX
+  MOV ECX, DECODE_STRING_TABLE.CurrentCodeBits[RBX]
+  MOV EDX, 1
+  SHL EDX, CL
+  CMP EAX, EDX
+  JNE @ExitFunction
+
+  CMP DECODE_STRING_TABLE.CurrentCodeBits[RBX], 12
+  JAE @ExitFunction
+
+  INC DECODE_STRING_TABLE.CurrentCodeBits[RBX]
+
+@ExitFunction:
+  MOV RAX, R12
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STRING_LOCALS_STACK
+  ADD RSP, SIZE STD_FUNCTION_STRING_LOCALS_STACK
   RET
 NESTED_END Gif_AddNewEntry, _TEXT$00
-.
-BOOL WINAPI Gif_AddNewEntry(PDECODE_STRING_TABLE pDecodeStringTable, UINT LastCodeWord, UINT NewCodeWord)
-{
-	STRING_TABLE FrontString;
-	STRING_TABLE BackString;
-	BOOL ReinitializeStringTable = FALSE;
 
-	if(NewCodeWord < pDecodeStringTable->ClearCode || CODE_TO_INDEX(NewCodeWord,pDecodeStringTable) < pDecodeStringTable->CurrentIndex)
-	{
-		if(NewCodeWord < pDecodeStringTable->ClearCode)
-		{
-			BackString.DecodeString[0] = (UCHAR)NewCodeWord;
-			BackString.Length          = 1;
-		}
-		else
-		{
-			BackString.DecodeString[0] = pDecodeStringTable->StringTable[CODE_TO_INDEX(NewCodeWord, pDecodeStringTable)].DecodeString[0];
-			BackString.Length          = 1;
-		}
-
-		if(LastCodeWord < pDecodeStringTable->ClearCode)
-		{
-			FrontString.DecodeString[0] = (UCHAR)LastCodeWord;
-			FrontString.Length          = 1;
-		}
-		else
-		{
-			memcpy(&FrontString, &pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)], sizeof(STRING_TABLE));
-		}
-	}
-	else
-	{
-		if(LastCodeWord < pDecodeStringTable->ClearCode)
-		{
-			BackString.DecodeString[0] = (UCHAR)LastCodeWord;
-			BackString.Length          = 1;
-
-            FrontString.DecodeString[0] = (UCHAR)LastCodeWord;
-			FrontString.Length          = 1;
-		}
-		else
-		{
-			BackString.DecodeString[0] = pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)].DecodeString[0];
-			BackString.Length          = 1;
-
-			memcpy(&FrontString, &pDecodeStringTable->StringTable[CODE_TO_INDEX(LastCodeWord, pDecodeStringTable)], sizeof(STRING_TABLE));
-		}
-	}
-
-	memcpy(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].DecodeString, FrontString.DecodeString, FrontString.Length);
-	memcpy(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].DecodeString + FrontString.Length, BackString.DecodeString, BackString.Length);
-	pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].Length = FrontString.Length + BackString.Length;
-    
-	if(pDecodeStringTable->StringTable[pDecodeStringTable->CurrentIndex].Length >= 4096)
-	{
-		DebugBreak();
-	}
-
-	if(INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable) == 4096)
-	{
-		ReinitializeStringTable = TRUE;
-		DEBUGPRINT2(" Re-Initialize String Table %i %i\n", pDecodeStringTable->CurrentIndex, INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable));
-	}
-
-	pDecodeStringTable->CurrentIndex++; 
-
-	if(INDEX_TO_CODE(pDecodeStringTable->CurrentIndex, pDecodeStringTable) == (UINT)pow(2, pDecodeStringTable->CurrentCodeBits))
-	{
-		if(pDecodeStringTable->CurrentCodeBits < 12)
-		{
-			pDecodeStringTable->CurrentCodeBits++;
-		}
-		DEBUGPRINT2(" Code Bits Increase %i\n", pDecodeStringTable->CurrentCodeBits);
-	}
-
-	return ReinitializeStringTable;
-}
 
 
 

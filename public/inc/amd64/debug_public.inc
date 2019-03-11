@@ -28,6 +28,12 @@ extern Engine_PreFunctionCall:proc
 extern Engine_PostFunctionCall: proc
 
 ;
+; Special Debug saves all registers so you can easily put
+; printfs in without worrying about what volatile registers are used.
+;  DO NOT USE WITH DEBUG_FUNCTION_CALL !!  
+;
+extern Engine_Debug:proc
+;
 ; Debug Enabled Function Calls
 ;
 IF DEBUG_IS_ENABLED 
