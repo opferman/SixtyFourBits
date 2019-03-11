@@ -182,7 +182,7 @@ DECODE_STRING_TABLE struct
    CurrentIndex        dd ?
    CurrentCodeBits     dd ?
    Stride              dd ?
-   StringTableListPtr  dq ?   
+   StringTableList     STRING_TABLE STRING_TABLE_SIZE DUP({})
    LastCodeWord        dd ?
    NewCodeWord         dd ?
    BitIncrement        dd ?
@@ -1103,22 +1103,6 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   MOV STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], RAX                       ; Save the String Decode in a Local Variable
 
   ;
-  ; Allocate String Table Pointer
-  ;
-  MOV RDX, SIZE STRING_TABLE*STRING_TABLE_SIZE
-  MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
-  CMP RAX, 0
-  JE @DeallocateStringDecode
-
-  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-  MOV DECODE_STRING_TABLE.StringTableListPtr[RCX], RAX
-
-  ;
-  ; Set RAX to DECODE_STRING_TABLE
-  ;
-  MOV RAX, RCX
-  ;
   ; Initialize the String Decode Table
   ;
   MOVZX ECX, IMAGE_DESCRIPTOR.ImageStartLeft[R14]
@@ -1218,10 +1202,6 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   DEBUG_FUNCTION_CALL LocalFree
 
 @DeallocateStringTableDecode:
-  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RCX]
-  DEBUG_FUNCTION_CALL LocalFree
-
 @DeallocateStringDecode:
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   DEBUG_FUNCTION_CALL LocalFree
@@ -1479,14 +1459,18 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      ;
      ; Preserve RAX to return to caller!
      ;
-     XOR R8, R8
+     MOV R8, RAX
+     
      MOV EDX, DECODE_STRING_TABLE.FirstAvailable[RBX]
      MOV R10, R12
      SUB R10, RDX                               ; NewCode - First Available
-     MOV RSI, DECODE_STRING_TABLE.StringTableListPtr[RBX]
-     SHL R10, 3
-     ADD RSI, R10
-
+     MOV RAX, SIZE STRING_TABLE
+     XOR RDX, RDX
+     MUL R10
+     LEA RSI, DECODE_STRING_TABLE.StringTableList[RBX]
+     ADD RSI, RAX
+     MOV RAX, R8
+     XOR R8, R8
 
 
   MOV ECX, STRING_TABLE.StringLength[RSI]
@@ -1616,9 +1600,12 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   ;
   ; Use the index to the string table to update the Back String decode.
   ; 
-  MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
-  SHL ECX, 3
-  ADD RDX, RCX
+  MOV EAX, SIZE STRING_TABLE
+  XOR RDX, RDX
+  MUL ECX
+  LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
+  ADD RDX, RAX
+
   LEA R8, STRING_TABLE.DecodeString[RDX]
   MOV CL, BYTE PTR [R8]
   LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
@@ -1655,10 +1642,11 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
    ;   
    LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString[RSP]
    MOV R8, SIZE STRING_TABLE
-   MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+   XOR RDX, RDX
    MOV RAX, RSI
    SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
-   SHL RAX, 3
+   MUL R8
+   LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
    ADD RDX, RAX
    DEBUG_FUNCTION_CALL memcpy
 
@@ -1688,10 +1676,12 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   JMP @UpdateStringDecodeBuffersWithMemCopy
 @UpdateBackStringAndMemCpy:
 
-  MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  XOR RDX, RDX
   MOV RAX, RSI
   SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
-  SHL RAX, 3
+  MOV RCX, SIZE STRING_TABLE
+  MUL RCX
+  LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RDX, RAX
   LEA RDX, STRING_TABLE.DecodeString[RDX]
   MOV CL, BYTE PTR [RDX]
@@ -1700,54 +1690,61 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
 
   LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString[RSP]
   MOV R8, SIZE STRING_TABLE
-
-  MOV RDX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  
   MOV RAX, RSI
   SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
-  SHL RAX, 3
+  XOR RDX, RDX
+  MUL R8
+  LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RDX, RAX
   DEBUG_FUNCTION_CALL memcpy
 
 @UpdateStringDecodeBuffersWithMemCopy:
   MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
-  LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
-
-  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  
+  XOR RDX, RDX
+  MOV R9, SIZE STRING_TABLE
   MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  SHL EAX, 3
+  MUL R9
+  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RCX, RAX
   LEA RCX, STRING_TABLE.DecodeString[RCX]
+  LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
   DEBUG_FUNCTION_CALL memcpy
 
 
   MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
-  LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
-
-  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  
+  XOR RDX, RDX
   MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  SHL EAX, 3
+  MOV R9, SIZE STRING_TABLE
+  MUL R9
+  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RCX, RAX
   LEA RCX, STRING_TABLE.DecodeString[RCX]
   MOV R9D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
   ADD RCX, R9
+  LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
   DEBUG_FUNCTION_CALL memcpy
 
-  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
+  MOV RCX, SIZE STRING_TABLE
+  XOR RDX, RDX
   MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  SHL EAX, 3
+  MUL RCX
+  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RCX, RAX
   MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
   MOV STRING_TABLE.StringLength[RCX], EAX
   MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
   ADD STRING_TABLE.StringLength[RCX], EAX
-  CMP EAX, 500
-  JB @noIssue
-  int 3
-@noIssue:
-  MOV RCX, DECODE_STRING_TABLE.StringTableListPtr[RBX]
-  MOV EDX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  SHL RDX, 3
-  ADD RCX, RDX
+  
+  XOR RDX, RDX
+  MOV RCX, SIZE STRING_TABLE
+  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  MUL RCX
+
+  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
+  ADD RCX, RAX
 
 @NoOutOfBounds:
   MOV ECX, DECODE_STRING_TABLE.CurrentIndex[RBX]
