@@ -1197,14 +1197,14 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   DEBUG_FUNCTION_CALL Gif_DecodePackedBlock
 
 @DeallocateRasterdataBuffer:
-  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-  MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
-  DEBUG_FUNCTION_CALL LocalFree
+;  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+;  MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
+;  DEBUG_FUNCTION_CALL LocalFree
 
 @DeallocateStringTableDecode:
 @DeallocateStringDecode:
-  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-  DEBUG_FUNCTION_CALL LocalFree
+;  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+;  DEBUG_FUNCTION_CALL LocalFree
 
 @Failed:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1287,7 +1287,6 @@ NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
   SUB DECODE_STRING_TABLE.BitIncrement[RBX], 8
   JMP @BitIncrementLoop
 @CompleteBitIncrementLoop:
-  INC R12
   JMP @DecodePackedBlockLoop
 @FinishedDecoding:
 
