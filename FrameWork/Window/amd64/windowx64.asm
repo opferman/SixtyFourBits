@@ -272,7 +272,7 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
   DEBUG_FUNCTION_CALL DispatchMessageA
                 
-  JMP SHORT @Windowx64_MessageLoop
+  JMP @Windowx64_MessageLoop
     
 @Windowx64_ReturnExitCode:
   ADD RSP, SIZEOF LOOP_STACK_FRAME
@@ -363,7 +363,7 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   MOV R9, WINPROG_STACK_FRAME.SaveParam4[RSP]
 
   CMP R8D, VK_ESCAPE
-  JNE SHORT @Window_DefaultWindow
+  JNE @Window_DefaultWindow
 
   DEBUG_FUNCTION_CALL DestroyWindow
   

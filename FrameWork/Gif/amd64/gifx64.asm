@@ -1002,9 +1002,9 @@ NESTED_ENTRY Gif_GetPaletteColorByIndex, _TEXT$00
 @UseGlobalColorTable:
   MOV RDX, GIF_INTERNAL.GlobalColorMapPtr[RCX]
 @ReturnColor:
-  ADD RDX, R8
-  SHL R8, 1
-  ADD RDX, R8                        ; Trick to 3*n + Address where n + n<<1 + Address.  
+  ADD RDX, RBX
+  SHL RBX, 1
+  ADD RDX, RBX                        ; Trick to 3*n + Address where n + n<<1 + Address.  
                                         ;  2^0 = 1   2^1 = 2 = 1+2 = 3
   XOR RAX, RAX
   MOV AL, BYTE PTR [RDX]              ; Red
@@ -1158,10 +1158,10 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   MOV DECODE_STRING_TABLE.RasterDataBufferPtr[RCX], RAX
 
   XOR R13, R13     ; Non-Volatile Counter
+  XOR R14, R14
                                
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV R15, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]                 ; R15 = Raster Table
-  
 @MemoryCopyUpdater:
   CMP R13D, IMAGE_DATA.RasterData.NumberOfBlocks[RDI]
   JAE @CopyComplete
@@ -1176,13 +1176,13 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   XOR R8, R8
   MOVZX R8D, PACKED_BLOCK.BlockByteCount[RDX]
   LEA RDX, PACKED_BLOCK.DataBytes[RDX]
-
+  ADD R12, R8
   ADD R15, R8
   DEBUG_FUNCTION_CALL memcpy
 
   INC R13
   JMP @MemoryCopyUpdater
-
+  
 @CopyComplete:
   MOV R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV RDX, RDI
@@ -1372,7 +1372,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      ADD RCX, R10
      MOV DWORD PTR [RCX], EAX
 
-
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
 
      MOV R10D, DECODE_STRING_TABLE.ImageWidth[RBX]
@@ -1437,7 +1436,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      ADD RSI, RAX
      MOV RAX, R8
      XOR R8, R8
-
      ;
      ; RSI = STRING_TABLE[Index]
      ;
@@ -1528,18 +1526,22 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   XOR R12, R12                                  ; R12 will hold the return value of TRUE or FALSE
+
   MOV RBX, RCX                                  ; RBX will hold the DECODE_STRING_TABLE
-  MOV RDI, R8                                   ; RDI will hold the NewCOdeWord
   MOV RSI, RDX                                  ; RSI will hold the LastCOdeWord
+  MOV RDI, R8                                   ; RDI will hold the NewCOdeWord
 
   MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 0
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 0
-
+  
   CMP EDI, DECODE_STRING_TABLE.ClearCode[RBX]   
-  JB @UpdateBackStringWIthNewCodeWord
+  JB @CreateBackStringWIthNewCode
     
-  MOV ECX, EDI
-  SUB ECX, DECODE_STRING_TABLE.FirstAvailable[RBX] 
+  ;
+  ;  Translate NewCode to an Index
+  ; 
+  MOV ECX, EDI                                          ; Move New Code
+  SUB ECX, DECODE_STRING_TABLE.FirstAvailable[RBX]      ; New Code - FirstAvailable
   CMP ECX, DECODE_STRING_TABLE.CurrentIndex[RBX] 
   JAE @CheckLastCodeWord
 
@@ -1552,20 +1554,17 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RDX, RAX
 
-  LEA R8, STRING_TABLE.DecodeString[RDX]
-  MOV CL, BYTE PTR [R8]
-  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
-  MOV BYTE PTR [R8], CL
+  MOV CL, STRING_TABLE.DecodeString[RDX]
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP], CL
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
   JMP @CheckClearAndLastCode
   
-@UpdateBackStringWIthNewCodeWord:
+@CreateBackStringWIthNewCode:
   ;
   ; Update BackString with newCodeword
   ;
   MOV RCX, RDI
-  LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
-  MOV BYTE PTR [RCX], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP], CL
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
 
 @CheckClearAndLastCode:
@@ -1577,8 +1576,7 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   JAE @PerformMemCopyToFrontString
 
   MOV RCX, RSI
-  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
-  MOV BYTE PTR [R8], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP], CL
   MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 1
 
   JMP @UpdateStringDecodeBuffersWithMemCopy
@@ -1588,16 +1586,25 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
    ;   
    LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString[RSP]
    MOV R8, SIZE STRING_TABLE
+
+   ;
+   ; Get the Index into the string table to get the right string to copy.
+   ; 
+   MOV R9D, ESI                                          
+   SUB R9D, DECODE_STRING_TABLE.FirstAvailable[RBX] 
+
+   MOV EAX, SIZE STRING_TABLE
    XOR RDX, RDX
-   MOV RAX, RSI
-   SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
-   MUL R8
+   MUL R9D
    LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
    ADD RDX, RAX
+
    DEBUG_FUNCTION_CALL memcpy
 
   JMP @UpdateStringDecodeBuffersWithMemCopy
-
+;
+; This is the ELSE routine.
+;
 @CheckLastCodeWord:
   ;
   ; Check if LastCodeWord and ClearCode.
@@ -1608,106 +1615,124 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   ;
   ;  Update Front and Back string to use Last Code Word
   ;
-
-  MOV RCX, RSI
-  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
-  MOV BYTE PTR [R8], CL
+  MOV ECX, ESI
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP], CL
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
-
-  MOV RCX, RSI
-  LEA R8, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
-  MOV BYTE PTR [R8], CL
+  MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP], CL
   MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 1
 
   JMP @UpdateStringDecodeBuffersWithMemCopy
 @UpdateBackStringAndMemCpy:
-
+  
+;
+; Get the index for the string (LastCodeWord - FirstAvailable)*SIZE STRING_TABLE
+;
   XOR RDX, RDX
   MOV RAX, RSI
   SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
   MOV RCX, SIZE STRING_TABLE
   MUL RCX
+
   LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RDX, RAX
-  LEA RDX, STRING_TABLE.DecodeString[RDX]
-  MOV CL, BYTE PTR [RDX]
+
+  ;
+  ; Copy 1 byte to backstring
+  ;
+  MOV CL, STRING_TABLE.DecodeString[RDX]
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP], CL
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 1
 
+  ;
+  ; Copy Entire String in RDX to Front String
+  ;
   LEA RCX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString[RSP]
   MOV R8, SIZE STRING_TABLE
   
-  MOV RAX, RSI
-  SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
-  XOR RDX, RDX
-  MUL R8
-  LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
-  ADD RDX, RAX
   DEBUG_FUNCTION_CALL memcpy
 
 @UpdateStringDecodeBuffersWithMemCopy:
+
+  ;
+  ; Set the size to the Front String length.
+  ;
   MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
+
   
+  ;
+  ; Get the Current StringTable Index
+  ;
   XOR RDX, RDX
   MOV R9, SIZE STRING_TABLE
   MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
   MUL R9
+  
+  ;
+  ; Perform the indexing into the table and get the address
+  ;
   LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
   ADD RCX, RAX
   LEA RCX, STRING_TABLE.DecodeString[RCX]
+  ;
+  ; Save RCX for the next round.
+  ;
+  MOV R14, RCX
+
+  ;
+  ; Set the Front String to be copied.
+  ;
   LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP]
+
   DEBUG_FUNCTION_CALL memcpy
-
-
-  MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
   
-  XOR RDX, RDX
-  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  MOV R9, SIZE STRING_TABLE
-  MUL R9
-  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
-  ADD RCX, RAX
-  LEA RCX, STRING_TABLE.DecodeString[RCX]
-  MOV R9D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
-  ADD RCX, R9
+  ;
+  ; Setup advance of String and then set BackString to be copied.
+  ;  
+  MOV RCX, R14
+  MOV R15, R14
+  MOV R14D, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
+  ADD RCX, R14
+  MOV R8D, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
   LEA RDX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.DecodeString[RSP]
   DEBUG_FUNCTION_CALL memcpy
 
-  MOV RCX, SIZE STRING_TABLE
-  XOR RDX, RDX
-  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  MUL RCX
-  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
-  ADD RCX, RAX
-  MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
-  MOV STRING_TABLE.StringLength[RCX], EAX
-  MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
-  ADD STRING_TABLE.StringLength[RCX], EAX
-  
-  XOR RDX, RDX
-  MOV RCX, SIZE STRING_TABLE
-  MOV EAX, DECODE_STRING_TABLE.CurrentIndex[RBX]
-  MUL RCX
+  ;
+  ;  Set the current string size
+  ;
 
-  LEA RCX, DECODE_STRING_TABLE.StringTableList[RBX]
-  ADD RCX, RAX
+  MOV EAX, STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP]
+  ADD EAX, STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP]
+  MOV STRING_TABLE.StringLength[R15], EAX
+
+  CMP RAX, STRING_SIZE
+  JB @NoOutOfBounds
+
+  INT 3                         ; Need to increase the static array size.
 
 @NoOutOfBounds:
+
   MOV ECX, DECODE_STRING_TABLE.CurrentIndex[RBX]
   ADD ECX, DECODE_STRING_TABLE.FirstAvailable[RBX]
   CMP ECX, STRING_TABLE_SIZE
-  JB @StringTableWithinBounds
-      MOV R12, 1                           ; need to re-initialize string tabel
+  JNE @StringTableWithinBounds
+
+  MOV R12, 1                           ; need to re-initialize string tabel
 
 @StringTableWithinBounds:
 
   INC DECODE_STRING_TABLE.CurrentIndex[RBX]
-  INC RCX
-  MOV RAX, RCX
+
+  MOV ECX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  ADD ECX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+
   MOV ECX, DECODE_STRING_TABLE.CurrentCodeBits[RBX]
   MOV EDX, 1
   SHL EDX, CL
-  CMP EAX, EDX
+
+  MOV ECX, DECODE_STRING_TABLE.CurrentIndex[RBX]
+  ADD ECX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+
+  CMP ECX, EDX
   JNE @ExitFunction
 
   CMP DECODE_STRING_TABLE.CurrentCodeBits[RBX], 12

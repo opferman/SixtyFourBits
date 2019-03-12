@@ -9,8 +9,8 @@ C_DEFINES = $(CFASTFLAGS) $(C_DEFINES) -DWIN64
 UMTYPE = windows
 INCLUDES=$(INCLUDES);..\..\public\inc;..\..\public\inc\amd64;..\..\private\inc;..\..\private\inc\amd64;..\inc;..\inc\amd64
 
-AMD64_SOURCES = gifx64.asm
-SOURCES=
+AMD64_SOURCES = gifx64.asm 
+SOURCES= 
 
 
 

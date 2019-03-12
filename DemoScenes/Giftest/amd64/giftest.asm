@@ -46,17 +46,17 @@ FRAME_COUNT_DOWN EQU <3>
 ;*********************************************************
 .DATA
 
-   FileName      db "MyGif.gif", 0
-   GifHandle     dq ?
-   ImageBufferPtr   dq ?
-   NumberOfImages   dq ?
+   FileName             db "MyGif2.gif", 0
+   GifHandle            dq ?
+   ImageBufferPtr       dq ?
+   NumberOfImages       dq ?
    ImageOffsetIncrement dq ?
-   CurrentImagePtr dq ?
-   CurrentImageIndex dq ?
-   DoubleBuffer  dq ?
-   ImageStride   dq ?
-   ScreenStride  dq ?
-   ImageFrameNumber dq ?
+   CurrentImagePtr      dq ?
+   CurrentImageIndex    dq ?
+   DoubleBuffer         dq ?
+   ImageStride          dq ?
+   ScreenStride         dq ?
+   ImageFrameNumber     dq ?
 
 .CODE
 
@@ -96,6 +96,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   ;
   MOV RCX, [GifHandle]
   DEBUG_FUNCTION_CALL Gif_GetImageSize
+  SHL RAX, 1
   MOV [ImageOffsetIncrement], RAX
   
   XOR EDX, EDX
