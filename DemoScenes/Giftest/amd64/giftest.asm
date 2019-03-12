@@ -39,6 +39,7 @@ public Gif_Init
 public Gif_Demo
 public Gif_Free
 
+FRAME_COUNT_DOWN EQU <3>
 
 ;*********************************************************
 ; Data Segment
@@ -47,10 +48,15 @@ public Gif_Free
 
    FileName      db "MyGif.gif", 0
    GifHandle     dq ?
-   ImageBuffer   dq ?
+   ImageBufferPtr   dq ?
+   NumberOfImages   dq ?
+   ImageOffsetIncrement dq ?
+   CurrentImagePtr dq ?
+   CurrentImageIndex dq ?
    DoubleBuffer  dq ?
    ImageStride   dq ?
    ScreenStride  dq ?
+   ImageFrameNumber dq ?
 
 .CODE
 
@@ -67,6 +73,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -79,13 +86,21 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   CMP RAX, 0
   JE @Failed
   MOV [GifHandle], RAX
+  
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL Gif_NumberOfImages
+  MOV [NumberOfImages], RAX
 
   ;
   ; Get the size of the image to create the buffer
   ;
-  MOV RCX, RAX
+  MOV RCX, [GifHandle]
   DEBUG_FUNCTION_CALL Gif_GetImageSize
-
+  MOV [ImageOffsetIncrement], RAX
+  
+  XOR EDX, EDX
+  MUL [NumberOfImages]
+  
   ;
   ; Allocate the Buffer
   ;
@@ -94,15 +109,25 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   DEBUG_FUNCTION_CALL LocalAlloc
   CMP RAX,0
   JE @FailedAndCloseGif
-  MOV [ImageBuffer], RAX
-
+  MOV [ImageBufferPtr], RAX
+  MOV [CurrentImagePtr], RAX
+  MOV [CurrentImageIndex], 0
+  MOV [ImageFrameNumber], FRAME_COUNT_DOWN
+  
+  XOR RBX, RBX
+  MOV RDI, [ImageBufferPtr]
+@GetImages:
   ;
   ; Decode the Image into the buffer
   ;
-  MOV R8, RAX
-  MOV RDX, 0
+  MOV R8, RDI
+  MOV RDX, RBX
   MOV RCX, [GifHandle]
   DEBUG_FUNCTION_CALL Gif_GetImage32bpp
+  ADD RDI, [ImageOffsetIncrement]
+  INC RBX
+  CMP RBX, [NumberOfImages]
+  JB @GetImages
 
   MOV RDX, 4
   MOV RCX, RSI
@@ -118,7 +143,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   MOV EAX, 1
   RET
 @FailedAndCloseGifAndDeallocate:
-  MOV RCX, [ImageBuffer]
+  MOV RCX, [ImageBufferPtr]
   DEBUG_FUNCTION_CALL LocalFree
 
 @FailedAndCloseGif:
@@ -127,6 +152,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
 @Failed:
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV RBX, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   XOR RAX, RAX
   RET
@@ -156,10 +182,22 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
 
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
-  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
-  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
   MOV RSI, RCX
+  
+  DEC [ImageFrameNumber]
+  JNZ @SkipUpdate
+  MOV [ImageFrameNumber], FRAME_COUNT_DOWN
+  INC [CurrentImageIndex]
+  MOV RAX, [ImageOffsetIncrement]
+  ADD [CurrentImagePtr], RAX
+  MOV RAX, [NumberOfImages]
+  CMP [CurrentImageIndex], RAX
+  JB @SkipUpdate
+  MOV RAX, [ImageBufferPtr]
+  MOV [CurrentImagePtr], RAX
+  MOV [CurrentImageIndex], 0
+  
+@SkipUpdate:
 
   MOV RCX, [GifHandle]
   DEBUG_FUNCTION_CALL Gif_GetImageWidth
@@ -193,7 +231,7 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
   MOV R13, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
 @NoUpdateToHeight:
   MOV RDX, [DoubleBuffer]
-  MOV R11, [ImageBuffer]
+  MOV R11, [CurrentImagePtr]
   XOR R8, R8
 @IncrementHeight:
   CMP R8, R13
@@ -219,7 +257,13 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
   XOR RDX, RDX
   MOV RCX, [DoubleBuffer]
   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+  
+
+  
   MOV RAX, 1
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]  
   MOV r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14[RSP]
   MOV r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15[RSP]
   MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]

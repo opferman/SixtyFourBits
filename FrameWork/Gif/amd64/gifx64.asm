@@ -227,14 +227,7 @@ public Gif_GetImageHeight
 public Gif_GetImage32bpp
 
 .DATA
-;GifEntryString db "Gif_AddNewEntry(%x, %x)",10, 13, 0
-;GifRetriveCode db "%x = Gif_RetrieveCodeWord( bit = %i, new bit = %i)",10, 13, 0
-ProcessNewCode db "Gif_ProcessNewCode( Last = %x, New = %x)",10, 13, 0
-;GifRetriveCode2 db "Gif_RetrieveCodeWord( Packed Block %x CurrentCodeBits %x blockaddress %p)", 13, 10, 0
-PlotPixel db "Pixel = %x",10, 13, 0
-   
-FirstAvailable db "First Available %x, LastCode %x, NewCodeWord %x", 13, 10, 0
-StringTableRef db "String Table Number %i", 10, 13, 0
+
 .CODE
 
 
@@ -884,7 +877,7 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
     MOV RAX, SIZE IMAGE_DATA
     MUL RBX
     LEA R11, GIF_INTERNAL.ImageData[RSI]
-    ADD RDX, RAX
+    ADD R11, RAX
     
     MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RSI]
     MOV RAX, IMAGE_DATA.ImageDescriptorPtr[R11]
@@ -1009,9 +1002,9 @@ NESTED_ENTRY Gif_GetPaletteColorByIndex, _TEXT$00
 @UseGlobalColorTable:
   MOV RDX, GIF_INTERNAL.GlobalColorMapPtr[RCX]
 @ReturnColor:
-  ADD RDX, RBX
-  SHL RBX, 1
-  ADD RDX, RBX                        ; Trick to 3*n + Address where n + n<<1 + Address.  
+  ADD RDX, R8
+  SHL R8, 1
+  ADD RDX, R8                        ; Trick to 3*n + Address where n + n<<1 + Address.  
                                         ;  2^0 = 1   2^1 = 2 = 1+2 = 3
   XOR RAX, RAX
   MOV AL, BYTE PTR [RDX]              ; Red
@@ -1168,7 +1161,7 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
                                
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV R15, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]                 ; R15 = Raster Table
-  int 3
+  
 @MemoryCopyUpdater:
   CMP R13D, IMAGE_DATA.RasterData.NumberOfBlocks[RDI]
   JAE @CopyComplete
@@ -1197,14 +1190,14 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   DEBUG_FUNCTION_CALL Gif_DecodePackedBlock
 
 @DeallocateRasterdataBuffer:
-;  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-;  MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
-;  DEBUG_FUNCTION_CALL LocalFree
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
+  DEBUG_FUNCTION_CALL LocalFree
 
 @DeallocateStringTableDecode:
 @DeallocateStringDecode:
-;  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
-;  DEBUG_FUNCTION_CALL LocalFree
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL LocalFree
 
 @Failed:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1323,26 +1316,12 @@ NESTED_ENTRY Gif_RetrieveCodeWord, _TEXT$00
   SUB EAX,1             ; ((1<<CurrentCodeBits)-1)
 
 
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], RCX
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param4[RSP], R8
-;  MOV ECX, DWORD PTR [R8]
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RCX
-;  MOV RCX, OFFSET GifRetriveCode2
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
-;  CALL Engine_Debug
-
   AND EAX, R9D          ; New Code Word  = ((1<<CurrentCodeBits)-1) & (PackedBlock >>BitIncrmenet)
 
   MOV ECX, [RDX]
   MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], RCX
   ADD DWORD PTR [RDX], R11D
 
-;  MOV ECX, [RDX]
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param4[RSP], RCX
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RAX
-;  MOV RCX, OFFSET GifRetriveCode
-;  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
-;  CALL Engine_Debug
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -1366,12 +1345,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX          ; RBX is Decode String Table
-
-  MOV RAX, OFFSET ProcessNewCode
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RAX
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RDX
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], R8
-  CALL Engine_Debug
 
   CMP R8D, DECODE_STRING_TABLE.ClearCode[RBX]
   JAE @NewCodeWord_EqualOrGreater
@@ -1398,12 +1371,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      SHL R10D, 2                                                ; Need to Multiply by 4* to get to DWORD
      ADD RCX, R10
      MOV DWORD PTR [RCX], EAX
-
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RAX
-  MOV RAX, OFFSET PlotPixel
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RAX
-  MOV RAX, STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP]
-  CALL Engine_Debug
 
 
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
@@ -1471,12 +1438,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      MOV RAX, R8
      XOR R8, R8
 
-
-  MOV ECX, STRING_TABLE.StringLength[RSI]
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RCX
-  MOV RCX, OFFSET StringTableRef
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
-  CALL Engine_Debug
      ;
      ; RSI = STRING_TABLE[Index]
      ;
@@ -1512,12 +1473,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      SHL R10, 2                                         ; Need to multiply by 4 to get correct 32 bit color
      ADD R9, R10
      MOV DWORD PTR [R9], ECX
-
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RCX
-  MOV RCX, OFFSET PlotPixel
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RCX
-  MOV RCX, STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP]
-  CALL Engine_Debug
 
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
      INC DECODE_STRING_TABLE.ImageX[RBX]
@@ -1579,14 +1534,6 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
 
   MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.StringLength[RSP], 0
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 0
-  
-  MOV RAX, OFFSET FirstAvailable 
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param1[RSP], RAX
-  MOV EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]   
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param2[RSP], RAX
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param3[RSP], RDX
-  MOV STD_FUNCTION_STRING_LOCALS_STACK.Parameters.Param4[RSP], R8
-  CALL Engine_Debug
 
   CMP EDI, DECODE_STRING_TABLE.ClearCode[RBX]   
   JB @UpdateBackStringWIthNewCodeWord
