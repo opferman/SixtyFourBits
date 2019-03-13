@@ -196,6 +196,7 @@ DECODE_STRING_TABLE struct
    ImageX              dd ?
    ImageY              dd ?
    ImageStartLeft      dd ? 
+   ColorIndex          dd ?
 DECODE_STRING_TABLE ends
 
 GIF_GRAPHIC_CONTROL struct
@@ -715,7 +716,7 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
 
     CMP EAX, PACK_BLOCK_PTR_ARRAY
     JB @NoArraySizeIssues
-    INT 3
+    
 @NoArraySizeIssues:
     ;
     ; Save the number of blocks created
@@ -824,7 +825,8 @@ NESTED_END Gif_ParsePackedBlock, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Gif_NumberOfImages, _TEXT$00
 .ENDPROLOG 
-  MOV EAX, GIF_INTERNAL.NumberOfImages[RCX]				
+  MOV EAX, GIF_INTERNAL.NumberOfImages[RCX]	
+  MOV EAX, 2			
   RET
 NESTED_END Gif_NumberOfImages, _TEXT$00
 
@@ -1095,6 +1097,14 @@ NESTED_ENTRY Gif_InitializeStringTable, _TEXT$00
   MOV RSI, RCX
   MOV RDI, RDX
   MOV RBX, R8
+  MOV DECODE_STRING_TABLE.ColorIndex[RBX], -1
+  CMP IMAGE_DATA.GraphicControlPtr[RDI], 0
+  JE @NoGraphicControl
+  XOR RCX, RCX
+  MOV RAX, IMAGE_DATA.GraphicControlPtr[RDI]
+  MOV CL, GIF_GRAPHIC_CONTROL.ColorIndex[RAX]
+  MOV DECODE_STRING_TABLE.ColorIndex[RBX], ECX
+@NoGraphicControl:
 
   MOV CL, IMAGE_DATA.RasterData.CodeSize[RDI]
   MOV EAX, 1
@@ -1412,19 +1422,13 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
 
     MOV RCX, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
 
-    MOV R9, IMAGE_DATA.GraphicControlPtr[R13]
-    CMP R9, 0
-    JE @NoGraphicControl
-        MOV RAX, R8
-        CMP GIF_GRAPHIC_CONTROL.ColorIndex[R9], AL
-        JE @TransparentColor
-@NoGraphicControl:
-
      MOV R10, R8
      SHL R10, 1
      ADD R10, R8                        ; 2^0 + 2^1 = 3*n
      ADD RCX, R10
 
+     CMP DECODE_STRING_TABLE.ColorIndex[RBX], R8D
+     JE @TransparentColor
      XOR RAX, RAX                       ; Create Pixel
      MOV AL, BYTE PTR [RCX]
      SHL EAX, 16
@@ -1523,12 +1527,9 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      XOR RCX, RCX
      MOV CL, BYTE PTR [RDX]
 
-     MOV R9, IMAGE_DATA.GraphicControlPtr[R13]
-     CMP R9, 0
-     JE @NoGraphicControl_Second
-        CMP GIF_GRAPHIC_CONTROL.ColorIndex[R9], CL
-        JE @TransparentColor_Second
-@NoGraphicControl_Second:
+     CMP DECODE_STRING_TABLE.ColorIndex[RBX], ECX
+     JE @TransparentColor2
+
      MOV R10, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
      ADD R10, RCX
      SHL RCX, 1
@@ -1549,7 +1550,7 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      ADD R9, R10
 
      MOV DWORD PTR [R9], ECX
-@TransparentColor_Second:
+@TransparentColor2:
 
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
      INC DECODE_STRING_TABLE.ImageX[RBX]
