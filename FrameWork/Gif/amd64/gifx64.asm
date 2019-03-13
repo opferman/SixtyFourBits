@@ -166,6 +166,7 @@ RASTER_DATA ends
 IMAGE_DATA struct
   ImageDescriptorPtr dq ?
   LocalColorMapPtr   dq ?
+  GraphicControlPtr  dq ?
   RasterData         RASTER_DATA <?>
 IMAGE_DATA ends 
 
@@ -197,6 +198,15 @@ DECODE_STRING_TABLE struct
    ImageStartLeft      dd ? 
 DECODE_STRING_TABLE ends
 
+GIF_GRAPHIC_CONTROL struct
+  Introducer      db ?
+  ExtLabel        db ?
+  BlockSize       db ?
+  Packed          db ?
+  DelayTime       dw ?
+  ColorIndex      db ?
+  Terminator      db ?
+GIF_GRAPHIC_CONTROL ends
 
 GIF_INTERNAL struct
    hGifFile         dq ?
@@ -217,6 +227,9 @@ STD_FUNCTION_STRING_LOCALS_STACK struct
     SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
     ; Padding     dq                         ?
 STD_FUNCTION_STRING_LOCALS_STACK ends
+
+
+
 
 public Gif_Open
 public Gif_Close
@@ -580,10 +593,33 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
   CMP BYTE PTR[RBX], ','
   JE @CompletedExtensionRemoval
 
+  ;
+  ; Check if this is a Graphic Control Exztension
+  ;
+  CMP BYTE PTR[RBX], '!'
+  JNE @NotGraphicControl
+
+  CMP BYTE PTR[RBX+1], 0F9h
+  JNE @NotGraphicControl
+
+    ;
+    ; Index the correct Image Data and update the pointer
+    ; to the Graphic Control descriptor
+    ;    
+    MOV R8D,GIF_INTERNAL.NumberOfImages[RSI]
+    XOR RDX, RDX
+    MOV RAX, SIZE IMAGE_DATA
+    MUL R8
+    LEA RDX, GIF_INTERNAL.ImageData[RSI]
+    ADD RDX, RAX
+    MOV IMAGE_DATA.GraphicControlPtr[RDX], RBX
+
+@NotGraphicControl:
     ;
     ; Update the current offset by 2
     ;
     ADD STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP], 2
+   
    
     ;
     ; Parse the packed block but we are only doing this to advance the
@@ -676,7 +712,11 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
     LEA RDX, IMAGE_DATA.RasterData.PackBlocksPtr[RBX]
     MOV RCX, RSI
     DEBUG_FUNCTION_CALL Gif_ParsePackedBlock
-    
+
+    CMP EAX, PACK_BLOCK_PTR_ARRAY
+    JB @NoArraySizeIssues
+    INT 3
+@NoArraySizeIssues:
     ;
     ; Save the number of blocks created
     ;
@@ -866,21 +906,33 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
 
   CMP EDX, GIF_INTERNAL.NumberOfImages[RCX]
   JAE @IndexTooHigh
-    ;
-    ; Pass through parameters, they have not yet been destroyed.
-    ;
-    DEBUG_FUNCTION_CALL Gif_SetBackgroundColor
+  XOR R12, R12
+@ImageLoop:
     ;
     ; Get the Image Index being created
     ;    
     XOR RDX, RDX
     MOV RAX, SIZE IMAGE_DATA
-    MUL RBX
-    LEA R11, GIF_INTERNAL.ImageData[RSI]
-    ADD R11, RAX
+    MUL R12
+    LEA R14, GIF_INTERNAL.ImageData[RSI]
+    ADD R14, RAX
+
+    MOV R9, -1
+    MOV RAX, IMAGE_DATA.GraphicControlPtr[R14]
+    CMP RAX, 0
+    JE @NoGraphicControl
+        XOR RDX, RDX
+        MOV DL, GIF_GRAPHIC_CONTROL.ColorIndex[RAX]
+        MOV R9, RDX
+@NoGraphicControl:
+    MOV RDX, R12
+    MOV R8, RDI
+    MOV RCX, RSI
+    DEBUG_FUNCTION_CALL Gif_SetBackgroundColor
+
     
     MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RSI]
-    MOV RAX, IMAGE_DATA.ImageDescriptorPtr[R11]
+    MOV RAX, IMAGE_DATA.ImageDescriptorPtr[R14]
     
     ;
     ; Create the Stride of ScreenWidth - ImageWidth
@@ -902,9 +954,13 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
     SHL R10, 2
     ; R8 = Stride
     ADD R9, R10    ; Image Buffer
-    MOV RDX, R11   ; IMAGE_DATA     
+    MOV RDX, R14   ; IMAGE_DATA     
     MOV RCX, RSI   ; GIF_INTERNAL
     DEBUG_FUNCTION_CALL Gif_Decode
+    
+    INC R12D
+    CMP R12D, EBX
+    JBE @ImageLoop
 @Success:
   MOV EAX, 1
 
@@ -919,7 +975,7 @@ NESTED_END Gif_GetImage32bpp, _TEXT$00
 ;*********************************************************
 ;   Gif_SetBackgroundColor
 ;
-;        Parameters: Gif Handle, Image Index, Return Buffer
+;        Parameters: Gif Handle, Image Index, Return Buffer, Transparent Color
 ;
 ;        Return Value: None
 ;
@@ -936,6 +992,8 @@ NESTED_ENTRY Gif_SetBackgroundColor, _TEXT$00
   MOV R12, GIF_INTERNAL.ScreenDescriptorPtr[RCX]
   XOR R8, R8
   MOVZX R8W, SCREEN_DESCRIPTOR.ScreenBackgroundColorIndex[R12]
+  CMP R9W, R8W
+  JE @BackgroundIsTransparent
   DEBUG_FUNCTION_CALL Gif_GetPaletteColorByIndex
 
   MOV RCX, RAX                                     ; Save Background Color Value
@@ -952,6 +1010,7 @@ NESTED_ENTRY Gif_SetBackgroundColor, _TEXT$00
   INC R8
   CMP R8, RAX                                      ; Test if we filled the entire image yet
   JB @SetBackgroundColor
+@BackgroundIsTransparent:
 @BackgroundComplete:
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1076,8 +1135,8 @@ NESTED_END Gif_InitializeStringTable, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_Decode, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+  alloc_stack(SIZEOF STD_FUNCTION_LV_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_LV_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX                                                                  ; RSI = GIF_INTERNAL
@@ -1200,8 +1259,8 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   DEBUG_FUNCTION_CALL LocalFree
 
 @Failed:
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
+  RESTORE_ALL_STD_REGS STD_FUNCTION_LV_STACK
+  ADD RSP, SIZE STD_FUNCTION_LV_STACK
   RET
 NESTED_END Gif_Decode, _TEXT$00
 
@@ -1219,8 +1278,8 @@ NESTED_END Gif_Decode, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+  alloc_stack(SIZEOF STD_FUNCTION_LV_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_LV_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX   ; GIF_INTERNAL        (RSI)
@@ -1253,6 +1312,7 @@ NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
   CMP EAX, DECODE_STRING_TABLE.EndOfInformation[RBX]
   JE @BitIncrementLoop
 
+  MOV R9, RDI
   MOV R8, RAX
   MOV EDX, DECODE_STRING_TABLE.LastCodeWord[RBX]
   MOV RCX, RBX
@@ -1283,8 +1343,8 @@ NESTED_ENTRY Gif_DecodePackedBlock, _TEXT$00
   JMP @DecodePackedBlockLoop
 @FinishedDecoding:
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
+  RESTORE_ALL_STD_REGS STD_FUNCTION_LV_STACK
+  ADD RSP, SIZE STD_FUNCTION_LV_STACK
   RET
 NESTED_END Gif_DecodePackedBlock, _TEXT$00
 
@@ -1299,8 +1359,8 @@ NESTED_END Gif_DecodePackedBlock, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Gif_RetrieveCodeWord, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+  alloc_stack(SIZEOF STD_FUNCTION_STRING_LOCALS_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STRING_LOCALS_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
@@ -1323,8 +1383,8 @@ NESTED_ENTRY Gif_RetrieveCodeWord, _TEXT$00
   ADD DWORD PTR [RDX], R11D
 
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STRING_LOCALS_STACK
+  ADD RSP, SIZE STD_FUNCTION_STRING_LOCALS_STACK
   RET
 NESTED_END Gif_RetrieveCodeWord, _TEXT$00
 
@@ -1333,7 +1393,7 @@ NESTED_END Gif_RetrieveCodeWord, _TEXT$00
 ;***********************************
 ;   Gif_ProcessNewCode
 ;
-;        Parameters: Decode String Table, LastCodeWord, NewCodeWord
+;        Parameters: Decode String Table, LastCodeWord, NewCodeWord, Image Control
 ;
 ;        Return Value: TRUE or FALSE
 ;
@@ -1345,11 +1405,20 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX          ; RBX is Decode String Table
+  MOV R13, R9
 
   CMP R8D, DECODE_STRING_TABLE.ClearCode[RBX]
   JAE @NewCodeWord_EqualOrGreater
 
-     MOV RCX, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
+    MOV RCX, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
+
+    MOV R9, IMAGE_DATA.GraphicControlPtr[R13]
+    CMP R9, 0
+    JE @NoGraphicControl
+        MOV RAX, R8
+        CMP GIF_GRAPHIC_CONTROL.ColorIndex[R9], AL
+        JE @TransparentColor
+@NoGraphicControl:
 
      MOV R10, R8
      SHL R10, 1
@@ -1362,6 +1431,7 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      MOV AL, BYTE PTR [RCX+1]
      SHL AX, 8
      MOV AL, BYTE PTR [RCX+2]
+@TransparentColor:
 
      ;
      ; Update Pixel On Screen and Increment Current Pixel
@@ -1452,6 +1522,13 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      ADD RDX, R8
      XOR RCX, RCX
      MOV CL, BYTE PTR [RDX]
+
+     MOV R9, IMAGE_DATA.GraphicControlPtr[R13]
+     CMP R9, 0
+     JE @NoGraphicControl_Second
+        CMP GIF_GRAPHIC_CONTROL.ColorIndex[R9], CL
+        JE @TransparentColor_Second
+@NoGraphicControl_Second:
      MOV R10, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
      ADD R10, RCX
      SHL RCX, 1
@@ -1470,7 +1547,9 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      MOV R10D, DECODE_STRING_TABLE.CurrentPixel[RBX]
      SHL R10, 2                                         ; Need to multiply by 4 to get correct 32 bit color
      ADD R9, R10
+
      MOV DWORD PTR [R9], ECX
+@TransparentColor_Second:
 
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
      INC DECODE_STRING_TABLE.ImageX[RBX]

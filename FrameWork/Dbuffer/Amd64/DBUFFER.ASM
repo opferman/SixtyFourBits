@@ -33,14 +33,16 @@ SAVEFRAME struct
     SaveRdi        dq ?
     SaveRsi        dq ?
     SaveR12        dq ?
-	SaveRbp        dq ?
+    SaveRbp        dq ?
     SaveR13        dq ?
     SaveR14        dq ?
     SaveR15        dq ?
+    SaveRbx        dq ?
 SAVEFRAME ends
 
 DB_INIT_LOCALS struct
    ParameterFrame PARAMFRAME <?>
+   Padding        dq ?
    SaveRegsFrame  SAVEFRAME  <?>
 DB_INIT_LOCALS ends
 
@@ -146,6 +148,7 @@ NESTED_END Dbuffer_Free, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Dbuffer_UpdateScreen, _TEXT$00
   alloc_stack(SIZEOF DB_INIT_LOCALS)
+  save_reg rbx, DB_INIT_LOCALS.SaveRegsFrame.SaveRbx
   save_reg rdi, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi
   save_reg rsi, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi
   save_reg r12, DB_INIT_LOCALS.SaveRegsFrame.SaveR12
@@ -441,6 +444,7 @@ NESTED_ENTRY Dbuffer_UpdateScreen, _TEXT$00
 
 
 @DoneUpdate:
+  MOV RBX, DB_INIT_LOCALS.SaveRegsFrame.SaveRbx[RSP]
   MOV RDI, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
   MOV R15, DB_INIT_LOCALS.SaveRegsFrame.SaveR15[RSP]
   MOV R14, DB_INIT_LOCALS.SaveRegsFrame.SaveR14[RSP]
