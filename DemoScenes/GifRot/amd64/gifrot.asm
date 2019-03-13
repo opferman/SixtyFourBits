@@ -36,7 +36,7 @@ extern LocalFree:proc
 ;*********************************************************
 LMEM_ZEROINIT         EQU <40h>
 MAX_FRAMES_PER_IMAGE  EQU <3>
-
+COLOR_THRESHOLD       EQU <33>
 ;*********************************************************
 ; Public Declarations
 ;*********************************************************
@@ -405,8 +405,8 @@ NESTED_ENTRY GifRot_Combined, _TEXT$00
   MOV RSI, RCX
   DEBUG_FUNCTION_CALL GifRot_FullScreen
 
-  ;MOV RCX, RSI
- ; DEBUG_FUNCTION_CALL GifRot_GrowToScreen
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GifRot_GrowToScreen
 
   MOV RCX, GIF_ROT_STRUCT.MasterPtr[RSI]
   MOV RDX, GIF_ROT_STRUCT.DoubleBuffer[RSI]
@@ -816,9 +816,28 @@ NESTED_ENTRY GifRot_GrowToScreen, _TEXT$00
 @PlotScaledX:
   SHL R12, 2
   MOV EAX, [RSI + R12]
-  CMP EAX, 0
-  JE @DoNotPlotZero
-  MOV [RDI + R14], EAX
+  CMP AL, COLOR_THRESHOLD
+  JA @PlotIt
+  CMP AH, COLOR_THRESHOLD
+  JA @PlotIt
+  SHR EAX, 16
+  CMP AL, COLOR_THRESHOLD
+  JBE @DoNotPlotZero
+@PlotIt:
+  ADD AL, BYTE PTR [RDI + R14]
+  SHR AL, 1
+  MOV BYTE PTR [RDI + R14], AL
+  SHR AX, 8
+  ADD AL, BYTE PTR [RDI + R14 + 1]
+  SHR AL, 1
+  MOV BYTE PTR [RDI + R14 + 1], AL
+
+  SHR RAX, 16
+  ADD AL, BYTE PTR [RDI + R14 + 2]
+  SHR AL, 1
+  MOV BYTE PTR [RDI + R14 + 2], AL
+
+;  MOV [RDI + R14], EAX
 @DoNotPlotZero:
   ADD R14, 4
   ADDSD XMM1, [IncrementX]
