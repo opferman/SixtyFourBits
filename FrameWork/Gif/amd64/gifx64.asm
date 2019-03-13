@@ -826,7 +826,6 @@ NESTED_END Gif_ParsePackedBlock, _TEXT$00
 NESTED_ENTRY Gif_NumberOfImages, _TEXT$00
 .ENDPROLOG 
   MOV EAX, GIF_INTERNAL.NumberOfImages[RCX]	
-  MOV EAX, 2			
   RET
 NESTED_END Gif_NumberOfImages, _TEXT$00
 
@@ -951,7 +950,7 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
     MOVZX EAX, SCREEN_DESCRIPTOR.ScreenWidth[RCX]
     XOR RDX, RDX
     MUL R9
-    ADD R10, R9
+    ADD R10, RAX
     MOV R9, RDI
     SHL R10, 2
     ; R8 = Stride
@@ -1435,8 +1434,6 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      MOV AL, BYTE PTR [RCX+1]
      SHL AX, 8
      MOV AL, BYTE PTR [RCX+2]
-@TransparentColor:
-
      ;
      ; Update Pixel On Screen and Increment Current Pixel
      ;
@@ -1445,6 +1442,7 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      SHL R10D, 2                                                ; Need to Multiply by 4* to get to DWORD
      ADD RCX, R10
      MOV DWORD PTR [RCX], EAX
+@TransparentColor:
 
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
 
@@ -1542,7 +1540,7 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      MOV CL, BYTE PTR [R10+2]
 
      ;
-     ; Update Pixel On Screen and Increment Current Pixel
+     ; Update Pixel On Screen 
      ;
      MOV R9, DECODE_STRING_TABLE.ImageBuffer32bppPtr[RBX]
      MOV R10D, DECODE_STRING_TABLE.CurrentPixel[RBX]
@@ -1551,6 +1549,9 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
 
      MOV DWORD PTR [R9], ECX
 @TransparentColor2:
+     ;
+     ; Increment Current Pixel
+     ;
 
      INC DECODE_STRING_TABLE.CurrentPixel[RBX]
      INC DECODE_STRING_TABLE.ImageX[RBX]
