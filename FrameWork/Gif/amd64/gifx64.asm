@@ -239,6 +239,7 @@ public Gif_GetImageSize
 public Gif_GetImageWidth
 public Gif_GetImageHeight
 public Gif_GetImage32bpp
+public Gif_GetImage32bppRealTime
 
 .DATA
 
@@ -972,6 +973,94 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
   RET
 NESTED_END Gif_GetImage32bpp, _TEXT$00
 
+
+
+;*********************************************************
+;   Gif_GetImage32bpp
+;
+;        Parameters: Gif Handle, Image Index, Previous Image & Return Buffer
+;
+;        Return Value: TRUE or FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetImage32bppRealTime, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  XOR RAX, RAX
+  ;
+  ; Save the parameters in non-volatile registers
+  ;
+  MOV RSI, RCX
+  MOV RDI, R8
+  MOV RBX, RDX
+  MOV R12, RDX
+
+  CMP EDX, GIF_INTERNAL.NumberOfImages[RCX]
+  JAE @IndexTooHigh
+    ;
+    ; Get the Image Index being created
+    ;    
+    XOR RDX, RDX
+    MOV RAX, SIZE IMAGE_DATA
+    MUL R12
+    LEA R14, GIF_INTERNAL.ImageData[RSI]
+    ADD R14, RAX
+
+    CMP R12, 0
+    JA @SkipBackgroundColor
+
+    MOV R9, -1
+    MOV RAX, IMAGE_DATA.GraphicControlPtr[R14]
+    CMP RAX, 0
+    JE @NoGraphicControl
+        XOR RDX, RDX
+        MOV DL, GIF_GRAPHIC_CONTROL.ColorIndex[RAX]
+        MOV R9, RDX
+@NoGraphicControl:
+    MOV RDX, R12
+    MOV R8, RDI
+    MOV RCX, RSI
+    DEBUG_FUNCTION_CALL Gif_SetBackgroundColor
+@SkipBackgroundColor:
+    
+    MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RSI]
+    MOV RAX, IMAGE_DATA.ImageDescriptorPtr[R14]
+    
+    ;
+    ; Create the Stride of ScreenWidth - ImageWidth
+    ;
+    MOVZX R8D, SCREEN_DESCRIPTOR.ScreenWidth[RCX]
+    SUB R8W, IMAGE_DESCRIPTOR.ImageWidth[RAX]
+
+    ;
+    ; Create the Start Offset = ImageStartLeft + (ImageStartTop*ScreenWidth)
+    ;   Buffer += Offset*4
+    ;
+    MOVZX R10D, IMAGE_DESCRIPTOR.ImageStartLeft[RAX]
+    MOVZX R9D, IMAGE_DESCRIPTOR.ImageStartTop[RAX]
+    MOVZX EAX, SCREEN_DESCRIPTOR.ScreenWidth[RCX]
+    XOR RDX, RDX
+    MUL R9
+    ADD R10, RAX
+    MOV R9, RDI
+    SHL R10, 2
+    ; R8 = Stride
+    ADD R9, R10    ; Image Buffer
+    MOV RDX, R14   ; IMAGE_DATA     
+    MOV RCX, RSI   ; GIF_INTERNAL
+    DEBUG_FUNCTION_CALL Gif_Decode
+    
+@Success:
+  MOV EAX, 1
+
+@IndexTooHigh:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Gif_GetImage32bppRealTime, _TEXT$00
 
 
 ;*********************************************************
