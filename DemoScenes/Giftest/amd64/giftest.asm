@@ -25,7 +25,7 @@ include dbuffer_public.inc
 ;*********************************************************
 extern LocalAlloc:proc
 extern LocalFree:proc
-
+extern GetCommandLineA:proc
 
 ;*********************************************************
 ; Structures
@@ -45,8 +45,7 @@ FRAME_COUNT_DOWN EQU <3>
 ; Data Segment
 ;*********************************************************
 .DATA
-
-   FileName             db "MyGif2.gif", 0
+   Success              dq ?
    GifHandle            dq ?
    ImageBufferPtr       dq ?
    NumberOfImages       dq ?
@@ -81,7 +80,11 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   ;
   ; Open and Initialize the GIF Library
   ;
-  MOV RCX, OFFSET FileName
+  DEBUG_FUNCTION_CALL Gif_GetCommandLine
+  CMP RAX, 0
+  JE @Failed
+
+  MOV RCX, RAX
   DEBUG_FUNCTION_CALL Gif_Open
   CMP RAX, 0
   JE @Failed
@@ -141,6 +144,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  MOV [Success], 1
   MOV EAX, 1
   RET
 @FailedAndCloseGifAndDeallocate:
@@ -151,6 +155,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   MOV RCX, [GifHandle]
   DEBUG_FUNCTION_CALL Gif_Close
 @Failed:
+  MOV [Success], 0
   MOV RSI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
   MOV RDI, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
   MOV RBX, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
@@ -159,6 +164,9 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   RET
 
 NESTED_END Gif_Init, _TEXT$00
+
+
+
 
 
 
@@ -184,7 +192,9 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
-  
+  CMP [Success], 0
+  JE @Failed
+
   DEC [ImageFrameNumber]
   JNZ @SkipUpdate
   MOV [ImageFrameNumber], FRAME_COUNT_DOWN
@@ -271,8 +281,71 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
   MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
+@Failed:
+  XOR RAX, RAX
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]  
+  MOV r14, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR14[RSP]
+  MOV r15, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR15[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
 NESTED_END Gif_Demo, _TEXT$00
 
+;*********************************************************
+;  Gif_GetCommandLine
+;
+;        Parameters: None
+;        Return: File Pointer
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_GetCommandLine, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+  
+  DEBUG_FUNCTION_CALL GetCommandLineA
+
+@FindFile:
+  CMP BYTE PTR [RAX], ' '
+  JE @FoundSpace
+  CMP BYTE PTR [RAX], 0
+  JE @Error
+  INC RAX
+  JMP @FindFile
+
+  ;
+  ; Keep Looping Until we find the first
+  ; letter of the file name
+  ;
+@FoundSpace:
+  INC RAX
+  CMP BYTE PTR [RAX], ' '
+  JE @FoundSpace
+  CMP BYTE PTR [RAX], 0
+  JE @Error
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+
+@Error:
+  XOR RAX, RAX
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+
+NESTED_END Gif_GetCommandLine, _TEXT$00
 
 
 ;*********************************************************

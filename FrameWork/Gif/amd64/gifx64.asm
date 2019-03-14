@@ -38,8 +38,8 @@ extern memcpy:proc
 ;*********************************************************
 COLOR_MAP_SIZE       EQU <256>
 PACK_BLOCK_PTR_ARRAY EQU <5000>
-STRING_SIZE          EQU <4096>
-STRING_TABLE_SIZE    EQU <4096>
+STRING_SIZE          EQU <4096*2>
+STRING_TABLE_SIZE    EQU <4096*2>
 NUMBER_OF_IMAGES     EQU <256>
 LMEM_ZEROINIT        EQU <40h>
 INVALID_HANDLE_VALUE EQU <-1>
@@ -602,7 +602,6 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
 
   CMP BYTE PTR[RBX+1], 0F9h
   JNE @NotGraphicControl
-
     ;
     ; Index the correct Image Data and update the pointer
     ; to the Graphic Control descriptor
@@ -646,7 +645,6 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
   ;
   CMP BYTE PTR[RBX], ','
   JNE @SkipImageData
-    
     ;
     ; Index the correct Image Data and update the pointer
     ; to the image descriptor
@@ -918,6 +916,9 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
     LEA R14, GIF_INTERNAL.ImageData[RSI]
     ADD R14, RAX
 
+    CMP R12, 0
+    JA @SkipBackgroundColor
+
     MOV R9, -1
     MOV RAX, IMAGE_DATA.GraphicControlPtr[R14]
     CMP RAX, 0
@@ -930,7 +931,7 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
     MOV R8, RDI
     MOV RCX, RSI
     DEBUG_FUNCTION_CALL Gif_SetBackgroundColor
-
+@SkipBackgroundColor:
     
     MOV RCX, GIF_INTERNAL.ScreenDescriptorPtr[RSI]
     MOV RAX, IMAGE_DATA.ImageDescriptorPtr[R14]
@@ -1418,9 +1419,9 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
 
 
   CMP R8D, DECODE_STRING_TABLE.ClearCode[RBX]
-  JAE @NewCodeWord_EqualOrGreater
+  JA @NewCodeWord_EqualOrGreater ; TEO: Was JA
 
-    MOV RCX, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
+     MOV RCX, DECODE_STRING_TABLE.ImagePalettePtr[RBX]
 
      MOV R10, R8
      SHL R10, 1
@@ -1429,12 +1430,14 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
 
      CMP DECODE_STRING_TABLE.ColorIndex[RBX], R8D
      JE @TransparentColor
+
      XOR RAX, RAX                       ; Create Pixel
      MOV AL, BYTE PTR [RCX]
      SHL EAX, 16
      MOV AL, BYTE PTR [RCX+1]
      SHL AX, 8
      MOV AL, BYTE PTR [RCX+2]
+
      ;
      ; Update Pixel On Screen and Increment Current Pixel
      ;
@@ -1533,13 +1536,22 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
      ADD R10, RCX
      SHL RCX, 1
      ADD R10, RCX
-
+     XOR RCX, RCX
      MOV CL, BYTE PTR [R10]
      SHL ECX, 16
      MOV CL, BYTE PTR [R10+1]
      SHL CX, 8
      MOV CL, BYTE PTR [R10+2]
 
+     CMP ECX, 0726681h
+     JNE @NotValue
+     int 3
+@NotValue:
+     AND ECX, 0FFFFFFh
+     CMP ECX, 0726681h
+     JNE @NotValue2
+     int 3
+@NotValue2:
      ;
      ; Update Pixel On Screen 
      ;
@@ -1617,7 +1629,7 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   MOV STD_FUNCTION_STRING_LOCALS_STACK.BackString.StringLength[RSP], 0
   
   CMP EDI, DECODE_STRING_TABLE.ClearCode[RBX]   
-  JB @CreateBackStringWIthNewCode
+  JBE @CreateBackStringWIthNewCode  ; TEO: Was JBE
     
   ;
   ;  Translate NewCode to an Index
@@ -1655,7 +1667,7 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   ; Check if LastCodeWord and ClearCode.
   ;
   CMP ESI, DECODE_STRING_TABLE.ClearCode[RBX]  
-  JAE @PerformMemCopyToFrontString
+  JA @PerformMemCopyToFrontString  ; TEO: Was JA
 
   MOV RCX, RSI
   MOV STD_FUNCTION_STRING_LOCALS_STACK.FrontString.DecodeString[RSP], CL
@@ -1692,7 +1704,7 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   ; Check if LastCodeWord and ClearCode.
   ;
   CMP ESI, DECODE_STRING_TABLE.ClearCode[RBX]  
-  JAE @UpdateBackStringAndMemCpy
+  JA @UpdateBackStringAndMemCpy  ; Was JAE
 
   ;
   ;  Update Front and Back string to use Last Code Word
@@ -1709,6 +1721,11 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
 ;
 ; Get the index for the string (LastCodeWord - FirstAvailable)*SIZE STRING_TABLE
 ;
+;  CMP ESI, DECODE_STRING_TABLE.ClearCode[RBX]
+;  JNE @Skip
+;  MOV ESI, DECODE_STRING_TABLE.FirstAvailable[RBX]
+;@Skip:
+
   MOV RAX, RSI
   MOV EDX, DECODE_STRING_TABLE.FirstAvailable[RBX]
   SUB RAX, RDX 
@@ -1798,7 +1815,7 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
   ADD ECX, DECODE_STRING_TABLE.FirstAvailable[RBX]
   CMP ECX, STRING_TABLE_SIZE
   JNE @StringTableWithinBounds
-
+int 3
   MOV R12, 1                           ; need to re-initialize string tabel
 
 @StringTableWithinBounds:
