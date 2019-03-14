@@ -1416,6 +1416,7 @@ NESTED_ENTRY Gif_ProcessNewCode, _TEXT$00
   MOV RBX, RCX          ; RBX is Decode String Table
   MOV R13, R9
 
+
   CMP R8D, DECODE_STRING_TABLE.ClearCode[RBX]
   JAE @NewCodeWord_EqualOrGreater
 
@@ -1708,10 +1709,11 @@ NESTED_ENTRY Gif_AddNewEntry, _TEXT$00
 ;
 ; Get the index for the string (LastCodeWord - FirstAvailable)*SIZE STRING_TABLE
 ;
-  XOR RDX, RDX
   MOV RAX, RSI
-  SUB EAX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+  MOV EDX, DECODE_STRING_TABLE.FirstAvailable[RBX]
+  SUB RAX, RDX 
   MOV RCX, SIZE STRING_TABLE
+  XOR RDX, RDX
   MUL RCX
 
   LEA RDX, DECODE_STRING_TABLE.StringTableList[RBX]
