@@ -15,6 +15,7 @@
 ;*********************************************************
 
 
+
 ;*********************************************************
 ; Included Files
 ;*********************************************************
@@ -113,6 +114,7 @@ MAX_ALIEN_ROWS     EQU <>
     DoubleBuffer       dq ?
     SpaceInvadersState dq ?
     SpaceCurrentLevel  dq ?
+	SpaceStateFuncPtrs dq ?
 
     ThePlayer          PLAYER_SPRITE_STRUCT ?
     TheSpaceShip       SPACE_SHIP_STRUCT    ?
@@ -143,10 +145,19 @@ NESTED_ENTRY Invaders_Init, _TEXT$00
   CMP EAX, 0
   JE @FailureExit
   MOV [DoubleBuffer], RAX
+  
   DEBUG_FUNCTION_CALL Invaders_LoadSPrites
+  CMP EAX, 0
+  JE @FailureExit
+  
   DEBUG_FUNCTION_CALL Invaders_LoadGraphics
-
-
+  JE @FailureExit
+  
+  DEBUG_FUNCTION_CALL Invaders_CreateFunctionTable
+  JE @FailureExit
+  
+  MOV [SpaceInvadersState], SPACE_INVADERS_STATE_INTRO
+  
 @SuccessExit:
   MOV EAX, 1
   JMP @ActualExit  
@@ -175,11 +186,36 @@ NESTED_ENTRY Invaders_FrameStateMachine, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
-
-
-
-
   
+  ;
+  ; Clear the double buffer for use.
+  ;
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_ClearBuffer
+  
+  ;
+  ; Determine the state function to call.
+  ;
+  MOV R8, [SpaceInvadersState]
+  LEA RDX, [SpaceStateFuncPtrs]
+  SHL R8, 3
+  MOV RDX, QWORD PTR [RDX + R8]
+  DEBUG_FUNCTION_CALL RDX
+  
+  ;
+  ; Update the State Machine
+  ;
+  MOV [SpaceInvadersState], RAX
+  
+  ;
+  ; Update the double buffer on screen
+  ;
+  XOR R8, R8
+  XOR RDX, RDX
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+
+  MOV RAX, 1
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_PARAMS
   ADD RSP, SIZE STD_FUNCTION_STACK_PARAMS
