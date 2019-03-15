@@ -13,7 +13,6 @@
 ; Included Files
 ;*********************************************************
 include ksamd64.inc
-include fire_public.inc
 include init_public.inc
 
 extern ExitProcess:proc
