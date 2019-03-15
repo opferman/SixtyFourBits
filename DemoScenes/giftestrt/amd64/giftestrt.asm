@@ -35,9 +35,9 @@ LMEM_ZEROINIT        EQU <40h>
 ;*********************************************************
 ; Public Declarations
 ;*********************************************************
-public Gif_Init
-public Gif_Demo
-public Gif_Free
+public GifRt_Init
+public GifRt_Demo
+public GifRt_Free
 
 FRAME_COUNT_DOWN EQU <3>
 
@@ -46,6 +46,7 @@ FRAME_COUNT_DOWN EQU <3>
 ;*********************************************************
 .DATA
    Success              dq ?
+   ImagesComplete       dq ?
    GifHandle            dq ?
    ImageBufferPtr       dq ?
    NumberOfImages       dq ?
@@ -60,7 +61,7 @@ FRAME_COUNT_DOWN EQU <3>
 .CODE
 
 ;*********************************************************
-;   Gif_Init
+;   GifRt_Init
 ;
 ;        Parameters: Master Context
 ;
@@ -68,7 +69,7 @@ FRAME_COUNT_DOWN EQU <3>
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Gif_Init, _TEXT$00
+NESTED_ENTRY GifRt_Init, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
@@ -80,7 +81,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   ;
   ; Open and Initialize the GIF Library
   ;
-  DEBUG_FUNCTION_CALL Gif_GetCommandLine
+  DEBUG_FUNCTION_CALL GifRt_GetCommandLine
   CMP RAX, 0
   JE @Failed
 
@@ -104,7 +105,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   
   XOR EDX, EDX
   MUL [NumberOfImages]
-  
+  MOV [ImagesComplete], -1
   ;
   ; Allocate the Buffer
   ;
@@ -117,21 +118,6 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   MOV [CurrentImagePtr], RAX
   MOV [CurrentImageIndex], 0
   MOV [ImageFrameNumber], FRAME_COUNT_DOWN
-  
-  XOR RBX, RBX
-  MOV RDI, [ImageBufferPtr]
-@GetImages:
-  ;
-  ; Decode the Image into the buffer
-  ;
-  MOV R8, RDI
-  MOV RDX, RBX
-  MOV RCX, [GifHandle]
-  DEBUG_FUNCTION_CALL Gif_GetImage32bpp
-  ADD RDI, [ImageOffsetIncrement]
-  INC RBX
-  CMP RBX, [NumberOfImages]
-  JB @GetImages
 
   MOV RDX, 4
   MOV RCX, RSI
@@ -163,7 +149,7 @@ NESTED_ENTRY Gif_Init, _TEXT$00
   XOR RAX, RAX
   RET
 
-NESTED_END Gif_Init, _TEXT$00
+NESTED_END GifRt_Init, _TEXT$00
 
 
 
@@ -171,7 +157,7 @@ NESTED_END Gif_Init, _TEXT$00
 
 
 ;*********************************************************
-;  Gif_Demo
+;  GifRt_Demo
 ;
 ;        Parameters: Master Context
 ;
@@ -179,7 +165,7 @@ NESTED_END Gif_Init, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Gif_Demo, _TEXT$00
+NESTED_ENTRY GifRt_Demo, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
@@ -207,8 +193,41 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
   MOV RAX, [ImageBufferPtr]
   MOV [CurrentImagePtr], RAX
   MOV [CurrentImageIndex], 0
-  
 @SkipUpdate:
+
+  CMP [ImagesComplete], -1
+  JE @NotCompleteFirstImage
+  MOV RAX, [CurrentImageIndex]
+  CMP RAX, [ImagesComplete]
+  JB @CompletedImage
+
+  MOV R12, RSI
+  MOV RSI, [CurrentImagePtr]
+  MOV RDI, RSI
+  MOV RCX, [ImageOffsetIncrement]
+  SUB RSI, RCX
+  SHR RCX, 3
+  REP MOVSQ
+  MOV RSI, R12
+
+  XOR RBX, RBX
+  MOV R8, [CurrentImagePtr]
+  MOV RDX, [CurrentImageIndex]
+  MOV RCX, [GifHandle]
+  DEBUG_FUNCTION_CALL Gif_GetImage32bppRealTime
+
+  INC [ImagesComplete]
+
+  JMP @CompletedImage
+@NotCompleteFirstImage:
+  XOR RBX, RBX
+  MOV R8, [ImageBufferPtr]
+  XOR RDX, RDX
+  MOV RCX, [GifHandle]
+  DEBUG_FUNCTION_CALL Gif_GetImage32bpp
+  MOV [ImagesComplete], 1
+
+@CompletedImage:
 
   MOV RCX, [GifHandle]
   DEBUG_FUNCTION_CALL Gif_GetImageWidth
@@ -292,10 +311,10 @@ NESTED_ENTRY Gif_Demo, _TEXT$00
   MOV r13, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR13[RSP]
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
-NESTED_END Gif_Demo, _TEXT$00
+NESTED_END GifRt_Demo, _TEXT$00
 
 ;*********************************************************
-;  Gif_GetCommandLine
+;  GifRt_GetCommandLine
 ;
 ;        Parameters: None
 ;        Return: File Pointer
@@ -303,7 +322,7 @@ NESTED_END Gif_Demo, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Gif_GetCommandLine, _TEXT$00
+NESTED_ENTRY GifRt_GetCommandLine, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
@@ -345,7 +364,7 @@ NESTED_ENTRY Gif_GetCommandLine, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
 
-NESTED_END Gif_GetCommandLine, _TEXT$00
+NESTED_END GifRt_GetCommandLine, _TEXT$00
 
 
 ;*********************************************************
@@ -357,7 +376,7 @@ NESTED_END Gif_GetCommandLine, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Gif_Free, _TEXT$00
+NESTED_ENTRY GifRt_Free, _TEXT$00
  alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
  save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
  save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
@@ -373,7 +392,7 @@ NESTED_ENTRY Gif_Free, _TEXT$00
 
   ADD RSP, SIZE STD_FUNCTION_STACK_MIN
   RET
-NESTED_END Gif_Free, _TEXT$00
+NESTED_END GifRt_Free, _TEXT$00
 
 
 END
