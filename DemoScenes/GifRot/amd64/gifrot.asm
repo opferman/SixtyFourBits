@@ -251,21 +251,15 @@ NESTED_ENTRY GifRot_LoadGif, _TEXT$00
  
   XOR RBX, RBX
   MOV RDI, IMAGE_INFORMATION.ImageListPtr[RSI]
-@GetImages:
 
   ;
   ; Decode the Image into the buffer
   ;
   MOV R8, RDI
-  MOV RDX, RBX
+  MOV RDX, IMAGE_INFORMATION.NumberOfImages[RSI]
+  SUB RDX, 1
   MOV RCX, IMAGE_INFORMATION.GifHandle[RSI]
-  DEBUG_FUNCTION_CALL Gif_GetImage32bpp
-
-  ADD RDI, IMAGE_INFORMATION.ImgOffsets[RSI]
-
-  INC RBX
-  CMP RBX, IMAGE_INFORMATION.NumberOfImages[RSI]
-  JB @GetImages
+  DEBUG_FUNCTION_CALL Gif_GetAllImage32bpp
 
   MOV RAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

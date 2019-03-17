@@ -11,3 +11,4 @@ extern Gif_GetImageWidth:proc
 extern Gif_GetImageHeight:proc
 extern Gif_GetImage32bpp:proc
 extern Gif_GetImage32bppRealTime:proc
+extern Gif_GetAllImage32bpp:proc
