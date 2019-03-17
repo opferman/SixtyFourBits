@@ -27,6 +27,7 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\DemoScenes\Fire\$O\Firex64.lib \
              $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
              $(OBJ_PATH)\..\..\DemoScenes\Bubble\$O\Bubblex64.lib \
+             $(OBJ_PATH)\..\..\Framework\gif\$O\gifx64.lib \
              $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
              $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
              $(OBJ_PATH)\..\..\Framework\Init\$O\Initx64.lib \

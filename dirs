@@ -1,4 +1,5 @@
 dirs=FrameWork \
      DemoScenes \
      TestApps\
-     Apps
+     Apps \
+     Games

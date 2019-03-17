@@ -60,6 +60,36 @@ SAVE_REGISTERS_FRAME_XMM struct
     SaveXmm15 oword ?
 SAVE_REGISTERS_FRAME_XMM ends
 
+LOCAL_VARIABLES8 struct
+   LocalVar1 dq ?
+   LocalVar2 dq ?
+   LocalVar3 dq ?
+   LocalVar4 dq ?
+   LocalVar5 dq ?
+   LocalVar6 dq ?
+   LocalVar7 dq ?
+   LocalVar8 dq ?
+LOCAL_VARIABLES8 ends
+
+STD_FUNCTION_STACK_LV struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    LocalVariables LOCAL_VARIABLES8       <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    Padding     dq                         ?
+STD_FUNCTION_STACK_LV ends
+
+STD_FUNCTION_STACK_LV_PARAMS struct
+    Parameters  LOCAL_PARAMETER_FRAME8    <?>
+    LocalVariables LOCAL_VARIABLES8       <?>
+    SaveRegs    SAVE_REGISTERS_FRAME      <?>
+    SaveXmmRegs SAVE_REGISTERS_FRAME_XMM  <?>
+    Padding     dq                         ?
+    FuncParams  FUNCTION_PARAMETERS_FRAME <?>
+STD_FUNCTION_STACK_LV_PARAMS ends
+
+
+
 STD_FUNCTION_STACK struct
     Parameters  LOCAL_PARAMETER_FRAME8    <?>
     SaveRegs    SAVE_REGISTERS_FRAME      <?>
