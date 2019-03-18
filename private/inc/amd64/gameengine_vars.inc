@@ -19,9 +19,17 @@ IMAGE_INFORMATION struct
    ImageMaxFrames dq ?
    ImageWidth     dq ?
    ImageHeight    dq ?
+   StartX         dq ?
+   StartY         dq ?
+   InflateCountDown    dq ?
+   InflateCountDownMax dq ?
+   IncrementX          mmword ?
+   IncrementY          mmword ?
 IMAGE_INFORMATION ends
 
 GAME_ENGINE_INIT struct
    GameFunctionPtrs dq ?
+   GameLoadCxt      dq ?
+   GameLoadFunction dq ?
 GAME_ENGINE_INIT ends
 

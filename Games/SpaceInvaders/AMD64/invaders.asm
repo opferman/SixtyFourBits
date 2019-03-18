@@ -103,12 +103,12 @@ public Invaders_Free
 ; Space Invaders State Machine
 ;
 SPACE_INVADERS_STATE_LOADING              EQU <0>
-SPACE_INVADERS_STATE_INTRO                EQU <2>
-SPACE_INVADERS_STATE_MENU                 EQU <3>
-SPACE_INVADERS_LEVEL                      EQU <4>
-SPACE_INVADERS_FINAL                      EQU <5>
-SPACE_INVADERS_GAMEPLAY                   EQU <6>
-SPACE_INVADERS_HISCORE                    EQU <7>
+SPACE_INVADERS_STATE_INTRO                EQU <1>
+SPACE_INVADERS_STATE_MENU                 EQU <2>
+SPACE_INVADERS_LEVEL                      EQU <3>
+SPACE_INVADERS_FINAL                      EQU <4>
+SPACE_INVADERS_GAMEPLAY                   EQU <5>
+SPACE_INVADERS_HISCORE                    EQU <6>
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 
@@ -131,8 +131,13 @@ LODING_FONT_SIZE      EQU <10>
 ;*********************************************************
 .DATA
     SpaceCurrentLevel  dq ?
-    SpaceStateFuncPtrs dq Invaders_Loading
+    SpaceStateFuncPtrs dq Invaders_Loading,
+                          Invaders_IntroScreen
+
     SpaceInvadersLoadingScreenImage db "spaceloadingbackground.gif", 0
+    SpaceInvadersIntroImage db "spaceinvadersintro.gif", 0
+
+
     SpriteImageFileListAttributes   db 1, 2
     ;
     ; File Lists
@@ -150,6 +155,7 @@ LODING_FONT_SIZE      EQU <10>
     ;
     GameEngInit        GAME_ENGINE_INIT  <?>
     LoadingScreen      IMAGE_INFORMATION <?>
+    IntroScreen        IMAGE_INFORMATION  <?>
     ThePlayer          PLAYER_SPRITE_STRUCT <?>
     TheSpaceShip       SPACE_SHIP_STRUCT    <?>
     Aliens             ALIEN_SPRITE_STRUCT (MAX_ALIENS_PER_ROW*MAX_ALIEN_ROWS) DUP(<0>)
@@ -178,10 +184,13 @@ NESTED_ENTRY Invaders_Init, _TEXT$00
   DEBUG_FUNCTION_CALL GameEngine_LoadGif
   CMP RAX, 0
   JE @FailureExit
-  
+
   MOV RCX, OFFSET SpaceStateFuncPtrs
   MOV RDX, OFFSET GameEngInit
   MOV GAME_ENGINE_INIT.GameFunctionPtrs[RDX], RCX
+  MOV RCX, OFFSET Invaders_LoadingThread
+  MOV GAME_ENGINE_INIT.GameLoadFunction[RDX],RCX
+  MOV GAME_ENGINE_INIT.GameLoadCxt[RDX], 0
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_Init
   JE @FailureExit
@@ -222,6 +231,49 @@ NESTED_END Invaders_Demo, _TEXT$00
 
 
 ;*********************************************************
+;   Invaders_LoadingThread
+;
+;        Parameters: Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+    
+  MOV RDX, OFFSET IntroScreen
+  MOV RCX, OFFSET SpaceInvadersIntroImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [IntroScreen.StartX], 0
+  MOV [IntroScreen.StartY], 0
+  MOV [IntroScreen.InflateCountDown], 0
+  MOV [IntroScreen.InflateCountDownMax], 0
+
+  PXOR XMM0, XMM0
+  MOVSD [IntroScreen.IncrementX], XMM0
+  MOVSD [IntroScreen.IncrementY], XMM0
+
+
+  MOV EAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@FailureExit:
+  XOR RAX, RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Invaders_LoadingThread, _TEXT$00
+
+;*********************************************************
 ;   Invaders_LoadSprites
 ;
 ;        Parameters: Master Context
@@ -254,7 +306,7 @@ NESTED_END Invaders_LoadSprites, _TEXT$00
 ;
 ;        Parameters: Master Context, Double Buffer
 ;
-;        Return Value: TRUE / FALSE
+;        Return Value:State
 ;
 ;
 ;*********************************************************  
@@ -301,6 +353,34 @@ NESTED_ENTRY Invaders_Loading, _TEXT$00
 
 NESTED_END Invaders_Loading, _TEXT$00
 
+
+
+;*********************************************************
+;   Invaders_IntroScreen
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_IntroScreen, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV RDX, OFFSET IntroScreen
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  MOV RAX, SPACE_INVADERS_STATE_INTRO
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_IntroScreen, _TEXT$00
 
 
 ;*********************************************************

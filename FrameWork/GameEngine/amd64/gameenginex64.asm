@@ -26,22 +26,27 @@ include gameengine_vars.inc
 LMEM_ZEROINIT EQU <40h>
 MAX_FRAMES_PER_IMAGE EQU <3>
 
+extern CloseHandle:proc
+extern WaitForSingleObject:proc
 extern LocalAlloc:proc
 extern Engine_Private_OverrideDemoFunction:proc
 extern cos:proc
 extern sin:proc
+extern CreateThread:proc
 
 public GameEngine_Init
 public GameEngine_Free
 public GameEngine_PrintWord
 public GameEngine_LoadGif
 public GameEngine_ConvertImageToSprite
+public GameEngine_DisplayFullScreenAnimatedImage
+public GameEngine_DisplayCenteredImage
 
 .DATA
     GameEngineState             dq ?
     DoubleBuffer                dq ?
     GameEngineStateFunctionPtrs dq ?
-
+    ThreadLoadHandle            dq ?
 .CODE
 
 ;*********************************************************
@@ -60,6 +65,25 @@ NESTED_ENTRY GameEngine_Init, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV RDI, RDX
+
+  XOR RAX, RAX
+  CMP GAME_ENGINE_INIT.GameLoadFunction[RDI], 0
+  JE @SkipLoadingThread
+
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 0
+  MOV R9, GAME_ENGINE_INIT.GameLoadCxt[RDI]
+  MOV R8, GAME_ENGINE_INIT.GameLoadFunction[RDI]
+  XOR RDX, RDX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL CreateThread
+  CMP EAX, -1
+  JE @FailureExit
+  CMP EAX, 0
+  JE @FailureExit
+
+@SkipLoadingThread:
+  MOV [ThreadLoadHandle], RAX
 
   MOV RDX, 4
   MOV RCX, RSI
@@ -127,7 +151,23 @@ NESTED_ENTRY GameEngine_FrameStateMachine, _TEXT$00
 
   CMP [GameEngineState], GAME_ENGINE_FAILURE_STATE
   JE @Failure
+
+  CMP [ThreadLoadHandle], 0
+  JE @SkipWaitCheck
+
+  XOR RDX, RDX
+  MOV RCX, [ThreadLoadHandle]
+  DEBUG_FUNCTION_CALL WaitForSingleObject
+  CMP EAX, 0
+  JNE @NotComplete
+
+  MOV RCX, [ThreadLoadHandle]
+  DEBUG_FUNCTION_CALL CloseHandle
+  MOV [ThreadLoadHandle], 0
+  MOV [GameEngineState], 1
   
+@NotComplete:  
+@SkipWaitCheck:
   ;
   ; Clear the double buffer for use.
   ;
@@ -242,23 +282,16 @@ NESTED_ENTRY GameEngine_LoadGif, _TEXT$00
   DEBUG_FUNCTION_CALL Gif_GetImageHeight
   MOV IMAGE_INFORMATION.ImageHeight[RSI], RAX
  
-  XOR RBX, RBX
-  MOV RDI, IMAGE_INFORMATION.ImageListPtr[RSI]
-@GetImages:
 
+  MOV RDI, IMAGE_INFORMATION.ImageListPtr[RSI]
   ;
   ; Decode the Image into the buffer
   ;
   MOV R8, RDI
-  MOV RDX, RBX
+  MOV RDX, IMAGE_INFORMATION.NumberOfImages[RSI]
+  DEC RDX
   MOV RCX, IMAGE_INFORMATION.GifHandle[RSI]
-  DEBUG_FUNCTION_CALL Gif_GetImage32bpp
-
-  ADD RDI, IMAGE_INFORMATION.ImgOffsets[RSI]
-
-  INC RBX
-  CMP RBX, IMAGE_INFORMATION.NumberOfImages[RSI]
-  JB @GetImages
+  DEBUG_FUNCTION_CALL Gif_GetAllImage32bpp
 
   MOV RAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -303,6 +336,263 @@ NESTED_ENTRY GameEngine_ConvertImageToSprite, _TEXT$00
   RET
 
 NESTED_END GameEngine_ConvertImageToSprite, _TEXT$00
+
+
+;*********************************************************
+;   GameEngine_DisplayCenteredImage
+;
+;        Parameters: Master Struct, Image Struct
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplayCenteredImage, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R8, RDX
+  MOV R9, RCX
+  MOV RDI, [DoubleBuffer]
+
+  ;
+  ; Check if frame should be advanced
+  ;
+  INC IMAGE_INFORMATION.ImageFrameNum[R8]
+  MOV RCX, IMAGE_INFORMATION.ImageMaxFrames[R8]
+  CMP IMAGE_INFORMATION.ImageFrameNum[R8], RCX
+  JB @NoFrameUpdate
+  
+  ;
+  ;  General Frame Update
+  ;
+  MOV IMAGE_INFORMATION.ImageFrameNum[R8], 0
+  MOV RCX, IMAGE_INFORMATION.ImgOffsets[R8]
+  ADD IMAGE_INFORMATION.CurrImagePtr[R8], RCX
+
+  ;
+  ; Check for Frame Wraparound
+  ;
+  INC IMAGE_INFORMATION.CurrentImage[R8]
+  MOV RCX, IMAGE_INFORMATION.NumberOfImages[R8]
+  CMP IMAGE_INFORMATION.CurrentImage[R8], RCX
+  JB @NoFrameReset
+
+    MOV IMAGE_INFORMATION.CurrentImage[R8], 0   
+    MOV RCX, IMAGE_INFORMATION.ImageListPtr[R8]
+    MOV IMAGE_INFORMATION.CurrImagePtr[R8], RCX
+
+@NoFrameReset:
+@NoFrameUpdate:
+
+  ;
+  ; Center the GIF on the screen
+  ;
+  MOV RDX, IMAGE_INFORMATION.ImageHeight[R8]
+  SHR RDX, 1
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[R9]
+  SHR RAX, 1
+  SUB RAX, RDX
+  MOV IMAGE_INFORMATION.StartY[R8], RAX
+  SHL RAX, 2
+  XOR RDX, RDX
+  MUL MASTER_DEMO_STRUCT.ScreenWidth[R9]
+
+  MOV RDX, IMAGE_INFORMATION.ImageWidth[R8]
+  SHR RDX, 1
+  MOV RBX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  SHR RBX, 1
+  SUB RBX, RDX
+  MOV IMAGE_INFORMATION.StartX[R8], RBX
+  SHL RBX, 2
+  ADD RAX, RBX
+  ADD RDI, RAX
+
+;  ADD RCX, RAX
+;  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+;  SHL RAX, 1
+  
+
+  MOV RSI, IMAGE_INFORMATION.CurrImagePtr[R8]
+  
+;
+; Plot the image on the screen
+;
+  XOR R10, R10
+@PlotImageOnScreenCentered:
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R8]
+  REP MOVSD
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R8]
+  SHL RCX, 2
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  SHL RAX, 2
+  SUB RAX, RCX
+  ADD RDI, RAX
+  INC R10
+  CMP R10, IMAGE_INFORMATION.ImageHeight[R8]
+  JB @PlotImageOnScreenCentered
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GameEngine_DisplayCenteredImage, _TEXT$00
+
+
+;*********************************************************
+;  GameEngine_DisplayFullScreenAnimatedImage
+;
+;         Parameters: Master Struct, Image Struct
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplayFullScreenAnimatedImage, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R8, RDX
+  MOV R9, RCX
+
+  ;
+  ; Check if should advance Start/End to go to full screen
+  ;
+  CMP IMAGE_INFORMATION.InflateCountDown[R8], 0
+  JE @NoUpdate
+
+  DEC IMAGE_INFORMATION.InflateCountDown[R8]
+  JNZ @NoUpdate
+  MOV RCX, IMAGE_INFORMATION.InflateCountDownMax[R8]
+  MOV IMAGE_INFORMATION.InflateCountDown[R8], RCX
+  CMP IMAGE_INFORMATION.StartX[R8], 0
+  JE @StartXIsComplete
+  DEC IMAGE_INFORMATION.StartX[R8]
+@StartXIsComplete:
+  CMP IMAGE_INFORMATION.StartY[R8], 0
+  JE @StartYIsComplete
+  DEC IMAGE_INFORMATION.StartY[R8]
+@StartYIsComplete:
+@NoUpdate:
+  ;
+  ; Check if frame should be advanced
+  ;
+  INC IMAGE_INFORMATION.ImageFrameNum[R8]
+  MOV RCX, IMAGE_INFORMATION.ImageMaxFrames[R8]
+  CMP IMAGE_INFORMATION.ImageFrameNum[R8], RCX
+  JB @NoFrameUpdate
+  
+  ;
+  ;  General Frame Update
+  ;
+  MOV IMAGE_INFORMATION.ImageFrameNum[R8], 0
+  MOV RCX, IMAGE_INFORMATION.ImgOffsets[R8]
+  ADD IMAGE_INFORMATION.CurrImagePtr[R8], RCX
+
+  ;
+  ; Check for Frame Wraparound
+  ;
+  INC IMAGE_INFORMATION.CurrentImage[R8]
+  MOV RCX, IMAGE_INFORMATION.NumberOfImages[R8]
+  CMP IMAGE_INFORMATION.CurrentImage[R8], RCX
+  JB @NoFrameReset
+
+  MOV IMAGE_INFORMATION.CurrentImage[R8], 0   
+  MOV RCX, IMAGE_INFORMATION.ImageListPtr[R8]
+  MOV IMAGE_INFORMATION.CurrImagePtr[R8], RCX
+
+@NoFrameReset:
+@NoFrameUpdate:
+
+  ;
+  ; Determine Growth of Image by scaling of X and Y
+  ;
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  SUB RCX, IMAGE_INFORMATION.StartX[R8]
+  SUB RCX, IMAGE_INFORMATION.StartX[R8]
+  CVTSI2SD XMM0, RCX
+  CVTSI2SD XMM1, IMAGE_INFORMATION.ImageWidth[R8]
+  DIVSD XMM1, XMM0
+  MOVSD IMAGE_INFORMATION.IncrementX[R8], XMM1
+
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[R9]
+  SUB RDX, IMAGE_INFORMATION.StartY[R8]
+  SUB RDX, IMAGE_INFORMATION.StartY[R8]
+  CVTSI2SD XMM0, RDX
+  CVTSI2SD XMM1, IMAGE_INFORMATION.ImageHeight[R8]
+  DIVSD XMM1, XMM0
+  MOVSD IMAGE_INFORMATION.IncrementY[R8], XMM1
+
+  ;
+  ; Create the Y start Location.
+  ;
+  MOV RAX, IMAGE_INFORMATION.StartY[R8]
+  XOR RDX, RDX
+  MUL MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  SHL RAX, 2
+
+  ;
+  ; Create the X Start Location
+  ;
+  MOV RCX,  IMAGE_INFORMATION.StartX[R8]
+  SHL RCX, 2
+  ADD RAX, RCX
+ 
+  ;
+  ; The Stride
+  ;
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  SHL RDX, 2
+
+  MOV RSI, IMAGE_INFORMATION.CurrImagePtr[R8]
+  MOV RDI, [DoubleBuffer]
+  ADD RDI, RAX
+;
+; Plot the image on the screen
+;
+  PXOR XMM0, XMM0
+  XOR R10, R10
+@PlotScaledY:
+  PXOR XMM1, XMM1
+  XOR R14, R14
+  XOR R12, R12
+  ;
+  ; Loop and Plot Pixels
+  ;
+@PlotScaledX:
+  SHL R12, 2
+  MOV EAX, [RSI + R12]
+  MOV [RDI + R14], EAX
+  ADD R14, 4
+  ADDSD XMM1, IMAGE_INFORMATION.IncrementX[R8]
+  CVTSD2SI R12, XMM1
+  CMP R12, IMAGE_INFORMATION.ImageWidth[R8]
+  JB @PlotScaledX
+  ;
+  ; Wrap around to the next line
+  ;
+  ADD RDI, RDX
+  ADDSD XMM0, IMAGE_INFORMATION.IncrementY[R8]
+  CVTSD2SI R9, XMM0
+  CMP R9, R10
+  JE @PlotScaledY
+  MOV RAX, IMAGE_INFORMATION.ImageWidth[R8]
+  ;
+  ; Wrap Image to the next size
+  ;
+  SHL RAX, 2
+  ADD RSI, RAX
+  MOV R10, R9
+  CMP R10, IMAGE_INFORMATION.ImageHeight[R8]
+  JB @PlotScaledY
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GameEngine_DisplayFullScreenAnimatedImage, _TEXT$00
+
 
 ;*********************************************************
 ;  GameEngine_PrintWord
