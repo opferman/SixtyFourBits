@@ -211,6 +211,7 @@ RESTORE_COMPLETE_XMM_REGS MACRO Structure
 ENDM
 
 public Engine_Debug
+public Engine_Private_OverrideDemoFunction
 
 NESTED_FUNCTIONS_FOR_DEBUG EQU <25>
 
@@ -324,6 +325,29 @@ NESTED_ENTRY Engine_Init, _TEXT$00
 NESTED_END Engine_Init, _TEXT$00
 
 
+
+;*********************************************************
+;  Engine_Private_OverrideDemoFunction
+;
+;        Parameters: Maeter Demo Structure, New Demo Function
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Engine_Private_OverrideDemoFunction, _TEXT$00
+ alloc_stack(SIZEOF ENGINE_FREE_LOCALS)
+ save_reg rdi, ENGINE_FREE_LOCALS.SaveFrameCtx.SaveRdi
+.ENDPROLOG 
+  ENGINE_DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, MASTER_DEMO_STRUCT.CurrentDemoStruct[RCX]
+  MOV DEMO_STRUCT.DemoFunction[RDI], RDX
+
+  MOV RDI, ENGINE_FREE_LOCALS.SaveFrameCtx.SaveRdi[RSP]
+  ADD RSP, SIZEOF ENGINE_FREE_LOCALS
+  RET
+NESTED_END Engine_Private_OverrideDemoFunction, _TEXT$00
 
 ;*********************************************************
 ;  Engine_Free

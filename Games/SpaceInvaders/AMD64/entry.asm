@@ -17,7 +17,7 @@ include init_public.inc
 
 extern ExitProcess:proc
 extern Invaders_Init:proc
-extern Invaders_FrameStateMachine:proc
+extern Invaders_Demo:proc
 extern Invaders_Free:proc
 
 ;*********************************************************
@@ -44,7 +44,7 @@ WINMAIN_FRAME ends
 ;*********************************************************
 
 GlobalDemoStructure  dq Invaders_Init 
-                     dq Invaders_FrameStateMachine
+                     dq Invaders_Demo
                      dq Invaders_Free
 ;
 ; End Tag

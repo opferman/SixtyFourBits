@@ -10,4 +10,5 @@ dirs=DDraw \
      FrameLoop \
      Dbuffer \
      Primatives \
-     Gif
+     Gif \
+     GameEngine
