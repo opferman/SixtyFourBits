@@ -25,6 +25,7 @@ include font_public.inc
 include input_public.inc
 include gif_public.inc
 include gameengine_public.inc
+include primatives_public.inc
 
 ;*********************************************************
 ; External WIN32/C Functions
@@ -138,7 +139,8 @@ INTRO_FONT_SIZE       EQU <3>
     SpaceCurrentLevel  dq ?
     SpaceStateFuncPtrs dq Invaders_Loading,
                           Invaders_IntroScreen,
-                          Invaders_MenuScreen
+                          Invaders_BoxIt
+                          ;Invaders_MenuScreen
 
     SpaceCurrentState  dq ?
 
@@ -146,6 +148,7 @@ INTRO_FONT_SIZE       EQU <3>
     SpaceInvadersIntroImage         db "spaceinvadersintro.gif", 0
     SpaceInvadersMenuImage          db "spmenu.gif", 0
     SpaceInvadersTitle              db "Space_Invaders_logo.gif", 0
+    SpaceInvaderSprites             db "SpaceInvaderSprites.gif", 0
 
     PressSpaceToContinue            db "<Press Spacebar>", 0
 
@@ -157,18 +160,17 @@ INTRO_FONT_SIZE       EQU <3>
     CurrentLoadingColor dd 0, 0FF000h, 0FF00h, 0FFh, 0FFFFFFh, 0FF00FFh, 0FFFF00h, 0FFFFh, 0F01F0Eh
     LoadingColorsLoop   dd 0
 
-    SpriteImageFileList db  'Alien1_m1.gif', 0
-                        db  'Alien1_m2.gif', 0
-
-
     ;
     ; Game Variable Structures
     ;
-    GameEngInit        GAME_ENGINE_INIT  <?>
-    LoadingScreen      IMAGE_INFORMATION <?>
+    GameEngInit        GAME_ENGINE_INIT   <?>
+    LoadingScreen      IMAGE_INFORMATION  <?>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
     SpTitle            IMAGE_INFORMATION  <?>
+    SpInvaders         IMAGE_INFORMATION  <?>
+
+
     ThePlayer          PLAYER_SPRITE_STRUCT <?>
     TheSpaceShip       SPACE_SHIP_STRUCT    <?>
     Aliens             ALIEN_SPRITE_STRUCT (MAX_ALIENS_PER_ROW*MAX_ALIEN_ROWS) DUP(<0>)
@@ -334,6 +336,24 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpTitle.IncrementX], XMM0
   MOVSD [SpTitle.IncrementY], XMM0
 
+  
+
+  MOV RDX, OFFSET SpInvaders
+  MOV RCX, OFFSET SpaceInvaderSprites
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [SpInvaders.StartX], 0
+  MOV [SpInvaders.StartY], 0
+  MOV [SpInvaders.InflateCountDown], 0
+  MOV [SpInvaders.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [SpInvaders.IncrementX], XMM0
+  MOVSD [SpInvaders.IncrementY], XMM0
+  MOV [SpInvaders.ImageHeight], 700
+
+
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -471,6 +491,207 @@ NESTED_ENTRY Invaders_IntroScreen, _TEXT$00
 NESTED_END Invaders_IntroScreen, _TEXT$00
 
 
+
+
+;*********************************************************
+;   Invaders_BoxIt
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_BoxIt, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  XOR R9, R9
+  XOR R8, R8
+  MOV RDX, OFFSET SpInvaders
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+  
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 144
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 89
+  MOV R9, 47
+  MOV R8, 26
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DrawBox
+
+
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 159
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 167
+  MOV R9, 31
+  MOV R8, 103
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DrawBox
+
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 159
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 167+86
+  MOV R9, 31
+  MOV R8, 103+86
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DrawBox
+
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 150
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 490
+  MOV R9, 54
+  MOV R8, 426
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DrawBox
+
+
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 150
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 490+82
+  MOV R9, 54
+  MOV R8, 426+82
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DrawBox
+
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  MOV RAX, SPACE_INVADERS_STATE_MENU
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_BoxIt, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_DrawBox
+;   Not used in the game, this is the herlp function to split the
+;   sprites up from a single image.
+;        Parameters: Master Context, Double Buffer X, Y, X2, Y2
+;
+;        Return Value: TRUE / FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_DrawBox, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV STD_FUNCTION_STACK_PARAMS.FuncParams.Param3[RSP], R8     ; X
+  MOV STD_FUNCTION_STACK_PARAMS.FuncParams.Param4[RSP], R9     ; Y
+
+  ;
+  ; X, Y to X2, Y
+  ;
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], RDI
+  MOV R10, OFFSET Invaders_PlotPixel
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], R10
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param4[RSP]
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], R9
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param5[RSP]
+  MOV R8, STD_FUNCTION_STACK_PARAMS.FuncParams.Param4[RSP]
+  MOV RDX, STD_FUNCTION_STACK_PARAMS.FuncParams.Param3[RSP]
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Prm_DrawLine
+
+  ;
+  ; X, Y to X, Y2
+  ;
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], RDI
+  MOV R10, OFFSET Invaders_PlotPixel
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], R10
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param6[RSP]
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], R9
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param3[RSP]
+  MOV R8, STD_FUNCTION_STACK_PARAMS.FuncParams.Param4[RSP]
+  MOV RDX, STD_FUNCTION_STACK_PARAMS.FuncParams.Param3[RSP]
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Prm_DrawLine
+
+  ;
+  ; X, Y2 to X2, Y2
+  ;
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], RDI
+  MOV R10, OFFSET Invaders_PlotPixel
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], R10
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param6[RSP]
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], R9
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param5[RSP]
+  MOV R8, STD_FUNCTION_STACK_PARAMS.FuncParams.Param6[RSP]
+  MOV RDX, STD_FUNCTION_STACK_PARAMS.FuncParams.Param3[RSP]
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Prm_DrawLine
+
+
+  ;
+  ; X2, Y to X2, Y2
+  ;
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], RDI
+  MOV R10, OFFSET Invaders_PlotPixel
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], R10
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param6[RSP]
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], R9
+  MOV R9, STD_FUNCTION_STACK_PARAMS.FuncParams.Param5[RSP]
+  MOV R8, STD_FUNCTION_STACK_PARAMS.FuncParams.Param4[RSP]
+  MOV RDX, STD_FUNCTION_STACK_PARAMS.FuncParams.Param5[RSP]
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Prm_DrawLine
+ 
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_DrawBox, _TEXT$00
+
+;*********************************************************
+;   Invaders_PlotPixel
+;
+;        Parameters: X, Y, Context, Master Context
+;
+;        Return Value: TRUE / FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_PlotPixel, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, R9
+  MOV RDI, R8
+
+  XOR RAX, RAX
+  CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  JA @OffScreen
+  CMP RDX, MASTER_DEMO_STRUCT.ScreenHeight[R9]
+  JA @OffScreen
+  
+  MOV RAX, RDX
+  XOR RDX, RDX
+  MUL MASTER_DEMO_STRUCT.ScreenWidth[R9]
+  SHL RAX, 2
+  SHL RCX, 2
+  ADD RAX, RCX
+  MOV DWORD PTR [RDI + RAX], 0FFFFFFh
+  
+  MOV EAX, 1
+@OffScreen:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_PlotPixel, _TEXT$00
 
 ;*********************************************************
 ;   Invaders_MenuScreen
