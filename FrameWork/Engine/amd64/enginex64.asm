@@ -12,6 +12,7 @@
 ; Assembly Options
 ;*********************************************************
 
+ENGINE_INCLUDE EQU <1>
 
 ;*********************************************************
 ; Included Files
@@ -22,10 +23,20 @@ include ddrawx64.inc
 include master.inc
 include engdbg_internal.inc
 include ddraw_internal.inc
+include debug_public.inc
 
+extern GetCurrentThreadId:proc
 extern LocalAlloc:proc
+extern LocalFree:proc
+
 extern vsprintf:proc
 extern OutputDebugStringA:proc
+extern TlsAlloc:proc
+extern TlsGetValue:proc
+extern TlsSetValue:proc
+extern CloseHandle:proc
+extern CreateThread:proc
+
 
 FUNC_PARAMS struct
     ReturnAddress  dq ?
@@ -212,42 +223,46 @@ ENDM
 
 public Engine_Debug
 public Engine_Private_OverrideDemoFunction
+public Engine_DebugInit
 
 NESTED_FUNCTIONS_FOR_DEBUG EQU <25>
+NUMBER_THREADS             EQU <5>
 
-.DATA
-
-GlobalDemoStructure  dq ?
- 
- SaveR12Register      dq NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveR13Register      dq NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveR14Register      dq NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+FUNCTION_STATE_STACK struct
+ ; Nesting Counter At The Top Of The Stack
+ SaveR12Register      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveR13Register      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveR14Register      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveR15Register      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
-
  SaveRsiRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveRdiRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveRbxRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveRbpRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveRspRegister      dq  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
-
  SaveXmm6Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveXmm7Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveXmm8Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
  SaveXmm9Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm10Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm11Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm12Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm13Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm14Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SaveXmm15Register     oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- CompareXmmRegister    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
- SpecialSaveRegister1    dq ?
- SpecialSaveRegister2    dq ?
+ SaveXmm10Register    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm11Register    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm12Register    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm13Register    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm14Register    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+ SaveXmm15Register    oword  NESTED_FUNCTIONS_FOR_DEBUG DUP(?)
+FUNCTION_STATE_STACK ends
 
+THREAD_CONTEXT struct
+ ThreadFunction dq ?
+ ThreadContext  dq ?
+ DebugStackSize dq ?
+THREAD_CONTEXT ends
+
+.DATA
+ GlobalDemoStructure  dq ?
+ ThreadStackTls       dq ?
+ 
  GarbageXmmData        dq 0FFFFFFFFFFFFFFFFh
                        dq 0FFFFFFFFFFFFFFFFh
-
-  NestingCounter       dq 0
 
 .CODE
   
@@ -348,6 +363,43 @@ NESTED_ENTRY Engine_Private_OverrideDemoFunction, _TEXT$00
   ADD RSP, SIZEOF ENGINE_FREE_LOCALS
   RET
 NESTED_END Engine_Private_OverrideDemoFunction, _TEXT$00
+
+
+;*********************************************************
+;  Engine_DebugInit
+;
+;        Parameters: None
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Engine_DebugInit, _TEXT$00
+  SUB RSP, 8 + 8*4
+.ENDPROLOG 
+  ENGINE_DEBUG_RSP_CHECK_MACRO
+IF DEBUG_IS_ENABLED 
+  CALL TlsAlloc
+  MOV [ThreadStackTls], RAX
+
+  MOV RDX, (NESTED_FUNCTIONS_FOR_DEBUG * SIZE FUNCTION_STATE_STACK) + (2*SIZE QWORD)
+  MOV RCX, LMEM_ZEROINIT
+  CALL LocalAlloc
+  ;
+  ; TODO Error handling
+  ;
+  MOV RDX, RAX
+  ADD RDX, 8*2                          ; Setup Stack Pointer
+  MOV QWORD PTR [RAX + 8], RDX
+  MOV RDX, RAX
+  MOV RCX, [ThreadStackTls]
+  CALL TlsSetValue
+ENDIF
+  ADD RSP, 8 + 8*4
+  RET
+NESTED_END Engine_DebugInit, _TEXT$00
+
+
 
 ;*********************************************************
 ;  Engine_Free
@@ -485,82 +537,257 @@ NESTED_END Engine_Loop, _TEXT$00
 
 
 ;*********************************************************
+;  Engine_PushDebugThreadContext
+;
+;        Parameters: None
+;
+;          This will create a context for a thread
+;
+;*********************************************************  
+NESTED_ENTRY Engine_PushDebugThreadContext, _TEXT$00
+SUB RSP, 8*4
+;
+; Save Registers
+;
+.ENDPROLOG 
+ MOV RCX, [ThreadStackTls]
+ CALL TlsGetValue
+ CMP RAX, 0
+ JE @NoData
+ INC QWORD PTR [RAX]
+ CMP QWORD PTR [RAX], NESTED_FUNCTIONS_FOR_DEBUG                        ; TODO, allow this to be configured Per-Stack
+ JAE @Overflow
+ MOV RCX, RAX
+ MOV RAX, QWORD PTR [RAX + 8]
+ ADD QWORD PTR [RCX + 8], SIZE FUNCTION_STATE_STACK
+ ADD RSP, 8*4
+ RET
+@Overflow:
+@NoData:
+ INT 3 
+ INT 3 
+NESTED_END Engine_PushDebugThreadContext, _TEXT$00
+
+
+;*********************************************************
+;  Engine_PopDebugThreadContext
+;
+;        Parameters: None
+;
+;          This will get a context for a thread
+;
+;*********************************************************  
+NESTED_ENTRY Engine_PopDebugThreadContext, _TEXT$00
+ SUB RSP, 8*4
+.ENDPROLOG 
+;
+; Save Registers
+;
+.ENDPROLOG 
+ MOV RCX, [ThreadStackTls]
+ CALL TlsGetValue
+ CMP RAX, 0
+ JE @NoData
+ DEC QWORD PTR [RAX]
+ CMP QWORD PTR [RAX], 0
+ JL @Underflow
+ SUB QWORD PTR [RAX + 8], SIZE FUNCTION_STATE_STACK
+ MOV RAX, QWORD PTR [RAX + 8]
+ ADD RSP, 8*4
+ RET
+@Underflow:
+@NoData:
+ INT 3 
+ RET
+NESTED_END Engine_PopDebugThreadContext, _TEXT$00
+
+;*********************************************************
+;  Engine_CreateThread
+;
+;        Parameters: Function, Context, Debug Depth (ignored currently)
+;
+;        Return: Handle
+;
+;*********************************************************  
+NESTED_ENTRY Engine_CreateThread, _TEXT$00
+ SUB RSP, SIZE QWORD + (8*SIZE QWORD)
+.ENDPROLOG 
+ ENGINE_DEBUG_RSP_CHECK_MACRO
+ MOV [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + SIZE QWORD)], RCX
+ MOV [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + (2*SIZE QWORD))], RDX
+ MOV [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + (3*SIZE QWORD))], R8
+
+ MOV RDX, SIZE THREAD_CONTEXT
+ MOV RCX, LMEM_ZEROINIT
+ DEBUG_FUNCTION_CALL LocalAlloc
+ ;
+ ; TODO: Error Handling
+ ;
+ MOV RCX, [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + SIZE QWORD)]
+ MOV RDX, [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + (2*SIZE QWORD))]
+ MOV R8, [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + (3*SIZE QWORD))]
+
+ MOV THREAD_CONTEXT.ThreadFunction[RAX], RCX
+ MOV THREAD_CONTEXT.ThreadContext[RAX], RDX
+ MOV THREAD_CONTEXT.DebugStackSize[RAX], R8
+
+ ;
+ ; Create Function Call
+ ;
+ MOV QWORD PTR [RSP + 4*SIZE QWORD], 0
+ MOV QWORD PTR [RSP + 5*SIZE QWORD], 0
+ MOV R9, RAX
+ MOV R8, Engine_Thread
+ XOR RDX, RDX
+ XOR RCX, RCX
+ DEBUG_FUNCTION_CALL CreateThread
+ ;
+ ; TODO: Error Handling
+ ;
+ ADD RSP, SIZE QWORD + (8*SIZE QWORD)
+ RET
+NESTED_END Engine_CreateThread, _TEXT$00
+
+
+;*********************************************************
+;  Engine_Thread
+;
+;        Parameters: Context
+;
+;        Return: Handle
+;
+;*********************************************************
+NESTED_ENTRY Engine_Thread, _TEXT$00
+ SUB RSP, 8 + 8*4
+.ENDPROLOG 
+ ENGINE_DEBUG_RSP_CHECK_MACRO
+ MOV [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + SIZE QWORD)], RCX
+
+IF DEBUG_IS_ENABLED 
+ MOV RDX, (NESTED_FUNCTIONS_FOR_DEBUG * SIZE FUNCTION_STATE_STACK) + (2*SIZE QWORD)
+ MOV RCX, LMEM_ZEROINIT
+ CALL LocalAlloc
+ ;
+ ; TODO: Error Handling
+ ;
+ MOV RDX, RAX
+ ADD RDX, 8*2
+ MOV QWORD PTR [RAX + 8], rdx   ; setup stack pointer
+
+ MOV RDX, RAX
+ MOV RCX, [ThreadStackTls]
+ CALL TlsSetValue
+ENDIF
+
+ MOV RCX, [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + SIZE QWORD)] 
+ MOV RDX, RCX
+ MOV RCX, THREAD_CONTEXT.ThreadContext[RDX]
+ DEBUG_FUNCTION_CALL THREAD_CONTEXT.ThreadFunction[RDX]
+
+ MOV RCX, [RSP + ((SIZE QWORD + (8*SIZE QWORD)) + SIZE QWORD)]
+ CALL LocalFree
+
+IF DEBUG_IS_ENABLED 
+ MOV RCX, [ThreadStackTls]
+ CALL TlsGetValue
+ MOV RCX, RAX
+ CALL LocalFree
+ENDIF
+
+ ADD RSP, 8 + 8*4
+ RET
+NESTED_END Engine_Thread, _TEXT$00
+
+
+;*********************************************************
+;  Engine_CloseThread
+;
+;        Parameters: Function
+;
+;        Return: Handle
+;
+;*********************************************************  
+NESTED_ENTRY Engine_CloseThread, _TEXT$00
+ SUB RSP, 8
+.ENDPROLOG 
+ ENGINE_DEBUG_RSP_CHECK_MACRO
+ DEBUG_FUNCTION_CALL CloseHandle
+@NoData:
+ ADD RSP, 8
+ RET
+NESTED_END Engine_CloseThread, _TEXT$00
+
+
+;*********************************************************
 ;  Engine_PreFunctionCall
 ;
 ;        Parameters: None
 ;
-;          This is a single threaded test function that will
-;        save the Non-Volatile registers.  The purpose is to 
-;        use this before a function call and then use 
-;        "Engine_PostFunctionCall" to verify the integrity
-;        of your function.
 ;
 ;*********************************************************  
 NESTED_ENTRY Engine_PreFunctionCall, _TEXT$00
 .ENDPROLOG 
- CMP [NestingCounter], NESTED_FUNCTIONS_FOR_DEBUG
- JB @ValidNesting
- INT 3
+ ;
+ ; Save Function Parameters
+ ;
+ MOV [RSP+8h], RCX
+ MOV [RSP+10h], RDX
+ MOV [RSP+18h], R8
+ MOV [RSP+20h], R9
+ CALL Engine_PushDebugThreadContext
 
-@ValidNesting:
- MOV [SpecialSaveRegister1], RAX
- MOV [SpecialSaveRegister2], RBX
- MOV RBX, [NestingCounter]
- SHL RBX, 6
-
- LEA RAX, [SaveR12Register]
- MOV [RAX + RBX], R12
-
- LEA RAX, [SaveR13Register]
- MOV [RAX + RBX], R13
-
- LEA RAX, [SaveR14Register]
- MOV [RAX + RBX], R14
-
- LEA RAX, [SaveR15Register]
- MOV [RAX + RBX], R15
-
- LEA RAX, [SaveRsiRegister]
- MOV [RAX + RBX], RSI
-
- LEA RAX, [SaveRdiRegister]
- MOV [RAX + RBX], RDI
- 
- LEA RAX, [SaveRbpRegister]
- MOV [RAX + RBX], RBP
- 
- LEA RAX, [SaveRspRegister]
- MOV [RAX + RBX], RSP
- 
- LEA RAX, [SaveXmm6Register]
- MOVUPS [RAX + RBX], xmm6 
- LEA RAX, [SaveXmm7Register]
- MOVUPS [RAX + RBX], xmm7
- LEA RAX, [SaveXmm8Register]
- MOVUPS [RAX + RBX], xmm8
- LEA RAX, [SaveXmm9Register]
- MOVUPS [RAX + RBX], xmm9
- LEA RAX, [SaveXmm10Register]
- MOVUPS [RAX + RBX], xmm10
- LEA RAX, [SaveXmm11Register]
- MOVUPS [RAX + RBX], xmm11
- LEA RAX, [SaveXmm12Register]
- MOVUPS [RAX + RBX], xmm12
- LEA RAX, [SaveXmm13Register]
- MOVUPS [RAX + RBX], xmm13
- LEA RAX, [SaveXmm14Register]
- MOVUPS [RAX + RBX], xmm14
- LEA RAX, [SaveXmm15Register]
- MOVUPS [RAX + RBX], xmm15
-
- LEA RAX, [SaveRbxRegister]
- ADD RAX, RBX
- MOV RBX, [SpecialSaveRegister2]
+ ;
+ ; GP Registers
+ ;
+ MOV [RAX], R12
+ ADD RAX, SIZE QWORD 
+ MOV [RAX], R13
+ ADD RAX, SIZE QWORD
+ MOV [RAX], R14
+ ADD RAX, SIZE QWORD
+ MOV [RAX], R15
+ ADD RAX, SIZE QWORD
+ MOV [RAX], RSI
+ ADD RAX, SIZE QWORD
+ MOV [RAX], RDI
+ ADD RAX, SIZE QWORD
  MOV [RAX], RBX
+ ADD RAX, SIZE QWORD
+ MOV [RAX], RBP
+ ADD RAX, SIZE QWORD
+ MOV [RAX], RSP
+ ADD RAX, SIZE QWORD
+ 
+ ;
+ ; XMM Registers
+ ;
+ MOVUPS [RAX], xmm6 
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm7
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm8
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm9
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm10
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm11
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm12
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm13
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm14
+ ADD RAX, SIZE OWORD
+ MOVUPS [RAX], xmm15
 
- INC [NestingCounter]
-
- MOV RAX, [SpecialSaveRegister1]
+ ;
+ ; Restore Function Parameters
+ ;
+ MOV RCX, [RSP+8h]
+ MOV RDX, [RSP+10h]
+ MOV R8, [RSP+18h]
+ MOV R9, [RSP+20h]
  RET
 NESTED_END Engine_PreFunctionCall, _TEXT$00
 
@@ -569,183 +796,170 @@ NESTED_END Engine_PreFunctionCall, _TEXT$00
 ;
 ;        Parameters: None
 ;
-;          This is a single threaded test function that will
-;        save the Non-Volatile registers.  The purpose is to 
-;        use this before a function call and then use 
-;        "Engine_PostFunctionCall" to verify the integrity
-;        of your function.
+;
+;
 ;
 ;*********************************************************  
 NESTED_ENTRY Engine_PostFunctionCall, _TEXT$00
 .ENDPROLOG 
- DEC [NestingCounter]
+ MOV [RSP+8], RAX 
 
- MOV [RSP+8], RAX ; We can use Param1-4 in Post Function call but not in Pre.
-
- MOV R10, [NestingCounter]
- SHL R10, 6
-
+ CALL Engine_PopDebugThreadContext
+ MOV R11, RAX
  ;
  ; Check Non-Volatile Registers were preserved
  ;
-
+ 
  MOV RAX, 12
- LEA RDX, [SaveR12Register]
- CMP [RDX + R10], R12
+ CMP [R11], R12
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 13
- LEA RDX, [SaveR13Register]
- CMP [RDX + R10], R13
+ CMP [R11], R13
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 14
- LEA RDX, [SaveR14Register]
- CMP [RDX + R10], R14
+ CMP [R11], R14
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 15
- LEA RDX, [SaveR15Register]
- CMP [RDX + R10], R15
+ CMP [R11], R15
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 1
- LEA RDX, [SaveRsiRegister]
- CMP [RDX + R10], RSI
+ CMP [R11], RSI
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 2
- LEA RDX, [SaveRdiRegister]
- CMP [RDX + R10], RDI
+ CMP [R11], RDI
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 3
- LEA RDX, [SaveRbxRegister]
- CMP [RDX + R10], RBX
+ CMP [R11], RBX
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 4
- LEA RDX, [SaveRbpRegister]
- CMP [RDX + R10], RBP
+ CMP [R11], RBP
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
  MOV RAX, 5
- LEA RDX, [SaveRspRegister]
- CMP [RDX + R10], RSP
+ CMP [R11], RSP
  JNE @Engine_Debug_Issue
+ ADD R11, SIZE QWORD
 
- LEA RCX, [CompareXmmRegister]
-
+ LEA RCX, [RSP + 16]
 
  MOV RAX, 6
- MOVUPS [CompareXmmRegister], xmm6 
- LEA RDX, [SaveXmm6Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS [RCX], xmm6 
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
+
+ ADD R11, SIZE OWORD
 
  MOV RAX, 7
- MOVUPS [CompareXmmRegister], xmm7
- LEA RDX, [SaveXmm7Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm7
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
 
+ ADD R11, SIZE OWORD
 
  MOV RAX, 8
- MOVUPS [CompareXmmRegister], xmm8
- LEA RDX, [SaveXmm8Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm8
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
 
+ ADD R11, SIZE OWORD
 
  MOV RAX, 9
- MOVUPS [CompareXmmRegister], xmm9
- LEA RDX, [SaveXmm9Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm9
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
 
+ ADD R11, SIZE OWORD
 
  MOV RAX, 10
- MOVUPS [CompareXmmRegister], xmm10
- LEA RDX, [SaveXmm10Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm10
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
 
+ ADD R11, SIZE OWORD
 
  MOV RAX, 11
- MOVUPS [CompareXmmRegister], xmm11
- LEA RDX, [SaveXmm11Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm11
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
+
+ ADD R11, SIZE OWORD
 
  MOV RAX, 12
- MOVUPS [CompareXmmRegister], xmm12
- LEA RDX, [SaveXmm12Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm12
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
+
+ ADD R11, SIZE OWORD
 
  MOV RAX, 13
- MOVUPS [CompareXmmRegister], xmm13
- LEA RDX, [SaveXmm13Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm13
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
+ 
+ ADD R11, SIZE OWORD
 
  MOV RAX, 14
- MOVUPS [CompareXmmRegister], xmm14
- LEA RDX, [SaveXmm14Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm14
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9
  JNE  @Engine_Debug_Issue
 
+ ADD R11, SIZE OWORD
+
  MOV RAX, 15
- MOVUPS [CompareXmmRegister], xmm15
- LEA RDX, [SaveXmm15Register]
- ADD RDX, R10
- MOV R8, QWORD PTR [RDX]
- MOV R9, QWORD PTR [RDX+8]
+ MOVUPS  [RCX], xmm15
+ MOV R8, QWORD PTR [R11]
+ MOV R9, QWORD PTR [R11+8]
  CMP QWORD PTR [RCX], R8
  JNE  @Engine_Debug_Issue
  CMP QWORD PTR [RCX+8], R9

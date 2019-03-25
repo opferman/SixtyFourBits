@@ -23,8 +23,9 @@ include font_public.inc
 include gif_public.inc
 include gameengine_vars.inc 
 
-LMEM_ZEROINIT EQU <40h>
+LMEM_ZEROINIT EQU        <40h>
 MAX_FRAMES_PER_IMAGE EQU <3>
+DEBUG_STACK_SIZE EQU     <25>  ; Currently ignored, perhaps will be enabled in the future.
 
 extern CloseHandle:proc
 extern WaitForSingleObject:proc
@@ -32,7 +33,7 @@ extern LocalAlloc:proc
 extern Engine_Private_OverrideDemoFunction:proc
 extern cos:proc
 extern sin:proc
-extern CreateThread:proc
+
 
 public GameEngine_Init
 public GameEngine_Free
@@ -41,6 +42,8 @@ public GameEngine_LoadGif
 public GameEngine_ConvertImageToSprite
 public GameEngine_DisplayFullScreenAnimatedImage
 public GameEngine_DisplayCenteredImage
+
+MAX_KEYS EQU <256>
 
 .DATA
     GameEngineState             dq ?
@@ -70,13 +73,10 @@ NESTED_ENTRY GameEngine_Init, _TEXT$00
   CMP GAME_ENGINE_INIT.GameLoadFunction[RDI], 0
   JE @SkipLoadingThread
 
-  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
-  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 0
-  MOV R9, GAME_ENGINE_INIT.GameLoadCxt[RDI]
-  MOV R8, GAME_ENGINE_INIT.GameLoadFunction[RDI]
-  XOR RDX, RDX
-  XOR RCX, RCX
-  DEBUG_FUNCTION_CALL CreateThread
+  MOV R8, DEBUG_STACK_SIZE
+  MOV RDX, GAME_ENGINE_INIT.GameLoadCxt[RDI]
+  MOV RCX, GAME_ENGINE_INIT.GameLoadFunction[RDI]
+  DEBUG_FUNCTION_CALL Engine_CreateThread
   CMP EAX, -1
   JE @FailureExit
   CMP EAX, 0
@@ -130,6 +130,7 @@ NESTED_ENTRY GameEngine_Free, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END GameEngine_Free, _TEXT$00
+
 
 
 

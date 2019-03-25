@@ -86,9 +86,7 @@ MAX_KEYS EQU <256>
 
 .DATA
   KeyPressArray    INPUT_HANDLER MAX_KEYS DUP(<0>)
-  KeyReleaseArray INPUT_HANDLER MAX_KEYS DUP(<0>)
-
-
+  KeyReleaseArray  INPUT_HANDLER MAX_KEYS DUP(<0>)
 
 .CODE
 

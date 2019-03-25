@@ -50,14 +50,14 @@ INIT_DEMO_STRUCT struct
       ScreenWidth           dq ?
       ScreenHeight          dq ?
       pszWindowTitle        dq ?
-	  pszWindowClass        dq ?
+      pszWindowClass        dq ?
       GlobalDemoStructure   dq ?
-	  FullScreen            dq ? 
+      FullScreen            dq ? 
 INIT_DEMO_STRUCT ends
 
 
 public Initialization_Demo
-
+extern Engine_DebugInit:proc
 
 .CODE
   
@@ -75,8 +75,10 @@ NESTED_ENTRY Initialization_Demo, _TEXT$00
  save_reg rdi, INIT_FRAME.SaveRdi
  save_reg rsi, INIT_FRAME.SaveRsi
 .ENDPROLOG 
-
   MOV RDI, RCX
+  CALL Engine_DebugInit
+
+  MOV RCX, RDI
   CALL Windowx64_Setup
   TEST RAX, RAX
   JZ @Init_Exit

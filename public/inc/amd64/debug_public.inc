@@ -24,15 +24,20 @@ DEBUG_RSP_CHECK_MACRO MACRO
 ENDM
 ENDIF
 
+IFNDEF ENGINE_INCLUDE
 extern Engine_PreFunctionCall:proc
 extern Engine_PostFunctionCall: proc
+ENDIF
 
 ;
 ; Special Debug saves all registers so you can easily put
 ; printfs in without worrying about what volatile registers are used.
 ;  DO NOT USE WITH DEBUG_FUNCTION_CALL !!  
 ;
+IFNDEF ENGINE_INCLUDE
 extern Engine_Debug:proc
+ENDIF
+
 ;
 ; Debug Enabled Function Calls
 ;

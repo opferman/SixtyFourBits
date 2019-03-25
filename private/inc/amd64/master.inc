@@ -27,3 +27,7 @@ MASTER_DEMO_STRUCT struct
       DirectDrawCtx      dq ?
 ;      FullScreen         dq ? ; TBD if needed 
 MASTER_DEMO_STRUCT ends
+
+IFNDEF ENGINE_INCLUDE
+extern Engine_CreateThread:proc
+ENDIF
