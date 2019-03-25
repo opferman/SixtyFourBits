@@ -45,54 +45,6 @@ LMEM_ZEROINIT EQU <40h>
 
 
 
-SPRITE_STRUCT struct
-   SpriteIndex dd ?
-   SpritePtr   dq ?
-   SpriteMaxX  dd ?
-   SpriteMaxY  dd ?
-SPRITE_STRUCT ends
-
-FIRE_STRUCT struct
-   VelocityY dd ?
-   LocationX dd ?
-   LocationY dd ?
-   Sprite      SPRITE_STRUCT <?>
-FIRE_STRUCT ends
-
-EXPLODE_STRUCT struct
-   LocationX dd ?
-   LocationY dd ?
-   SpriteCountdown dd ?
-   Sprite      SPRITE_STRUCT <?>
-EXPLODE_STRUCT ends
-
-
-
-ALIEN_SPRITE_STRUCT struct
-   LocationX   dd ?
-   LocationY   dd ?
-   Sprite      SPRITE_STRUCT <?>
-ALIEN_SPRITE_STRUCT ends
-
-PLAYER_SPRITE_STRUCT struct
-   LocationX dd ?
-   LocationY dd ?
-   Sprite      SPRITE_STRUCT <?>
-PLAYER_SPRITE_STRUCT ends
-
-SPACE_SHIP_STRUCT struct
-   LocationX dd ?
-   LocationY dd ?
-   Sprite      SPRITE_STRUCT <?>
-SPACE_SHIP_STRUCT ends
-
-SHEILD_SPRITE_STRUCT struct
-   LocationX         dd ?
-   LocationY         dd ?
-   DestructCountDown dd ?
-   Sprite      SPRITE_STRUCT <?>
-SHEILD_SPRITE_STRUCT ends
-
 ;*********************************************************
 ; Public Declarations
 ;*********************************************************
@@ -112,11 +64,25 @@ SPACE_INVADERS_GAMEPLAY                   EQU <5>
 SPACE_INVADERS_HISCORE                    EQU <6>
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
+SPRITE_STRUCT  struct
+   ImagePointer    dq ?
+   ImageStartFrame dq ?
+   ImageEndFrame   dq ?
+   ImageCurFrame   dq ?
+   ImageStartX     dq ?
+   ImageStartY     dq ?
+   ImageEndX       dq ?
+   ImageEndY       dq ?
+   ImageExplode    dq ?
+   SpriteAlive     dq ?
+   SpriteX         dq ?
+   SpriteY         dq ?
+SPRITE_STRUCT  ends 
 
 ;
 ; Space Invaders Constants
 ;
-MAX_SCORES            EQU  <5>
+MAX_SCORES            EQU <5>
 MAX_SHIELDS           EQU <3>
 MAX_ALIENS_PER_ROW    EQU <1>
 MAX_ALIEN_ROWS        EQU <1>
@@ -131,6 +97,7 @@ TITLE_Y               EQU <10>
 INTRO_Y               EQU <768 - 40>
 INTRO_X               EQU <300>
 INTRO_FONT_SIZE       EQU <3>
+NUMBER_OF_SPRITES     EQU <5>
 
 ;*********************************************************
 ; Data Segment
@@ -169,13 +136,8 @@ INTRO_FONT_SIZE       EQU <3>
     MenuScreen         IMAGE_INFORMATION  <?>
     SpTitle            IMAGE_INFORMATION  <?>
     SpInvaders         IMAGE_INFORMATION  <?>
-
-
-    ThePlayer          PLAYER_SPRITE_STRUCT <?>
-    TheSpaceShip       SPACE_SHIP_STRUCT    <?>
-    Aliens             ALIEN_SPRITE_STRUCT (MAX_ALIENS_PER_ROW*MAX_ALIEN_ROWS) DUP(<0>)
-    TheShields         SHEILD_SPRITE_STRUCT MAX_SHIELDS DUP(<0>)
-    ;HiScoreList        dq MAX_SCORES DUP(<0>)
+    SpSprites          SPRITE_STRUCT NUMBER_OF_SPRITES DUP(<>)
+  ;  HiScoreList        dq MAX_SCORES DUP(<>)
 .CODE
 
 ;*********************************************************
