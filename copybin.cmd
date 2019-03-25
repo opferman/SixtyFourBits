@@ -36,3 +36,9 @@ copy TestApps\TttTest\objfre_win7_amd64\amd64\*.pdb binaries\symbols
 copy TestApps\WindowTest\objfre_win7_amd64\amd64\*.pdb binaries\symbols
 copy TestApps\WormTest\objfre_win7_amd64\amd64\*.pdb binaries\symbols
 copy TestApps\YourDemo\objfre_win7_amd64\amd64\*.pdb binaries\symbols
+copy Games\SpaceInvaders\resources\* binaries
+copy TestApps\gifrottest\resources\* binaries
+copy TestApps\GifTest\resources\* binaries
+copy TestApps\GifTestRt\resources\* binaries
+
+
