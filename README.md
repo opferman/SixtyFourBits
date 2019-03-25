@@ -14,11 +14,19 @@ There is a template demo that you can use to create your own demo scene.  You ca
 All code will need to go into the **AMD64** directory as this is an **X86-64 assembly project there should not be any C or other langauges used**.  The **SOURCES** file will need modified to change the target name.
 The makefile is copied but you do not modify the make file.  To build the project you use **bcz** command.  You will also need to update the **DIRS** file in order to have your applications and libraries built using BCZ from the root directories.
 
+
 ## Demoscene functions and Master Context
 There are three functions to implement which the engine will use to call you back.
 - **Init** - This function you will initialize your demo, allocate your structures and setup the demo.  Return TRUE for success and FALSE for failure.
 - **Demo** - This function you will be able to draw one frame for the demo.  ALl of your graphics algorithms will be done here.  Return TRUE to mean you will continue to draw frames.  Return FALSE when you are complete drawing frames and the demo ends or migrates to the next demo scene in the list.
 - **Free** - This function you will use to clean up.
+
+## Game functions and Master Context
+There are three functions to implement which the engine will use to call you back for a game.
+- **Init** - This is your initialization function.  It should call the GameEngine_Init function.
+- **Demo** - This function should do nothing but return FALSE.  A correctly initailized game engine will override this function.
+- **Free** - This function you will use to clean up.
+
 
 All of these functions are passed a single parameter which is the **MASTER_DEMO_STRUCT** as defined in **MASTER.INC** This includes the video buffer for "Demo" along with the size of the screen and some other information.
 
@@ -83,6 +91,7 @@ The following describes the directory structure layout.
 - **DemoScenes** - Demoscene libraries themselves which users implement.
 - **DemoScenes\inc\amd64** - Header files to include to use the demo scenes.
 - **DemoEffects** - TBD, Future directory to contain libraries of demo effects that can be included in your demoscene.
+- **Games** - Location of where complete games should reside.
 
 ## Public Framework Header File list
 - **DemoScene.inc** - This is the base header file that should be included for demoscenes.
@@ -93,6 +102,9 @@ The following describes the directory structure layout.
 - **soft3d_public.inc** - Software implmented 3D library structures.
 - **vpal_public.inc** - Virtual Palette functions.
 - **primatives_public.inc** - Basic graphic functions (i.e. Circle, etc.).
+- **gameengine_public.inc** - Game engine to facilitate games.
+- **gif_public.inc** - Load and decode .GIF files.
+- **input_public.inc** - Get keyboard input (press/unpress).
 
 ## Available functions in the framework
 
@@ -119,10 +131,16 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Parameters: (RCX - Double Buffer, RDX - Palette (optional), R8 - Flags)
 	- Return: (None)
 
+- **Dbuffer_ClearBuffer**
+    - Description: Clear the double buffer to 0's.
+	- Parameters: (RCX - Double Buffer)
+	- Return: (None)
+  
 - **Dbuffer_Free**
     - Description: Free  double buffer.
 	- Parameters: (RCX - Double Buffer)
 	- Return: (None)
+
 
 ### DemoScene.inc (Debug_public.inc)
 - **DEBUG_IS_ENABLED**
@@ -133,6 +151,12 @@ The framework contains various functions you can use to accellerate your demo bu
 
 - **DEBUG_RSP_CHECK_MACRO**
     - Description: Performs the RSP verification when debug is enabled as described above.
+   
+- **Engine_Debug**
+    - Description: Print a debug message.  This is a special function that will save even volatile registers and FLAGS so it can be used for debug.
+    - Parameters: (RCX - format string (ala printf)), RDX and ... are the variable arguements like printf.
+    - Return: (None)
+
 
 ### DemoScene.inc (math_public.inc)
 - **Math_Rand**
@@ -248,6 +272,99 @@ The framework contains various functions you can use to accellerate your demo bu
 	- Return: None
         - void PlotPixelCallback(X, Y, Context, Master Context) - In order to accomodate any size buffer, the caller must draw the pixel for any primatives function.
 
+### gameengine_public.inc
+- **GameEngine_Init**
+    - Description: Initializes the game engine.
+    - Parameters: (RCX - Mater Demo Struct, RDX - GAME_ENGINE_INIT)
+    - Return: TRUE on Success, FALSE on Failure.
+       
+- **GameEngine_PrintWord**
+    - Description: Prints a word in bitfont into the double buffer.
+    - Parameters: (RCX - Master Context, RDX - String, R8 - X, R9 - Y, Param5 - Font Size, Param6 - Radians if rotation, Param7 - Color)
+    - Return: None
+
+- **GameEngine_LoadGif**
+    - Description: Loads a .GIF file.
+    - Parameters: (RCX - File Name, RDX - IMAGE_INFORMATION)
+    - Return: TRUE on Success, FALSE on Failure.
+
+- **GameEngine_ConvertImageToSprite**
+    - Description: TBD Future API
+   
+- **GameEngine_DisplayFullScreenAnimatedImage**
+    - Description: Displays an image full screen animated on the screen based on the data in IMAGE_INFORMATION.  It can also grow an image to full screen from smaller image.
+    - Parameters: (RCX - File Name, RDX - IMAGE_INFORMATION)
+    - Return: None
+
+- **GameEngine_DisplayCenteredImage**
+    - Description: Centers an image on the screen based on the data in IMAGE_INFORMATION.  
+    - Parameters: (RCX - File Name, RDX - IMAGE_INFORMATION)
+    - Return: None
+
+- **GameEngine_Free**
+    - Description: Frees the game engine.
+    - Parameters: None
+    - Return: None
+        
+### input_public.inc
+- **Inputx64_RegisterKeyPress**
+    - Description: Registers a callback function on keypress
+    - Parameters: (RCX - Key, RDX - Function Pointer to Handler)
+    - Return: TRUE on Success, FALSE on Failure.
+        - void Handler(void);
+       
+- **Inputx64_RegisterKeyRelease**
+    - Description: Registers a callback function on keyrelease
+    - Parameters: (RCX - Key, RDX - Function Pointer to Handler)
+    - Return: TRUE on Success, FALSE on Failure.
+        - void Handler(void);
+
+### gif_public.inc
+- **Gif_Open**
+    - Description: Opens a GIF and initializes the file handle.
+    - Parameters: (RCX - File Name)
+    - Return: GIF Handle
+       
+- **Gif_Close**
+    - Description: Closes a gif.
+    - Parameters: (RCX - Gif Handle)
+    - Return: None
+
+- **Gif_NumberOfImages**
+    - Description: Determines the number of images in a .GIF file
+    - Parameters: (RCX - Gif Handle)
+    - Return: Number of images in the file.
+
+- **Gif_GetImageSize**
+    - Description: Returns the buffer size for a 32-bit image.
+    - Parameters: (RCX - Gif Handle)
+    - Return: Number of images in the file.
+   
+- **Gif_GetImageWidth**
+    - Description: Returns the image width.
+    - Parameters: (RCX - Gif Handle)
+    - Return: Image width
+
+- **Gif_GetImageHeight**
+    - Description: Returns the image height.
+    - Parameters: (RCX - Gif Handle)
+    - Return: Image height
+
+- **Gif_GetImage32bpp**
+    - Description: Returns the selected frame from scratch.
+    - Parameters: (RCX - Gif Handle, RDX - Image Number, R8 - Return Buffer must be preallocated)
+    - Return: TRUE or FALSE
+    
+- **Gif_GetImage32bppRealTime**
+    - Description: Returns the selected frame from the input previous frame..
+    - Parameters: (RCX - Gif Handle, RDX - Image Number, R8 - Return Buffer must contain the previous frame)
+    - Return: TRUE or FALSE
+
+- **Gif_GetAllImage32bpp**
+    - Description: Returns the selected frame from scratch.
+    - Parameters: (RCX - Gif Handle, RDX - Image Number, R8 - Return Buffer must be preallocated to include a sequential buffer of all images)
+    - Return: TRUE or FALSE
+   
 # Programming Guide (Examples)
 
 The following are coding examples of how to use some of the library and framework functionality in your demo.
