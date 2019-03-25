@@ -12,3 +12,5 @@ extern GameEngine_LoadGif:proc
 extern GameEngine_ConvertImageToSprite:proc
 extern GameEngine_DisplayFullScreenAnimatedImage:proc
 extern GameEngine_DisplayCenteredImage:proc
+extern GameEngine_DisplayTransparentImage:proc
+extern GameEngine_ChangeState:proc
