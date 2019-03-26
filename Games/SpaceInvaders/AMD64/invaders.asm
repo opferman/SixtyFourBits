@@ -90,7 +90,7 @@ TITLE_Y               EQU <10>
 INTRO_Y               EQU <768 - 40>
 INTRO_X               EQU <300>
 INTRO_FONT_SIZE       EQU <3>
-NUMBER_OF_SPRITES     EQU <5>
+NUMBER_OF_SPRITES     EQU <29>
 
 ;*********************************************************
 ; Data Segment
@@ -99,10 +99,11 @@ NUMBER_OF_SPRITES     EQU <5>
     SpaceCurrentLevel  dq ?
     SpaceStateFuncPtrs dq Invaders_Loading,
                           Invaders_IntroScreen,
-						  Invaders_SpriteTest
-                          ;Invaders_BoxIt
+                          Invaders_SpriteTest,
+                          Invaders_BoxIt
+			;			  Invaders_SpriteTest
+                          
                           ;Invaders_MenuScreen
-
     SpaceCurrentState  dq ?
 
     SpaceInvadersLoadingScreenImage db "spaceloadingbackground.gif", 0
@@ -118,20 +119,52 @@ NUMBER_OF_SPRITES     EQU <5>
     ; File Lists
     ;
     LoadingString       db "Loading...", 0 
-    CurrentLoadingColor dd 0, 0FF000h, 0FF00h, 0FFh, 0FFFFFFh, 0FF00FFh, 0FFFF00h, 0FFFFh, 0F01F0Eh
-    LoadingColorsLoop   dd 0
-
+    CurrentLoadingColor dd 0 
+    LoadingColorsLoop   dd 0FF000h, 0FF00h, 0FFh, 0FFFFFFh, 0FF00FFh, 0FFFF00h, 0FFFFh, 0F01F0Eh
+    SpritePointer       dq OFFSET BasicSpriteData
+    ;
+    ; List of Sprite Information
+    ;
+    SpriteInformation   dq  26, 47, 89, 144, 0,16       ; X, Y, X2, Y2, Start Image Number, Number Of Images
+                        dq 103, 31, 167, 159, 0,16
+                        dq 189, 31, 253, 159, 0,16
+                        dq 426, 54, 490, 150, 0,16
+                        dq 508, 54, 572, 150, 0, 16
+                        dq 53, 284, 84, 319, 0,16
+                        dq 104, 284, 135, 319, 0,16
+                        dq 155, 284, 186, 319, 0,16
+                        dq 53+51+51+51, 284, 84+51+51+51, 319, 0,16
+                        dq 53+51+51+51+51-3, 284, 84+51+51+51+51-3, 319, 0, 16
+                        dq 53+51+51+51+51+51-2, 284, 84+51+51+51+51+51, 319, 0,16
+                        dq 53+51+51+51+51+51+51-1, 284, 84+51+51+51+51+51+51, 319, 0,16
+                        dq 53+51+51+51+51+51+51+51, 284, 84+51+51+51+51+51+51+51-7, 319, 0,16
+                        dq 53+51+51+51+51+51+51+51+51-4, 284, 84+51+51+51+51+51+51+51+51-4, 319, 0,16
+                        dq 53+51+51+51+51+51+51+51+51+51-4, 284, 84+51+51+51+51+51+51+51+51+51-3, 319, 0,16
+                        dq 115-1,420-31,  150-1, 454-31, 0,16
+                        dq 164-1, 420-31, 201-1, 454-31, 0,16
+                        dq 213-1, 420-31, 247-1,  454-31, 0,16
+                        dq 37-1, 369-31, 66-1, 401-31, 0,16
+                        dq 37+50-1, 369-31, 66+50-1, 401-31, 0,16
+                        dq 37+50+50-1, 369-31,  66+50+50-1, 401-31, 0,16
+                        dq 37+50+50+50-1,369-31, 66+50+50+50-1, 401-31, 0,16
+                        dq 37+50+50+50+50-1, 369-31, 66+50+50+50+50-1, 401-31, 0,16
+                        dq  37+50+50+50+50+50-1, 369-31, 66+50+50+50+50+50-1,  401-31, 0,16
+                        dq  37+50+50+50+50+50+50-1, 369-31, 66+50+50+50+50+50+50-1, 401-31, 0,16
+                        dq 37+50+50+50+50+50+50+50-1, 369-31, 66 +50+50+50+50+50+50+50-1, 401-31, 0,16
+                        dq  37+50+50+50+50+50+50+50+50-1, 369-31, 66+50+50+50+50+50+50+50+50-1, 401-31, 0,16
+                        dq  37+50+50+50+50+50+50+50+50+50-1, 369-31, 66+50+50+50+50+50+50+50+50+50-1, 401-31, 0,16
+                        dq  37+50+50+50+50+50+50+50+50+50+50-1, 369-31,66+50+50+50+50+50+50+50+50+50+50-1 , 401-31, 0,16
     ;
     ; Game Variable Structures
     ;
-	SpriteConvert      SPRITE_CONVERT <?>
+    SpriteConvert      SPRITE_CONVERT <?>
     GameEngInit        GAME_ENGINE_INIT   <?>
     LoadingScreen      IMAGE_INFORMATION  <?>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
     SpTitle            IMAGE_INFORMATION  <?>
     SpInvaders         IMAGE_INFORMATION  <?>
-	BasicSpriteData    SPRITE_BASIC_INFORMATION  NUMBER_OF_SPRITES DUP(<?>) 
+    BasicSpriteData    SPRITE_BASIC_INFORMATION  NUMBER_OF_SPRITES DUP(<?>) 
     SpSpriteList       dq ?
   ;  HiScoreList        dq MAX_SCORES DUP(<>)
 .CODE
@@ -205,8 +238,12 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   MOV RCX, SPACE_INVADERS_STATE_MENU
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
 
 @CheckOtherState:
+  ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -341,18 +378,47 @@ NESTED_ENTRY Invaders_LoadSprites, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, OFFSET BasicSpriteData
-  MOV RAX, OFFSET SpInvaders
-  MOV [SpriteConvert.ImageInformationPtr], RAX
+  MOV RDI, OFFSET SpInvaders
+
+  XOR RSI, RSI
+  MOV R12, OFFSET SpriteInformation
+@LoadNextSprite:
+
+  MOV [SpriteConvert.ImageInformationPtr], RDI
   MOV [SpriteConvert.SpriteBasicInformtionPtr], RBX
-  MOV [SpriteConvert.SpriteX], 26
-  MOV [SpriteConvert.SpriteY], 47
-  MOV [SpriteConvert.SpriteX2], 89
-  MOV [SpriteConvert.SpriteY2], 144
-  MOV [SpriteConvert.SpriteImageStart], 0
-  MOV RAX, [SpInvaders.NumberOfImages]
-  MOV [SpriteConvert.SpriteNumImages],RAX
+
+  MOV R8, [R12]
+  MOV [SpriteConvert.SpriteX], R8
+  ADD R12, 8
+
+  MOV R8, [R12]
+  MOV [SpriteConvert.SpriteY], R8
+  ADD R12, 8
+
+  MOV R8, [R12]
+  MOV [SpriteConvert.SpriteX2], R8
+  ADD R12, 8
+
+  MOV R8, [R12]
+  MOV [SpriteConvert.SpriteY2], R8
+  ADD R12, 8
+
+  MOV R8, [R12]
+  MOV [SpriteConvert.SpriteImageStart], R8
+  ADD R12, 8
+
+  MOV R8, [R12]
+  MOV [SpriteConvert.SpriteNumImages],R8
+  ADD R12, 8
+
   MOV RCX, OFFSET SpriteConvert
   DEBUG_FUNCTION_CALL GameEngine_ConvertImageToSprite
+
+  MOV SPRITE_BASIC_INFORMATION.SpriteMaxFrames[RBX], 10
+  ADD RBX, SIZE SPRITE_BASIC_INFORMATION
+  INC RSI
+  CMP RSI, NUMBER_OF_SPRITES
+  JB @LoadNextSprite
   
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -397,7 +463,7 @@ NESTED_ENTRY Invaders_Loading, _TEXT$00
   SHL RDX, 2
   ADD RCX, RDX
   MOV ECX, [RCX]
-
+       
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], RCX
   MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
   MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], LODING_FONT_SIZE
@@ -911,14 +977,32 @@ NESTED_ENTRY Invaders_SpriteTest, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV RDI, RDX
-  MOV RAX, 0FFFFFFh
-  MOV RCX, (1024*768*4)/4
-  REP STOSD
+  
   MOV R9, 100
   MOV R8, 100
-  MOV RDX, OFFSET BasicSpriteData
+  MOV RDX, [SpritePointer]
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplaySprite
+
+
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 4
+  MOV R9, 500
+  MOV R8, 500
+  
+
+  MOV RDX, [SpritePointer]
+  MOV RAX, SPRITE_BASIC_INFORMATION.CurrentSprite[RDX]
+  ADD RAX, 'A'
+  MOV RDX, OFFSET LoadingString
+  MOV [RDX], AL
+  MOV BYTE PTR [RDX+1], 0
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
 
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   MOV RAX, SPACE_INVADERS_STATE_MENU
