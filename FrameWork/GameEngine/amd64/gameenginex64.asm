@@ -33,7 +33,7 @@ extern LocalAlloc:proc
 extern Engine_Private_OverrideDemoFunction:proc
 extern cos:proc
 extern sin:proc
-
+extern LocalFree:proc
 
 public GameEngine_Init
 public GameEngine_Free
@@ -44,6 +44,7 @@ public GameEngine_DisplayFullScreenAnimatedImage
 public GameEngine_DisplayCenteredImage
 public GameEngine_DisplayTransparentImage
 public GameEngine_ChangeState
+public GameEngine_DisplaySprite
 
 MAX_KEYS EQU <256>
 
@@ -336,12 +337,15 @@ NESTED_ENTRY GameEngine_LoadGif, _TEXT$00
 NESTED_END GameEngine_LoadGif, _TEXT$00
 
 
+
+
+
 ;*********************************************************
 ;   GameEngine_ConvertImageToSprite
 ;
-;        Parameters: Sprite Struct, Image Struct
+;        Parameters: Sprite Convert Structure
 ;
-;        Return Value: None
+;        Return Value: True or False
 ;
 ;
 ;*********************************************************  
@@ -350,18 +354,240 @@ NESTED_ENTRY GameEngine_ConvertImageToSprite, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV RSI, RCX
-
-
-
-
+  MOV R12, RCX
+  MOV RBX, SPRITE_CONVERT.ImageInformationPtr[R12]
+  MOV R14, SPRITE_CONVERT.SpriteBasicInformtionPtr[R12]
   
-
+  MOV SPRITE_CONVERT.SpriteBasicAllocated[R12], 0
+	
+  ;
+  ; Error Checking, ensure the caller isn't requesting
+  ; more images than are in the image.
+  ;
+  MOV R8, SPRITE_CONVERT.SpriteImageStart[R12]
+  ADD R8, SPRITE_CONVERT.SpriteNumImages[R12]
+  CMP R8, IMAGE_INFORMATION.NumberOfImages[RBX]
+  JA @FailureExit
+  
+  CMP R14, 0
+  JNE @SkipAllocation
+  
+  ;
+  ; Allocate sprite information if not passed in.
+  ;  
+  MOV RDX, SIZE SPRITE_BASIC_INFORMATION
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JE @FailureExit
+  MOV SPRITE_CONVERT.SpriteBasicInformtionPtr[R12], RAX
+  MOV SPRITE_CONVERT.SpriteBasicAllocated[R12], 1
+  MOV R14, RAX
+@SkipAllocation:
+  
+  ;
+  ; Determine A Single Sprite Image Size
+  ;
+  MOV RCX, SPRITE_CONVERT.SpriteX2[R12]
+  SUB RCX, SPRITE_CONVERT.SpriteX[R12]
+  MOV SPRITE_BASIC_INFORMATION.SpriteWidth[R14], RCX
+  MOV RAX, SPRITE_CONVERT.SpriteY2[R12]
+  SUB RAX, SPRITE_CONVERT.SpriteY[R12]
+  MOV SPRITE_BASIC_INFORMATION.SpriteHeight[R14], RAX
+  XOR RDX, RDX
+  MUL RCX
+  SHL RAX, 2
+  MOV SPRITE_BASIC_INFORMATION.SpriteOffsets[R14], RAX
+  
+  ;
+  ; Determine the amount of memory needed for all images
+  ;
+  XOR RDX, RDX
+  MOV R8, SPRITE_CONVERT.SpriteNumImages[R12]
+  MUL R8
+  MOV SPRITE_BASIC_INFORMATION.NumberOfSprites[R14], R8
+  MOV RDX, RAX
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JE @FailureExit
+  
+  MOV SPRITE_BASIC_INFORMATION.SpriteListPtr[R14], RAX
+  MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[R14], RAX
+  MOV SPRITE_BASIC_INFORMATION.CurrentSprite[R14], 0
+  MOV SPRITE_BASIC_INFORMATION.SpriteFrameNum[R14], 0
+  MOV SPRITE_BASIC_INFORMATION.SpriteMaxFrames[R14], 3
+  MOV RSI, IMAGE_INFORMATION.ImageListPtr[RBX]
+  MOV R10, RSI
+  ;
+  ; Setup transparent color
+  ;
+  MOV EAX, DWORD PTR [RSI]
+  MOV SPRITE_BASIC_INFORMATION.SpriteTransparentColor[R14], EAX
+  
+  ;
+  ; Copy Images
+  ;
+  CMP SPRITE_CONVERT.SpriteImageStart[R12], 0
+  JE @SkipAdvanceImagePtr
+  
+@SkipAdvanceImagePtr:
+  XOR R9, R9  
+  MOV RDI, SPRITE_BASIC_INFORMATION.SpriteListPtr[R14]
+@CopyImage:
+  XOR R8, R8
+  ;
+  ; Advance RSI to Sprite Location.
+  ;
+  MOV RAX, SPRITE_CONVERT.SpriteY[R12]
+  XOR RDX, RDX
+  MUL IMAGE_INFORMATION.ImageWidth[RBX]
+  MOV RCX, SPRITE_CONVERT.SpriteX[R12]
+  ADD RAX, RCX
+  SHL RAX, 2
+  ADD RSI, RAX
+  
+  @CopyWidth:
+  MOV RCX, SPRITE_BASIC_INFORMATION.SpriteWidth[R14]
+  REP MOVSD
+  
+  ;
+  ; Advance to the next line.
+  ;
+  MOV RAX, IMAGE_INFORMATION.ImageWidth[RBX]
+  SUB RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[R14]
+  SHL RAX, 2
+  ADD RSI, RAX
+  
+  INC R8
+  CMP R8, SPRITE_BASIC_INFORMATION.SpriteHeight[R14]
+  JB @CopyWidth
+  
+  ADD R10, IMAGE_INFORMATION.ImgOffsets[RBX]
+  MOV RSI, R10
+  INC R9
+  CMP R9, SPRITE_BASIC_INFORMATION.NumberOfSprites[R14]
+  JB @CopyImage
+ 
+  MOV EAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+@FailureExit:
+  CMP SPRITE_CONVERT.SpriteBasicAllocated[RSI], 0
+  JE @SkipFree
+  MOV SPRITE_CONVERT.SpriteBasicAllocated[RSI], 0
+  MOV RCX, SPRITE_CONVERT.SpriteBasicInformtionPtr[RSI]
+  DEBUG_FUNCTION_CALL LocalFree
+@SkipFree:
+  XOR RAX, RAX
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END GameEngine_ConvertImageToSprite, _TEXT$00
+
+
+;*********************************************************
+;   GameEngine_DisplaySprite
+;
+;        Parameters: Master struct, SpriteBasic, X, Y
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplaySprite, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, [DoubleBuffer]
+  
+  ;
+  ; Check if frame should be advanced
+  ;
+  INC SPRITE_BASIC_INFORMATION.SpriteFrameNum[RDX]
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteMaxFrames[RDX]
+  CMP SPRITE_BASIC_INFORMATION.SpriteFrameNum[RDX], RAX
+  JB @NoFrameUpdate
+  
+  ;
+  ;  General Frame Update
+  ;
+  MOV SPRITE_BASIC_INFORMATION.SpriteFrameNum[RDX], 0
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteOffsets[RDX]
+  ADD SPRITE_BASIC_INFORMATION.CurrSpritePtr[RDX], RAX
+
+  ;
+  ; Check for Frame Wraparound
+  ;
+  INC SPRITE_BASIC_INFORMATION.CurrentSprite[RDX]
+  MOV RAX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RDX]
+  CMP SPRITE_BASIC_INFORMATION.CurrentSprite[RDX], RAX
+  JB @NoFrameReset
+
+  MOV SPRITE_BASIC_INFORMATION.CurrentSprite[RDX], 0   
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteListPtr[RDX]
+  MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[RDX], RAX
+
+@NoFrameReset:
+@NoFrameUpdate:
+
+  MOV RSI, SPRITE_BASIC_INFORMATION.CurrSpritePtr[RDX]
+  MOV R11D, SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RDX]
+                          
+
+  ; R8 - X
+  ; R9 - Y
+  MOV RAX, R9
+  SHL RAX, 2
+  MOV R9, RDX
+  XOR RDX, RDX
+  MUL MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  ADD RDI, RAX
+  SHL R8, 2
+  ADD RDI, R8
+  MOV RDX, R9
+
+;
+; Plot the image on the screen, no screen bounds checking currently -- TBD
+;
+  XOR R9, R9
+@PlotVerticle:
+  XOR R10, R10
+@PlotHorizontal:
+  CMP R11D, DWORD PTR [RSI]
+  JE @SkipPixel
+
+  MOV EAX, [RSI]
+  MOV [RDI], EAX
+@SkipPixel:
+  ADD RDI, 4
+  ADD RSI, 4
+  INC R10
+  CMP R10, SPRITE_BASIC_INFORMATION.SpriteWidth[RDX]
+  JB @PlotHorizontal
+  ;
+  ; Wrap to the next location.
+  ;
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  SUB RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDX]
+  SHL RAX, 2
+  ADD RDI, RAX
+
+  INC R9
+  CMP R9, SPRITE_BASIC_INFORMATION.SpriteHeight[RDX]
+  JB @PlotVerticle
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GameEngine_DisplaySprite, _TEXT$00
+
+
 
 
 ;*********************************************************

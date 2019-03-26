@@ -66,14 +66,7 @@ SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 SPRITE_STRUCT  struct
    ImagePointer    dq ?
-   ImageStartFrame dq ?
-   ImageEndFrame   dq ?
-   ImageCurFrame   dq ?
-   ImageStartX     dq ?
-   ImageStartY     dq ?
-   ImageEndX       dq ?
-   ImageEndY       dq ?
-   ImageExplode    dq ?
+   ExplodePointer  dq ?
    SpriteAlive     dq ?
    SpriteX         dq ?
    SpriteY         dq ?
@@ -106,7 +99,8 @@ NUMBER_OF_SPRITES     EQU <5>
     SpaceCurrentLevel  dq ?
     SpaceStateFuncPtrs dq Invaders_Loading,
                           Invaders_IntroScreen,
-                          Invaders_BoxIt
+						  Invaders_SpriteTest
+                          ;Invaders_BoxIt
                           ;Invaders_MenuScreen
 
     SpaceCurrentState  dq ?
@@ -130,13 +124,15 @@ NUMBER_OF_SPRITES     EQU <5>
     ;
     ; Game Variable Structures
     ;
+	SpriteConvert      SPRITE_CONVERT <?>
     GameEngInit        GAME_ENGINE_INIT   <?>
     LoadingScreen      IMAGE_INFORMATION  <?>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
     SpTitle            IMAGE_INFORMATION  <?>
     SpInvaders         IMAGE_INFORMATION  <?>
-    SpSprites          SPRITE_STRUCT NUMBER_OF_SPRITES DUP(<>)
+	BasicSpriteData    SPRITE_BASIC_INFORMATION  NUMBER_OF_SPRITES DUP(<?>) 
+    SpSpriteList       dq ?
   ;  HiScoreList        dq MAX_SCORES DUP(<>)
 .CODE
 
@@ -314,6 +310,8 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpInvaders.IncrementX], XMM0
   MOVSD [SpInvaders.IncrementY], XMM0
   MOV [SpInvaders.ImageHeight], 700
+  
+  DEBUG_FUNCTION_CALL Invaders_LoadSprites
 
 
   MOV EAX, 1
@@ -331,9 +329,9 @@ NESTED_END Invaders_LoadingThread, _TEXT$00
 ;*********************************************************
 ;   Invaders_LoadSprites
 ;
-;        Parameters: Master Context
+;        Parameters: None
 ;
-;        Return Value: TRUE / FALSE
+;        Return Value: None
 ;
 ;
 ;*********************************************************  
@@ -342,11 +340,19 @@ NESTED_ENTRY Invaders_LoadSprites, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV RSI, RCX
-
-
-
-
+  MOV RBX, OFFSET BasicSpriteData
+  MOV RAX, OFFSET SpInvaders
+  MOV [SpriteConvert.ImageInformationPtr], RAX
+  MOV [SpriteConvert.SpriteBasicInformtionPtr], RBX
+  MOV [SpriteConvert.SpriteX], 26
+  MOV [SpriteConvert.SpriteY], 47
+  MOV [SpriteConvert.SpriteX2], 89
+  MOV [SpriteConvert.SpriteY2], 144
+  MOV [SpriteConvert.SpriteImageStart], 0
+  MOV RAX, [SpInvaders.NumberOfImages]
+  MOV [SpriteConvert.SpriteNumImages],RAX
+  MOV RCX, OFFSET SpriteConvert
+  DEBUG_FUNCTION_CALL GameEngine_ConvertImageToSprite
   
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -885,6 +891,43 @@ NESTED_ENTRY Invaders_MenuScreen, _TEXT$00
   RET
 
 NESTED_END Invaders_MenuScreen, _TEXT$00
+
+
+
+
+;*********************************************************
+;   Invaders_SpriteTest
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_SpriteTest, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV RAX, 0FFFFFFh
+  MOV RCX, (1024*768*4)/4
+  REP STOSD
+  MOV R9, 100
+  MOV R8, 100
+  MOV RDX, OFFSET BasicSpriteData
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  MOV RAX, SPACE_INVADERS_STATE_MENU
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_SpriteTest, _TEXT$00
 
 
 ;*********************************************************

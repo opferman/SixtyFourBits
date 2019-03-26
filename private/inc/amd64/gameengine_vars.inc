@@ -27,6 +27,32 @@ IMAGE_INFORMATION struct
    IncrementY          mmword ?
 IMAGE_INFORMATION ends
 
+SPRITE_BASIC_INFORMATION struct
+   SpriteListPtr           dq ?
+   SpriteOffsets           dq ?
+   NumberOfSprites         dq ?
+   CurrSpritePtr           dq ?
+   CurrentSprite           dq ?
+   SpriteFrameNum          dq ?
+   SpriteMaxFrames         dq ?
+   SpriteWidth             dq ?
+   SpriteHeight            dq ?
+   SpriteTransparentColor  dd ?   
+SPRITE_BASIC_INFORMATION ends
+
+SPRITE_CONVERT struct
+    ImageInformationPtr       dq ?
+	SpriteBasicInformtionPtr  dq ?
+	SpriteBasicAllocated      dq ?
+	SpriteX                   dq ?
+	SpriteY                   dq ?
+	SpriteX2                  dq ?
+	SpriteY2                  dq ?
+	SpriteImageStart          dq ?
+	SpriteNumImages           dq ?
+SPRITE_CONVERT ends
+
+
 GAME_ENGINE_INIT struct
    GameFunctionPtrs dq ?
    GameLoadCxt      dq ?
