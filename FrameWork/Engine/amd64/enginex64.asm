@@ -638,7 +638,7 @@ NESTED_ENTRY Engine_CreateThread, _TEXT$00
  MOV QWORD PTR [RSP + 5*SIZE QWORD], 0
  MOV R9, RAX
  MOV R8, Engine_Thread
- XOR RDX, RDX
+ MOV RDX, 1024*1024   ; 1MB Stack Space
  XOR RCX, RCX
  DEBUG_FUNCTION_CALL CreateThread
  ;
