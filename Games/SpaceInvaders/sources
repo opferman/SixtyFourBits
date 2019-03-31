@@ -14,7 +14,7 @@ C_DEFINES = $(CFASTFLAGS) $(C_DEFINES) -DWIN64
 UMTYPE = windows
 INCLUDES=$(INCLUDES);..\..\public\inc;..\..\public\inc\amd64;..\..\private\inc;..\..\private\inc\amd64;..\..\demoscenes\inc\amd64;..\..\DemoScenes\inc\
 
-AMD64_SOURCES = entry.asm invaders.asm
+AMD64_SOURCES = entry.asm invaders.asm invaders.rc
 SOURCES=
 
 TARGETLIBS = $(TARGETLIBS) \

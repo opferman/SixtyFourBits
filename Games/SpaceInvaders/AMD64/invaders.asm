@@ -36,6 +36,8 @@ extern sqrt:proc
 extern cos:proc
 extern sin:proc
 extern tan:proc
+extern FindResourceA:proc
+extern LoadResource:proc
 
 LMEM_ZEROINIT EQU <40h>
 
@@ -62,6 +64,7 @@ SPACE_INVADERS_LEVEL                      EQU <3>
 SPACE_INVADERS_FINAL                      EQU <4>
 SPACE_INVADERS_GAMEPLAY                   EQU <5>
 SPACE_INVADERS_HISCORE                    EQU <6>
+SPACE_INVADERS_ABOUT                      EQU <7>
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 SPRITE_STRUCT  struct
@@ -91,6 +94,7 @@ INTRO_Y               EQU <768 - 40>
 INTRO_X               EQU <300>
 INTRO_FONT_SIZE       EQU <3>
 NUMBER_OF_SPRITES     EQU <29>
+MAX_MENU_SELECTION    EQU <5>
 
 ;*********************************************************
 ; Data Segment
@@ -99,20 +103,44 @@ NUMBER_OF_SPRITES     EQU <29>
     SpaceCurrentLevel  dq ?
     SpaceStateFuncPtrs dq Invaders_Loading,
                           Invaders_IntroScreen,
-                          Invaders_SpriteTest,
+                          Invaders_MenuScreen, 
                           Invaders_BoxIt
-			;			  Invaders_SpriteTest
+                          ;Invaders_HiScores,
+                          ;Invaders_About,
+                          ;Invaders_Instructions,
+                         ; 0
+
+			;Invaders_SpriteTest
                           
                           ;Invaders_MenuScreen
     SpaceCurrentState  dq ?
-
-    SpaceInvadersLoadingScreenImage db "spaceloadingbackground.gif", 0
-    SpaceInvadersIntroImage         db "spaceinvadersintro.gif", 0
-    SpaceInvadersMenuImage          db "spmenu.gif", 0
-    SpaceInvadersTitle              db "Space_Invaders_logo.gif", 0
-    SpaceInvaderSprites             db "SpaceInvaderSprites.gif", 0
+    GifResourceType                 db "GIFFILE", 0
+    SpaceInvadersLoadingScreenImage db "LOADING_GIF", 0
+    SpaceInvadersIntroImage         db "INTRO_GIF", 0
+    SpaceInvadersMenuImage          db "MENU_GIF", 0
+    SpaceInvadersTitle              db "LOGO_GIF", 0
+    SpaceInvaderSprites             db "SPRITES_GIF", 0
+    SpaceInvadersAbout              db "ABOUT_GIF", 0
 
     PressSpaceToContinue            db "<Press Spacebar>", 0
+
+    MenuText                        dq 400, 300
+                                    db "Play Game", 0
+                                    dq 350, 350
+                                    db "Instructions",0
+                                    dq 400, 400
+                                    db "Hi-Scores", 0
+                                    dq 440, 450
+                                    db "About", 0
+                                    dq 445, 500
+                                    db "Quit", 0
+                                    dq 0
+    MenuSelection                   dq 0
+    MenuToState                     dq SPACE_INVADERS_LEVEL
+                                    dq SPACE_INVADERS_GAMEPLAY
+                                    dq SPACE_INVADERS_HISCORE
+                                    dq SPACE_INVADERS_ABOUT
+                                    dq SPACE_INVADERS_FAILURE_STATE  ; Quit
 
     SpriteImageFileListAttributes   db 1, 2
     ;
@@ -163,6 +191,7 @@ NUMBER_OF_SPRITES     EQU <29>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
     SpTitle            IMAGE_INFORMATION  <?>
+    SpAbout            IMAGE_INFORMATION  <?>
     SpInvaders         IMAGE_INFORMATION  <?>
     BasicSpriteData    SPRITE_BASIC_INFORMATION  NUMBER_OF_SPRITES DUP(<?>) 
     SpSpriteList       dq ?
@@ -187,9 +216,12 @@ NESTED_ENTRY Invaders_Init, _TEXT$00
 
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_LOADING
   
-  MOV RDX, OFFSET LoadingScreen
   MOV RCX, OFFSET SpaceInvadersLoadingScreenImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET LoadingScreen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
   CMP RAX, 0
   JE @FailureExit
 
@@ -207,6 +239,18 @@ NESTED_ENTRY Invaders_Init, _TEXT$00
   MOV RCX, VK_SPACE
   DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease
   
+  MOV RDX, Invaders_UpArrow
+  MOV RCX, VK_UP
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease  
+  
+  MOV RDX, Invaders_DownArrow
+  MOV RCX, VK_DOWN
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease  
+
+  MOV RDX, Invaders_Enter
+  MOV RCX, VK_RETURN
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyRelease  
+
 @SuccessExit:
   MOV EAX, 1
   JMP @ActualExit  
@@ -251,6 +295,111 @@ NESTED_END Invaders_SpaceBar, _TEXT$00
 
 
 ;*********************************************************
+;   Invaders_Enter
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_Enter, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  JNE @CheckOtherState
+  
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  MOV RCX, SPACE_INVADERS_STATE_MENU
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@CheckOtherState:
+  ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Invaders_Enter, _TEXT$00
+
+
+
+;*********************************************************
+;   Invaders_DownArrow
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_DownArrow, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  JNE @CheckOtherState
+
+  INC QWORD PTR [MenuSelection]
+  
+  CMP QWORD PTR [MenuSelection], MAX_MENU_SELECTION
+  JB @NoResetToStart
+  MOV [MenuSelection], 0
+
+@NoResetToStart:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@CheckOtherState:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Invaders_DownArrow, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_UpArrow
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_UpArrow, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  JNE @CheckOtherState
+
+  CMP QWORD PTR [MenuSelection], 0
+  JA @Decrement
+  MOV [MenuSelection], MAX_MENU_SELECTION
+@Decrement:
+  DEC QWORD PTR [MenuSelection]
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@CheckOtherState:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Invaders_UpArrow, _TEXT$00
+
+;*********************************************************
 ;   Invaders_Demo
 ;
 ;        Parameters: Master Context
@@ -287,10 +436,13 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+
+  MOV RCX, OFFSET SpaceInvadersIntroImage
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
     
   MOV RDX, OFFSET IntroScreen
-  MOV RCX, OFFSET SpaceInvadersIntroImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
   CMP RAX, 0
   JE @FailureExit
 
@@ -302,9 +454,12 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [IntroScreen.IncrementX], XMM0
   MOVSD [IntroScreen.IncrementY], XMM0
 
-  MOV RDX, OFFSET MenuScreen
   MOV RCX, OFFSET SpaceInvadersMenuImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET MenuScreen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
   CMP RAX, 0
   JE @FailureExit
 
@@ -316,10 +471,12 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [MenuScreen.IncrementX], XMM0
   MOVSD [MenuScreen.IncrementY], XMM0
 
+  MOV RCX, OFFSET SpaceInvadersTitle
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
 
   MOV RDX, OFFSET SpTitle
-  MOV RCX, OFFSET SpaceInvadersTitle
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
   CMP RAX, 0
   JE @FailureExit
 
@@ -331,11 +488,29 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpTitle.IncrementX], XMM0
   MOVSD [SpTitle.IncrementY], XMM0
 
+  MOV RCX, OFFSET SpaceInvadersAbout
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET SpAbout
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [SpAbout.StartX], 0
+  MOV [SpAbout.StartY], 0
+  MOV [SpAbout.InflateCountDown], 0
+  MOV [SpAbout.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [SpAbout.IncrementX], XMM0
+  MOVSD [SpAbout.IncrementY], XMM0
   
+  MOV RCX, OFFSET SpaceInvaderSprites
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
 
   MOV RDX, OFFSET SpInvaders
-  MOV RCX, OFFSET SpaceInvaderSprites
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
   CMP RAX, 0
   JE @FailureExit
 
@@ -526,6 +701,61 @@ NESTED_END Invaders_IntroScreen, _TEXT$00
 
 
 
+
+;*********************************************************
+;   Invaders_DisplayMenuText
+;
+;        Parameters: Master Context
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_DisplayMenuText, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, OFFSET MenuText
+
+  XOR R12, R12
+
+@DisplayMenuText:
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  CMP R12, [MenuSelection]
+  JNE @SkipColorChange
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FF0000h
+
+@SkipColorChange:
+  
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+
+  MOV R8, QWORD PTR [RDI]
+  ADD RDI, 8
+  MOV R9, QWORD PTR [RDI]
+  ADD RDI, 8
+
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+@FindEnd:
+  INC RDI
+  CMP BYTE PTR [RDI], 0
+  JNZ @FindEnd
+
+  INC R12
+
+  INC RDI
+  CMP QWORD PTR [RDI], 0
+  JNE @DisplayMenuText
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_DisplayMenuText, _TEXT$00
 
 ;*********************************************************
 ;   Invaders_BoxIt
@@ -949,6 +1179,9 @@ NESTED_ENTRY Invaders_MenuScreen, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
 
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayMenuText
+
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   MOV RAX, SPACE_INVADERS_STATE_MENU
 
@@ -1041,7 +1274,36 @@ NESTED_ENTRY Invaders_Free, _TEXT$00
 
 NESTED_END Invaders_Free, _TEXT$00
 
+;*********************************************************
+;   Invaders_LoadGifResource
+;
+;        Parameters: Resource Name
+;
+;        Return Value: Memory
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LoadGifResource, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV R8, OFFSET GifResourceType         ; Resource Type
+  MOV RDX, RSI                           ; Resource Name
+  XOR RCX, RCX                           ; Use process module
+  DEBUG_FUNCTION_CALL FindResourceA
 
+  MOV RDX, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL LoadResource
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_LoadGifResource, _TEXT$00
 
 
 

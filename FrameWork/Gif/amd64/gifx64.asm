@@ -241,6 +241,8 @@ public Gif_GetImageHeight
 public Gif_GetImage32bpp
 public Gif_GetImage32bppRealTime
 public Gif_GetAllImage32bpp
+public Gif_InitMemory
+public Gif_CloseMemory
 
 .DATA
 
@@ -312,6 +314,103 @@ DEBUG_RSP_CHECK_MACRO
 
 NESTED_END Gif_Open, _TEXT$00
 
+
+;*********************************************************
+;   Gif_InitMemory
+;
+;        Parameters: Gif Memory
+;
+;        Return Value: Gif Handle
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_InitMemory, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX				; Gif File Name
+  
+  MOV RDX, SIZE GIF_INTERNAL
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  
+  CMP RAX, 0
+  JE @FailureExit
+
+ ;
+ ; Verify the Memory signature is actually a .GIF file.
+ ;
+  MOV GIF_INTERNAL.StartOfGifPtr[RAX], RSI
+  MOV GIF_INTERNAL.GifHeaderPtr[RAX], RSI
+  LEA RSI, GIF_HEADER.Signature[RSI]
+  
+  CMP BYTE PTR [RSI], 'G'
+  JNE @FailureExit
+ 
+  CMP BYTE PTR [RSI+1], 'I'
+  JNE @FailureExit
+
+  CMP BYTE PTR [RSI+2], 'F'
+  JNE @FailureExit
+  
+  MOV RSI, RAX
+  
+  ;
+  ;  Parse the initial file contents to split the memory map into
+  ;  it's base components and determine how many images are in the 
+  ;  file.
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Gif_ParseFile
+  
+  CMP RAX, 0
+  JE @FailureExitParseFile
+  
+  MOV RAX, RSI
+  JMP @SuccessExit  
+
+@FailureExitParseFile:
+  MOV RAX, RSI
+@FailureExit:
+  CMP RAX, 0
+  JE @DoNotDeAllocate
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL LocalFree
+  XOR RAX, RAX  
+@DoNotDeAllocate:
+@SuccessExit:
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Gif_InitMemory, _TEXT$00
+
+;*********************************************************
+;   Gif_CloseMemory
+;
+;        Parameters: Gif Handle
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Gif_CloseMemory, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX				
+ 
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL LocalFree
+    
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Gif_CloseMemory, _TEXT$00
 
 
 ;*********************************************************

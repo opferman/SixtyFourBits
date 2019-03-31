@@ -45,6 +45,7 @@ public GameEngine_DisplayCenteredImage
 public GameEngine_DisplayTransparentImage
 public GameEngine_ChangeState
 public GameEngine_DisplaySprite
+public GameEngine_LoadGifMemory
 
 MAX_KEYS EQU <256>
 
@@ -337,7 +338,99 @@ NESTED_ENTRY GameEngine_LoadGif, _TEXT$00
 NESTED_END GameEngine_LoadGif, _TEXT$00
 
 
+;*********************************************************
+;  GameEngine_LoadGifMemory
+;
+;        Parameters: Memory, Image Information
+;
+;        Return Value: TRUE / FALSE    
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_LoadGifMemory, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RDX
 
+  ;
+  ; Open and Initialize the GIF Library
+  ;
+  DEBUG_FUNCTION_CALL Gif_InitMemory
+  CMP RAX, 0
+  JE @Failed
+  MOV IMAGE_INFORMATION.GifHandle[RSI], RAX
+  
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL Gif_NumberOfImages
+  MOV IMAGE_INFORMATION.NumberOfImages[RSI], RAX
+
+  ;
+  ; Get the size of the image to create the buffer
+  ;
+  MOV RCX, IMAGE_INFORMATION.GifHandle[RSI]
+  DEBUG_FUNCTION_CALL Gif_GetImageSize
+  MOV IMAGE_INFORMATION.ImgOffsets[RSI], RAX
+   
+ ;
+ ; Determine the complete buffer size for all images 
+ ;
+  XOR EDX, EDX
+  MUL IMAGE_INFORMATION.NumberOfImages[RSI]
+  
+  ;
+  ; Allocate the Image Buffer
+  ;
+  MOV RDX, RAX
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX,0
+  JE @FailedWithCleanup
+  
+  ;
+  ; Initialize all of the start up variables
+  ;
+  MOV IMAGE_INFORMATION.ImageListPtr[RSI], RAX
+  MOV IMAGE_INFORMATION.CurrImagePtr[RSI], RAX
+  MOV IMAGE_INFORMATION.ImageFrameNum[RSI], 0
+  MOV IMAGE_INFORMATION.CurrentImage[RSI], 0
+  MOV IMAGE_INFORMATION.ImageMaxFrames[RSI], MAX_FRAMES_PER_IMAGE
+
+  MOV RCX, IMAGE_INFORMATION.GifHandle[RSI]
+  DEBUG_FUNCTION_CALL Gif_GetImageWidth
+  MOV IMAGE_INFORMATION.ImageWidth[RSI], RAX
+
+  MOV RCX, IMAGE_INFORMATION.GifHandle[RSI]
+  DEBUG_FUNCTION_CALL Gif_GetImageHeight
+  MOV IMAGE_INFORMATION.ImageHeight[RSI], RAX
+ 
+
+  MOV RDI, IMAGE_INFORMATION.ImageListPtr[RSI]
+  ;
+  ; Decode the Image into the buffer
+  ;
+  MOV R8, RDI
+  MOV RDX, IMAGE_INFORMATION.NumberOfImages[RSI]
+  DEC RDX
+  MOV RCX, IMAGE_INFORMATION.GifHandle[RSI]
+  DEBUG_FUNCTION_CALL Gif_GetAllImage32bpp
+
+  MOV RAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@FailedWithCleanup:
+;
+; Cleanup TBD
+;
+@Failed:
+  XOR RAX, RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GameEngine_LoadGifMemory, _TEXT$00
 
 
 ;*********************************************************

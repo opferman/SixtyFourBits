@@ -29,7 +29,7 @@ VK_RBUTTON EQU <002h> ; Right mouse button
 ;VK_TAB 0x09 TAB key
 ;- 0x0A-0B Reserved
 ;VK_CLEAR 0x0C CLEAR key
-;VK_RETURN 0x0D ENTER key
+VK_RETURN EQU <0Dh> ;  ENTER key
 ;- 0x0E-0F Undefined
 ;VK_SHIFT 0x10 SHIFT key
 ;VK_CONTROL 0x11 CTRL key

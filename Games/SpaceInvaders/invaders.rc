@@ -1,0 +1,11 @@
+#include <windows.h>
+
+
+ABOUT_GIF    GIFFILE resources\spabout.gif
+INTRO_GIF    GIFFILE resources\spaceinvadersintro.gif
+SPRITES_GIF  GIFFILE resources\SpaceInvaderSprites.gif
+LOADING_GIF  GIFFILE resources\spaceloadingbackground.gif
+LOGO_GIF     GIFFILE resources\Space_Invaders_logo.gif
+MENU_GIF     GIFFILE resources\spmenu.gif
+
+
