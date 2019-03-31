@@ -17,3 +17,4 @@ extern GameEngine_DisplayTransparentImage:proc
 extern GameEngine_ChangeState:proc
 extern GameEngine_DisplaySprite:proc
 extern GameEngine_LoadGifMemory:proc
+extern GameEngine_DisplaySpriteNoLoop:proc

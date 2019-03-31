@@ -46,6 +46,7 @@ public GameEngine_DisplayTransparentImage
 public GameEngine_ChangeState
 public GameEngine_DisplaySprite
 public GameEngine_LoadGifMemory
+public GameEngine_DisplaySpriteNoLoop
 
 MAX_KEYS EQU <256>
 
@@ -523,6 +524,14 @@ NESTED_ENTRY GameEngine_ConvertImageToSprite, _TEXT$00
   ;
   CMP SPRITE_CONVERT.SpriteImageStart[R12], 0
   JE @SkipAdvanceImagePtr
+  ;
+  ; Advance to the selected start image.
+  ;
+  XOR RDX, RDX
+  MOV RAX, IMAGE_INFORMATION.ImgOffsets[RBX]
+  MUL SPRITE_CONVERT.SpriteImageStart[R12]
+  ADD RSI, RAX
+  MOV R10, RSI
   
 @SkipAdvanceImagePtr:
   XOR R9, R9  
@@ -681,6 +690,105 @@ NESTED_ENTRY GameEngine_DisplaySprite, _TEXT$00
 NESTED_END GameEngine_DisplaySprite, _TEXT$00
 
 
+
+;*********************************************************
+;   GameEngine_DisplaySpriteNoLoop
+;
+;        Parameters: Master struct, SpriteBasic, X, Y
+;
+;        Return Value: TRUE is Complete.
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplaySpriteNoLoop, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, [DoubleBuffer]
+  
+  ;
+  ; Check if frame should be advanced
+  ;
+  INC SPRITE_BASIC_INFORMATION.SpriteFrameNum[RDX]
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteMaxFrames[RDX]
+  CMP SPRITE_BASIC_INFORMATION.SpriteFrameNum[RDX], RAX
+  JB @NoFrameUpdate
+  
+  ;
+  ; Check for Frame Wraparound
+  ;
+  INC SPRITE_BASIC_INFORMATION.CurrentSprite[RDX]
+  MOV RAX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RDX]
+  CMP SPRITE_BASIC_INFORMATION.CurrentSprite[RDX], RAX
+  JAE @NoFrameUpdate
+  ;
+  ;  General Frame Update
+  ;
+  MOV SPRITE_BASIC_INFORMATION.SpriteFrameNum[RDX], 0
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteOffsets[RDX]
+  ADD SPRITE_BASIC_INFORMATION.CurrSpritePtr[RDX], RAX
+
+@NoFrameUpdate:
+
+  MOV RSI, SPRITE_BASIC_INFORMATION.CurrSpritePtr[RDX]
+  MOV R11D, SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RDX]
+                          
+
+  ; R8 - X
+  ; R9 - Y
+  MOV RAX, R9
+  SHL RAX, 2
+  MOV R9, RDX
+  XOR RDX, RDX
+  MUL MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  ADD RDI, RAX
+  SHL R8, 2
+  ADD RDI, R8
+  MOV RDX, R9
+
+;
+; Plot the image on the screen, no screen bounds checking currently -- TBD
+;
+  XOR R9, R9
+@PlotVerticle:
+  XOR R10, R10
+@PlotHorizontal:
+  CMP R11D, DWORD PTR [RSI]
+  JE @SkipPixel
+
+  MOV EAX, [RSI]
+  MOV [RDI], EAX
+@SkipPixel:
+  ADD RDI, 4
+  ADD RSI, 4
+  INC R10
+  CMP R10, SPRITE_BASIC_INFORMATION.SpriteWidth[RDX]
+  JB @PlotHorizontal
+  ;
+  ; Wrap to the next location.
+  ;
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  SUB RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDX]
+  SHL RAX, 2
+  ADD RDI, RAX
+
+  INC R9
+  CMP R9, SPRITE_BASIC_INFORMATION.SpriteHeight[RDX]
+  JB @PlotVerticle
+
+  XOR RAX, RAX
+  MOV RCX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RDX]
+  CMP SPRITE_BASIC_INFORMATION.CurrentSprite[RDX], RCX
+  JB @AnimationStillGoing
+  MOV EAX, 1                    ; Animation Completed
+@AnimationStillGoing:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GameEngine_DisplaySpriteNoLoop, _TEXT$00
 
 
 ;*********************************************************
