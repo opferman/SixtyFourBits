@@ -110,7 +110,7 @@ MAX_MENU_SELECTION    EQU <5>
                        dq  Invaders_IntroScreen         ; SPACE_INVADERS_STATE_INTRO
                        dq  Invaders_MenuScreen          ; SPACE_INVADERS_STATE_MENU
                        dq  Invaders_BoxIt               ; SPACE_INVADERS_GAMEPLAY
-                       dq  Invaders_BoxIt               ; SPACE_INVADERS_HISCORE
+                       dq  Invaders_HiScoreScreen       ; SPACE_INVADERS_HISCORE
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
                        dq  Invaders_SpriteTest          ; SPACE_INVADERS_LEVEL_ONE
 
@@ -125,7 +125,7 @@ MAX_MENU_SELECTION    EQU <5>
     SpaceInvadersMenuImage          db "MENU_GIF", 0
     SpaceInvadersTitle              db "LOGO_GIF", 0
     SpaceInvaderSprites             db "SPRITES_GIF", 0
-    SpaceInvadersAbout              db "ABOUT_GIF", 0
+    SpaceInvadersGeneral            db "GENERAL_GIF", 0
 
     ;
     ; Game Text
@@ -143,15 +143,15 @@ MAX_MENU_SELECTION    EQU <5>
                                     db "Quit", 0
                                     dq 0
 
-    AboutText                       dq 370, 300
+    AboutText                       dq 370, 375
                                     db "Programming:", 0
-                                    dq 350, 350
+                                    dq 350, 425
                                     db "Toby Opferman",0
-                                    dq 165, 400
+                                    dq 165, 475
                                     db "x86 64-Bit Assembly Language", 0
-                                    dq 400, 450
+                                    dq 400, 525
                                     db "Graphics:", 0
-                                    dq 350, 500
+                                    dq 350, 575
                                     db "The Internet", 0
                                     dq 0
 
@@ -217,8 +217,8 @@ MAX_MENU_SELECTION    EQU <5>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
     SpTitle            IMAGE_INFORMATION  <?>
-    SpAbout            IMAGE_INFORMATION  <?>
     SpInvaders         IMAGE_INFORMATION  <?>
+    SpGeneral          IMAGE_INFORMATION  <?>
     BasicSpriteData    SPRITE_BASIC_INFORMATION  NUMBER_OF_SPRITES DUP(<?>) 
     SpSpriteList       dq ?
   ;  HiScoreList        dq MAX_SCORES DUP(<>)
@@ -303,6 +303,8 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_HISCORE
+  JE @GoToMenu
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ABOUT
   JE @GoToMenu
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_INTRO
@@ -541,22 +543,22 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpTitle.IncrementX], XMM0
   MOVSD [SpTitle.IncrementY], XMM0
 
-  MOV RCX, OFFSET SpaceInvadersAbout
+  MOV RCX, OFFSET SpaceInvadersGeneral
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
-  MOV RDX, OFFSET SpAbout
+  MOV RDX, OFFSET SpGeneral
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [SpAbout.StartX], 0
-  MOV [SpAbout.StartY], 0
-  MOV [SpAbout.InflateCountDown], 0
-  MOV [SpAbout.InflateCountDownMax], 0
+  MOV [SpGeneral.StartX], 0
+  MOV [SpGeneral.StartY], 0
+  MOV [SpGeneral.InflateCountDown], 0
+  MOV [SpGeneral.InflateCountDownMax], 0
   PXOR XMM0, XMM0
-  MOVSD [SpAbout.IncrementX], XMM0
-  MOVSD [SpAbout.IncrementY], XMM0
+  MOVSD [SpGeneral.IncrementX], XMM0
+  MOVSD [SpGeneral.IncrementY], XMM0
   
   MOV RCX, OFFSET SpaceInvaderSprites
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
@@ -575,7 +577,8 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpInvaders.IncrementX], XMM0
   MOVSD [SpInvaders.IncrementY], XMM0
   MOV [SpInvaders.ImageHeight], 700
-  
+
+ 
   DEBUG_FUNCTION_CALL Invaders_LoadSprites
 
 
@@ -769,7 +772,7 @@ NESTED_ENTRY Invaders_AboutScreen, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   
-  MOV RDX, OFFSET SpAbout
+  MOV RDX, OFFSET SpGeneral
   DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
 
   MOV R9, TITLE_Y
@@ -799,6 +802,51 @@ NESTED_ENTRY Invaders_AboutScreen, _TEXT$00
   RET
 
 NESTED_END Invaders_AboutScreen, _TEXT$00
+
+;*********************************************************
+;   Invaders_HiScoreScreen
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_HiScoreScreen, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV RDX, OFFSET SpGeneral
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  MOV R9, TITLE_Y
+  MOV R8, TITLE_X
+  MOV RDX, OFFSET SpTitle
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+  MOV R9, INTRO_Y
+  MOV R8, INTRO_X
+  MOV RDX, OFFSET PressSpaceToContinue
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_HISCORE
+  MOV RAX, SPACE_INVADERS_HISCORE
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_HiScoreScreen, _TEXT$00
+
+
 
 ;*********************************************************
 ;   Invaders_DisplayScrollText
