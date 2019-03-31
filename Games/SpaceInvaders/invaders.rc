@@ -7,4 +7,5 @@ LOADING_GIF  GIFFILE resources\spaceloadingbackground.gif
 LOGO_GIF     GIFFILE resources\Space_Invaders_logo.gif
 MENU_GIF     GIFFILE resources\spmenu.gif
 GENERAL_GIF  GIFFILE resources\spgeneral.gif
+LEVEL1_GIF   GIFFILE resources\spacelevelbackground.gif
 

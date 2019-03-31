@@ -152,6 +152,7 @@ PLAYER_FIRE_DAMAGE     EQU <1>
     SpaceInvadersTitle              db "LOGO_GIF", 0
     SpaceInvaderSprites             db "SPRITES_GIF", 0
     SpaceInvadersGeneral            db "GENERAL_GIF", 0
+    SpaceInvadersLevel1             db "LEVEL1_GIF", 0
  
     PlayerSprite                    SPRITE_STRUCT <?>
     PlayerFire                      SPRITE_STRUCT PLAYER_MAX_FIRE DUP(<?>)
@@ -347,6 +348,7 @@ PLAYER_FIRE_DAMAGE     EQU <1>
     LargeShips         SPRITE_STRUCT  10 DUP(<?>)
     SpriteConvert      SPRITE_CONVERT     <?>
     GameEngInit        GAME_ENGINE_INIT   <?>
+    Level1Screen       IMAGE_INFORMATION  <?>
     LoadingScreen      IMAGE_INFORMATION  <?>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
@@ -696,10 +698,11 @@ NESTED_ENTRY Invaders_LeftArrowPress, _TEXT$00
   MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
   MOV RDX, [PlayerSprite.SpriteVelMaxX]
   NEG RDX
-  CMP RDX, [PlayerSprite.SpriteVelX]
-  JE @SkipUpate
+  MOV [PlayerSprite.SpriteVelX], RDX
+  ;CMP RDX, [PlayerSprite.SpriteVelX]
+  ;JE @SkipUpate
 
-  DEC [PlayerSprite.SpriteVelX]
+  ;DEC [PlayerSprite.SpriteVelX]
 
 @SkipUpate:
   
@@ -731,10 +734,11 @@ NESTED_ENTRY Invaders_RightArrowPress, _TEXT$00
   JGE @SkipUpate
   MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
   MOV RDX, [PlayerSprite.SpriteVelMaxX]
-  CMP RDX, [PlayerSprite.SpriteVelX]
-  JE @SkipUpate
+  MOV [PlayerSprite.SpriteVelX], RDX
+  ;CMP RDX, [PlayerSprite.SpriteVelX]
+  ;JE @SkipUpate
 
-  INC [PlayerSprite.SpriteVelX]
+  ;INC [PlayerSprite.SpriteVelX]
 
 @SkipUpate:
   
@@ -818,10 +822,11 @@ NESTED_ENTRY Invaders_DownArrowPress, _TEXT$00
   JGE @SkipUpate
   MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
   MOV RDX, [PlayerSprite.SpriteVelMaxY]
-  CMP RDX, [PlayerSprite.SpriteVelY]
-  JE @SkipUpate
+  MOV [PlayerSprite.SpriteVelY], RDX
+  ;CMP RDX, [PlayerSprite.SpriteVelY]
+  ;JE @SkipUpate
 
-  INC [PlayerSprite.SpriteVelY]
+  ;INC [PlayerSprite.SpriteVelY]
 
 @SkipUpate:
   
@@ -855,10 +860,12 @@ NESTED_ENTRY Invaders_UpArrowPress, _TEXT$00
   MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
   MOV RDX, [PlayerSprite.SpriteVelMaxY]
   NEG RDX
-  CMP RDX, [PlayerSprite.SpriteVelY]
-  JE @SkipUpate
+  MOV [PlayerSprite.SpriteVelY], RDX
 
-  DEC [PlayerSprite.SpriteVelY]
+  ;CMP RDX, [PlayerSprite.SpriteVelY]
+  ;JE @SkipUpate
+
+  ;DEC [PlayerSprite.SpriteVelY]
 
 @SkipUpate:
   
@@ -1037,6 +1044,25 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   PXOR XMM0, XMM0
   MOVSD [SpTitle.IncrementX], XMM0
   MOVSD [SpTitle.IncrementY], XMM0
+
+  MOV RCX, OFFSET SpaceInvadersLevel1
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET Level1Screen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [Level1Screen.StartX], 0
+  MOV [Level1Screen.StartY], 0
+  MOV [Level1Screen.InflateCountDown], 0
+  MOV [Level1Screen.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [Level1Screen.IncrementX], XMM0
+  MOVSD [Level1Screen.IncrementY], XMM0
+
+  
 
   MOV RCX, OFFSET SpaceInvadersGeneral
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
@@ -2028,6 +2054,9 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
+
+  MOV RDX, OFFSET Level1Screen
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
   
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayPlayer
