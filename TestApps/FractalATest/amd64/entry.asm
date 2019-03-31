@@ -87,6 +87,7 @@ NESTED_ENTRY WinMain, _TEXT$00
   MOV WINMAIN_FRAME.InitializationStruct.pszWindowClass[RSP], RCX
   LEA RCX, [GlobalDemoStructure]    
   MOV WINMAIN_FRAME.InitializationStruct.GlobalDemoStructure[RSP], RCX
+  MOV WINMAIN_FRAME.InitializationStruct.DisableEscapeExit[RSP], 0
 
   MOV R9, 0h    ;   MB_OK
   LEA R8, [pszMsgCpt2]

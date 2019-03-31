@@ -60,11 +60,16 @@ public Invaders_Free
 SPACE_INVADERS_STATE_LOADING              EQU <0>
 SPACE_INVADERS_STATE_INTRO                EQU <1>
 SPACE_INVADERS_STATE_MENU                 EQU <2>
-SPACE_INVADERS_LEVEL                      EQU <3>
-SPACE_INVADERS_FINAL                      EQU <4>
-SPACE_INVADERS_GAMEPLAY                   EQU <5>
-SPACE_INVADERS_HISCORE                    EQU <6>
-SPACE_INVADERS_ABOUT                      EQU <7>
+SPACE_INVADERS_GAMEPLAY                   EQU <3>
+SPACE_INVADERS_HISCORE                    EQU <4>
+SPACE_INVADERS_STATE_ABOUT                EQU <5>
+
+SPACE_INVADERS_LEVEL_ONE                  EQU <6>
+SPACE_INVADERS_LEVEL_TWO                  EQU <7>
+SPACE_INVADERS_LEVEL_THREE                EQU <8>
+SPACE_INVADERS_LEVEL_FOUR                 EQU <9>
+SPACE_INVADERS_LEVEL_FIVE                 EQU <10>
+
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 SPRITE_STRUCT  struct
@@ -101,19 +106,19 @@ MAX_MENU_SELECTION    EQU <5>
 ;*********************************************************
 .DATA
     SpaceCurrentLevel  dq ?
-    SpaceStateFuncPtrs dq Invaders_Loading,
-                          Invaders_IntroScreen,
-                          Invaders_MenuScreen, 
-                          Invaders_BoxIt
-                          ;Invaders_HiScores,
-                          ;Invaders_About,
-                          ;Invaders_Instructions,
-                         ; 0
+    SpaceStateFuncPtrs dq  Invaders_Loading             ; SPACE_INVADERS_STATE_LOADING
+                       dq  Invaders_IntroScreen         ; SPACE_INVADERS_STATE_INTRO
+                       dq  Invaders_MenuScreen          ; SPACE_INVADERS_STATE_MENU
+                       dq  Invaders_BoxIt               ; SPACE_INVADERS_GAMEPLAY
+                       dq  Invaders_BoxIt               ; SPACE_INVADERS_HISCORE
+                       dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
+                       dq  Invaders_SpriteTest          ; SPACE_INVADERS_LEVEL_ONE
 
-			;Invaders_SpriteTest
-                          
-                          ;Invaders_MenuScreen
-    SpaceCurrentState  dq ?
+
+    ;
+    ;  Graphic Resources 
+    ; 
+    SpaceCurrentState               dq ?
     GifResourceType                 db "GIFFILE", 0
     SpaceInvadersLoadingScreenImage db "LOADING_GIF", 0
     SpaceInvadersIntroImage         db "INTRO_GIF", 0
@@ -122,8 +127,10 @@ MAX_MENU_SELECTION    EQU <5>
     SpaceInvaderSprites             db "SPRITES_GIF", 0
     SpaceInvadersAbout              db "ABOUT_GIF", 0
 
+    ;
+    ; Game Text
+    ;
     PressSpaceToContinue            db "<Press Spacebar>", 0
-
     MenuText                        dq 400, 300
                                     db "Play Game", 0
                                     dq 350, 350
@@ -135,14 +142,32 @@ MAX_MENU_SELECTION    EQU <5>
                                     dq 445, 500
                                     db "Quit", 0
                                     dq 0
+
+    AboutText                       dq 370, 300
+                                    db "Programming:", 0
+                                    dq 350, 350
+                                    db "Toby Opferman",0
+                                    dq 165, 400
+                                    db "x86 64-Bit Assembly Language", 0
+                                    dq 400, 450
+                                    db "Graphics:", 0
+                                    dq 350, 500
+                                    db "The Internet", 0
+                                    dq 0
+
+    ;
+    ; Menu Selection 
+    ;
     MenuSelection                   dq 0
-    MenuToState                     dq SPACE_INVADERS_LEVEL
+    MenuToState                     dq SPACE_INVADERS_LEVEL_ONE
                                     dq SPACE_INVADERS_GAMEPLAY
                                     dq SPACE_INVADERS_HISCORE
-                                    dq SPACE_INVADERS_ABOUT
+                                    dq SPACE_INVADERS_STATE_ABOUT
                                     dq SPACE_INVADERS_FAILURE_STATE  ; Quit
 
+
     SpriteImageFileListAttributes   db 1, 2
+
     ;
     ; File Lists
     ;
@@ -150,6 +175,7 @@ MAX_MENU_SELECTION    EQU <5>
     CurrentLoadingColor dd 0 
     LoadingColorsLoop   dd 0FF000h, 0FF00h, 0FFh, 0FFFFFFh, 0FF00FFh, 0FFFF00h, 0FFFFh, 0F01F0Eh
     SpritePointer       dq OFFSET BasicSpriteData
+
     ;
     ; List of Sprite Information
     ;
@@ -277,8 +303,12 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ABOUT
+  JE @GoToMenu
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_INTRO
   JNE @CheckOtherState
+
+@GoToMenu:
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   MOV RCX, SPACE_INVADERS_STATE_MENU
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
@@ -287,6 +317,22 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   RET
 
 @CheckOtherState:
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  JNE @NotOnMenu
+
+  ;
+  ; Implement Menu Selection
+  ;
+  MOV RDX, [MenuSelection]
+  MOV RCX, OFFSET MenuToState
+  SHL RDX, 3
+  ADD RCX, RDX
+  MOV RCX, QWORD PTR [RCX]
+  MOV [SpaceCurrentState], RCX
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+
+@NotOnMenu:
+
   ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -310,9 +356,16 @@ NESTED_ENTRY Invaders_Enter, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   JNE @CheckOtherState
-  
-  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
-  MOV RCX, SPACE_INVADERS_STATE_MENU
+
+  ;
+  ; Implement Menu Selection
+  ;
+  MOV RDX, [MenuSelection]
+  MOV RCX, OFFSET MenuToState
+  SHL RDX, 3
+  ADD RCX, RDX
+  MOV RCX, QWORD PTR [RCX]
+  MOV [SpaceCurrentState], RCX
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -700,30 +753,76 @@ NESTED_ENTRY Invaders_IntroScreen, _TEXT$00
 NESTED_END Invaders_IntroScreen, _TEXT$00
 
 
-
-
 ;*********************************************************
-;   Invaders_DisplayMenuText
+;   Invaders_AboutScreen
 ;
-;        Parameters: Master Context
+;        Parameters: Master Context, Double Buffer
 ;
 ;        Return Value: State
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Invaders_DisplayMenuText, _TEXT$00
+NESTED_ENTRY Invaders_AboutScreen, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
-  MOV RDI, OFFSET MenuText
+  
+  MOV RDX, OFFSET SpAbout
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  MOV R9, TITLE_Y
+  MOV R8, TITLE_X
+  MOV RDX, OFFSET SpTitle
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  MOV R8, 20
+  MOV RDX, OFFSET AboutText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+  MOV R9, INTRO_Y
+  MOV R8, INTRO_X
+  MOV RDX, OFFSET PressSpaceToContinue
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_ABOUT
+  MOV RAX, SPACE_INVADERS_STATE_ABOUT
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_AboutScreen, _TEXT$00
+
+;*********************************************************
+;   Invaders_DisplayScrollText
+;
+;        Parameters: Master Context, Text, Highlight Index
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_DisplayScrollText, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV RBX, R8
 
   XOR R12, R12
 
 @DisplayMenuText:
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
-  CMP R12, [MenuSelection]
+  CMP R12, RBX
   JNE @SkipColorChange
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FF0000h
 
@@ -755,7 +854,7 @@ NESTED_ENTRY Invaders_DisplayMenuText, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
-NESTED_END Invaders_DisplayMenuText, _TEXT$00
+NESTED_END Invaders_DisplayScrollText, _TEXT$00
 
 ;*********************************************************
 ;   Invaders_BoxIt
@@ -1179,8 +1278,10 @@ NESTED_ENTRY Invaders_MenuScreen, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
 
+  MOV R8, [MenuSelection]
+  MOV RDX, OFFSET MenuText
   MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayMenuText
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
 
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   MOV RAX, SPACE_INVADERS_STATE_MENU

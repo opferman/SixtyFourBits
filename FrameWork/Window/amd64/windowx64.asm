@@ -88,6 +88,7 @@ W_SETUP_PARAMS ends
  pszWindowTitle  dq ?
  FullScreenMode  dq ?
  EmulateVRTrace  dq ?
+ EscapeDisabled  dq ?
 .CODE
 
 ;*********************************************************
@@ -106,6 +107,10 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
 .ENDPROLOG 
   MOV [EmulateVRTrace], 0
   MOV RDI, RCX
+
+  MOV RCX, INIT_DEMO_STRUCT.DisableEscapeExit[RdI]
+  MOV [EscapeDisabled], RCX
+
   MOV RCX, INIT_DEMO_STRUCT.pszWindowClass[RdI]
   MOV [pszWindowClass], RCX
 
@@ -361,6 +366,9 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   MOV RDX, WINPROG_STACK_FRAME.SaveParam2[RSP]
   MOV R8, WINPROG_STACK_FRAME.SaveParam3[RSP]
   MOV R9, WINPROG_STACK_FRAME.SaveParam4[RSP]
+  
+  CMP [EscapeDisabled], 0
+  JNE @Window_DefaultWindow
 
   CMP R8D, VK_ESCAPE
   JNE @Window_DefaultWindow
