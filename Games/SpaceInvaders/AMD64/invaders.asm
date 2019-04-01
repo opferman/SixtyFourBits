@@ -64,12 +64,12 @@ SPACE_INVADERS_STATE_MENU                 EQU <2>
 SPACE_INVADERS_GAMEPLAY                   EQU <3>
 SPACE_INVADERS_HISCORE                    EQU <4>
 SPACE_INVADERS_STATE_ABOUT                EQU <5>
-
-SPACE_INVADERS_LEVEL_ONE                  EQU <6>
-SPACE_INVADERS_LEVEL_TWO                  EQU <7>
-SPACE_INVADERS_LEVEL_THREE                EQU <8>
-SPACE_INVADERS_LEVEL_FOUR                 EQU <9>
-SPACE_INVADERS_LEVEL_FIVE                 EQU <10>
+SPACE_INVADERS_END_GAME                   EQU <6>
+SPACE_INVADERS_LEVEL_ONE                  EQU <7>
+SPACE_INVADERS_LEVEL_TWO                  EQU <8>
+SPACE_INVADERS_LEVEL_THREE                EQU <9>
+SPACE_INVADERS_LEVEL_FOUR                 EQU <10>
+SPACE_INVADERS_LEVEL_FIVE                 EQU <11>
 
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
@@ -161,6 +161,7 @@ PLAYER_FIRE_DAMAGE     EQU <1>
                        dq  Invaders_BoxIt               ; SPACE_INVADERS_GAMEPLAY
                        dq  Invaders_HiScoreScreen       ; SPACE_INVADERS_HISCORE
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
+                       dq  0                            ; SPACE_INVADERS_END_GAME
                        dq  Invaders_LevelOne            ; SPACE_INVADERS_LEVEL_ONE
 
     ;
@@ -1036,6 +1037,35 @@ NESTED_END Invaders_Demo, _TEXT$00
 ;***************************************************************************************************************************************************************************
 ; Initialization & Support Functions
 ;***************************************************************************************************************************************************************************
+
+
+
+;*********************************************************
+;   Invaders_ResetSpriteBasicInformation
+;
+;        Parameters: Resource Name
+;
+;        Return Value: Memory
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_ResetSpriteBasicInformation, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteListPtr[RCX]
+  MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[RCX], RDX
+  MOV SPRITE_BASIC_INFORMATION.CurrentSprite[RCX], 0
+  MOV SPRITE_BASIC_INFORMATION.SpriteFrameNum[RCX], 0
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_ResetSpriteBasicInformation, _TEXT$00
+
 
 ;*********************************************************
 ;   Invaders_LoadGifResource
@@ -2262,6 +2292,16 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
 
 @SkipLevelAction:
+  CMP [PlayerLives], 0
+  JA @ContinueGoing
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_END_GAME
+  MOV RAX, [SpaceCurrentState]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@ContinueGoing:
   MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE
   MOV RAX, [SpaceCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -2270,6 +2310,77 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
 
 NESTED_END Invaders_LevelOne, _TEXT$00
 
+
+
+
+;***************************************************************************************************************************************************************************
+; Level Resets
+;***************************************************************************************************************************************************************************
+
+
+;*********************************************************
+;   Invaders_LevelOneReset
+;
+;        Parameters: 
+;
+;        Return Value: 
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LevelOneReset, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV [PlayerSprite.HitPoints], PLAYER_START_HP
+  DEBUG_FUNCTION_CALL Invaders_EmptyActiveList
+  MOV [LevelIntroTimer], LEVEL_INTRO_TIMER_SIZE/2
+  MOV [PlayerSprite.SpriteAlive], 1
+  MOV [PlayerSprite.SpriteFire], 0
+
+  MOV RCX, [SpritePointer]
+  ADD RCX, SIZE SPRITE_BASIC_INFORMATION*4
+  DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
+
+
+
+  MOV RDI, [PlayerFireActivePtr]
+  MOV [PlayerFireActivePtr], 0
+
+  CMP RDI, 0
+  JE @ListEmpty
+
+@InitPlayerFirePreviouslyActive:
+
+  MOV SPRITE_STRUCT.SpriteAlive[RDI], 0
+  MOV SPRITE_STRUCT.HitPoints[RDI], 0
+
+  ;
+  ; Add the fire to the inactive list.
+  ;
+  MOV R8, SPRITE_STRUCT.pNext[RDI]
+
+
+  MOV R9, [PlayerFireInActivePtr]
+  MOV SPRITE_STRUCT.pNext[RDI], R9
+  MOV SPRITE_STRUCT.pPrev[RDI], 0
+  CMP R9, 0
+  JE @DoNotUpdate
+  MOV SPRITE_STRUCT.pPrev[R9], RDI
+@DoNotUpdate:
+  MOV [PlayerFireInActivePtr], RDI
+
+  MOV RDI, R8
+  CMP RDI, 0
+  JNE @InitPlayerFirePreviouslyActive
+@ListEmpty:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_LevelOneReset, _TEXT$00
 
 ;***************************************************************************************************************************************************************************
 ; Creating Enemies
@@ -2688,7 +2799,9 @@ NESTED_ENTRY Invaders_DisplayPlayer, _TEXT$00
   ;
   ; Reset Level Time!
   ;
-  int 3
+  DEC [PlayerLives]
+  DEBUG_FUNCTION_CALL Invaders_LevelOneReset
+
 @StillExploding:    
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
