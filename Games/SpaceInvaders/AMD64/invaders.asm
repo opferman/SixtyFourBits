@@ -2802,11 +2802,7 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayGameGraphics
   
-  ;
-  ;  Display the Game Panel
-  ;
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
+
   
   CMP R12, 0
   JE @GameStillGoing
@@ -2818,6 +2814,13 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   DEBUG_FUNCTION_CALL Invaders_LevelOneReset
   
 @GameStillGoing:
+
+  ;
+  ;  Display the Game Panel After Updating Lives!
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
+
 @SkipLevelAction:
   CMP [PlayerLives], 0
   JA @ContinueGoing
