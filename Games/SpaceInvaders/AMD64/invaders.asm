@@ -72,11 +72,12 @@ SPACE_INVADERS_GAMEPLAY                   EQU <3>
 SPACE_INVADERS_HISCORE                    EQU <4>
 SPACE_INVADERS_STATE_ABOUT                EQU <5>
 SPACE_INVADERS_END_GAME                   EQU <6>
-SPACE_INVADERS_LEVEL_ONE                  EQU <7>
-SPACE_INVADERS_LEVEL_TWO                  EQU <8>
-SPACE_INVADERS_LEVEL_THREE                EQU <9>
-SPACE_INVADERS_LEVEL_FOUR                 EQU <10>
-SPACE_INVADERS_LEVEL_FIVE                 EQU <11>
+SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <7>
+SPACE_INVADERS_LEVEL_ONE                  EQU <8>
+SPACE_INVADERS_LEVEL_TWO                  EQU <9>
+SPACE_INVADERS_LEVEL_THREE                EQU <10>
+SPACE_INVADERS_LEVEL_FOUR                 EQU <11>
+SPACE_INVADERS_LEVEL_FIVE                 EQU <12>
 
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
@@ -136,7 +137,7 @@ PLAYER_MAX_FIRE        EQU <5>          ; Starting Level 1 max
 PLAYER_START_HP        EQU <1>
 PLAYER_DAMAGE          EQU <2>
 PLAYER_FIRE_MAX_Y      EQU <-5>
-LARGE_GAME_ALLOCATION  EQU <1024*1024>
+LARGE_GAME_ALLOCATION  EQU <1024*1024*10> ; 10 MB
 MAXIMUM_PLAYER_FIRE    EQU <5>          ; Total Game Maximum Fire
 SMALL_ALIEN_SHIPS_MAX  EQU <12>
 LARGE_ALIEN_SHIPS_MAX  EQU <10>
@@ -166,9 +167,21 @@ PLAYER_FIRE_DAMAGE     EQU <1>
 ;
 ; Game Over Constants
 ;
-GAME_OVER_X EQU <125>
-GAME_OVER_Y EQU <300>
-GAME_OVER_SIZE EQU <10>
+GAME_OVER_X     EQU <125>
+GAME_OVER_Y     EQU <300>
+GAME_OVER_SIZE  EQU <10>
+
+HS_GAME_OVER_X    EQU <100>
+HS_GAME_OVER_Y    EQU <300>
+HS_GAME_OVER_SIZE EQU <10>
+
+ENTER_INITIALS_X    EQU <275>
+ENTER_INITIALS_Y    EQU <400>
+ENTER_INITIALS_SIZE EQU <3>
+
+INITIALS_X    EQU <350>
+INITIALS_Y    EQU <500>
+INITIALS_SIZE EQU <10>
 
 ;*********************************************************
 ; Data Segment
@@ -182,6 +195,7 @@ GAME_OVER_SIZE EQU <10>
                        dq  Invaders_HiScoreScreen       ; SPACE_INVADERS_HISCORE
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
                        dq  Invaders_GameOver            ; SPACE_INVADERS_END_GAME
+                       dq  Invaders_EnterHiScore        ; SPACE_INVADERS_STATE_ENTER_HI_SCORE
                        dq  Invaders_LevelOne            ; SPACE_INVADERS_LEVEL_ONE
                   
     ;
@@ -276,9 +290,9 @@ GAME_OVER_SIZE EQU <10>
     HiScoreFormatString             db "%s - %I64u", 0
     HiScoreString                   db "                                      ",0
     
-     LevelIntroTimer                dq LEVEL_INTRO_TIMER_SIZE
-     LevelTimer                     dq ?
-
+    LevelIntroTimer                dq LEVEL_INTRO_TIMER_SIZE
+    LevelTimer                     dq ?
+    HiScoreLocationPtr             dq ?
 
     ;
     ; Menu Selection 
@@ -304,6 +318,12 @@ GAME_OVER_SIZE EQU <10>
 	GameOverCaptureScreen           dq ?
 	GameCaptureSize                 dq ?
 	GameOverText                    db "GAME OVER",0
+        HighScoreText                   db "HIGH SCORE!",0
+        EnterInitials                   db "Enter your initials!",0
+        InitialsConst                   db "A--", 0
+        InitialsEnter                   db "   ", 0
+        InitialsEnterPtr                dq ?
+
     ;
     ; File Lists
     ;
@@ -454,8 +474,9 @@ GAME_OVER_SIZE EQU <10>
     ;
     ; Game Variable Structures
     ;
-    LargeMemoryAllocation dq ?
-    CurrentMemoryPtr      dq ?
+    LargeMemoryAllocation    dq ?
+    LargeMemoryAllocationEnd dq ?
+    CurrentMemoryPtr         dq ?
     SpriteConvert      SPRITE_CONVERT     <?>
     GameEngInit        GAME_ENGINE_INIT   <?>
     Level1Screen       IMAGE_INFORMATION  <?>
@@ -465,7 +486,7 @@ GAME_OVER_SIZE EQU <10>
     SpTitle            IMAGE_INFORMATION  <?>
     SpInvaders         IMAGE_INFORMATION  <?>
     SpGeneral          IMAGE_INFORMATION  <?>
-	HiScoreListPtr     dq OFFSET HiScoreListConst
+    HiScoreListPtr     dq OFFSET HiScoreListConst
     HiScoreListConst   db "TEO", 0
 	                   dq 0
 					   db "TEO", 0
@@ -705,7 +726,6 @@ NESTED_ENTRY Invaders_SpacePress, _TEXT$00
 @AlreadyAtMaxFire:
 @GameNotActive:
 @PlayerIsDead:
-
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -741,6 +761,14 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
+@GoToIntro:
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_INTRO
+  MOV RCX, SPACE_INVADERS_STATE_INTRO
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
 @CheckOtherState:
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   JNE @NotOnMenu
@@ -760,7 +788,44 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
 
 @NotOnMenu:
+  CMP [SpaceCurrentState], SPACE_INVADERS_END_GAME
+  JNE @NotOnEndGame
+  
+  CMP [HiScoreLocationPtr], 0
+  JE @GoToIntro
+   
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  MOV RCX, SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
 
+@NotOnEndGame:
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  JNE @NotHighScore
+
+  INC QWORD PTR [InitialsEnterPtr]
+  MOV RAX, [InitialsEnterPtr]
+  MOV AL, BYTE PTR [RAX]
+
+  CMP AL, 0
+  JNE @NotDoneEnteringYet
+
+  ;
+  ; Done entering high score, Update Hi Score File
+  ; and go to Intro.
+  ;
+  DEBUG_FUNCTION_CALL Invaders_UpdateHighScore
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_INTRO
+  MOV RCX, SPACE_INVADERS_STATE_INTRO
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+  JMP @DoneWithEnteringScore
+@NotDoneEnteringYet:
+  MOV RAX, [InitialsEnterPtr]
+  MOV BYTE PTR [RAX], 'A'
+@NotHighScore:
+@DoneWithEnteringScore:
 ;  ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -956,6 +1021,9 @@ NESTED_ENTRY Invaders_DownArrowPress, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  JE @UpdateHighScore
+
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
@@ -969,9 +1037,15 @@ NESTED_ENTRY Invaders_DownArrowPress, _TEXT$00
   ;JE @SkipUpate
 
   ;INC [PlayerSprite.SpriteVelY]
-
-@SkipUpate:
 @PlayerIsDead:  
+@SkipUpate:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+@UpdateHighScore:
+
+  MOV AL, 1
+  DEBUG_FUNCTION_CALL Invaders_HiScoreEnterUpdate
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -996,6 +1070,9 @@ NESTED_ENTRY Invaders_UpArrowPress, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  JE @UpdateHighScore
+
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
@@ -1011,13 +1088,22 @@ NESTED_ENTRY Invaders_UpArrowPress, _TEXT$00
   ;JE @SkipUpate
 
   ;DEC [PlayerSprite.SpriteVelY]
-
-@SkipUpate:
 @PlayerIsDead:  
+@SkipUpate:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
+
+@UpdateHighScore:
+
+  MOV AL, -1
+  DEBUG_FUNCTION_CALL Invaders_HiScoreEnterUpdate  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
 NESTED_END Invaders_UpArrowPress, _TEXT$00
+
 
 
 
@@ -1107,6 +1193,32 @@ NESTED_END Invaders_UpArrow, _TEXT$00
 ;***************************************************************************************************************************************************************************
 ; Initialization & Support Functions
 ;***************************************************************************************************************************************************************************
+
+;*********************************************************
+;   Invaders_AllocateMemory
+;
+;        Parameters: Ignored, RDX is the size.
+;
+;        Return Value: Memory
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_AllocateMemory, _TEXT$00
+.ENDPROLOG
+  MOV RAX, [CurrentMemoryPtr]
+  ADD [CurrentMemoryPtr], RDX
+
+  MOV RDX, [LargeMemoryAllocationEnd]
+  CMP [CurrentMemoryPtr], RDX
+  JAE @OutOfMemory
+  RET
+@OutOfMemory:
+  INT 3
+  RET
+
+NESTED_END Invaders_AllocateMemory, _TEXT$00
+
+
 
 
 ;*********************************************************
@@ -1370,6 +1482,9 @@ NESTED_ENTRY Invaders_SetupMemoryAllocations, _TEXT$00
   CMP RAX, 0
   JE @Failure
   MOV [LargeMemoryAllocation], RAX
+  MOV [LargeMemoryAllocationEnd], RAX
+  ADD [LargeMemoryAllocationEnd],LARGE_GAME_ALLOCATION
+
   ;
   ; Setup data structure allocations.
   ;
@@ -1516,7 +1631,7 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOV [GameCaptureSize], RAX
   MOV RDX, RAX
   MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
   CMP RAX, 0
   JE @FailureExit
   
@@ -1742,7 +1857,7 @@ NESTED_ENTRY Invaders_DuplicateBasicSprite, _TEXT$00
  
   MOV RDX, SIZEOF SPRITE_BASIC_INFORMATION
   MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
   CMP RAX, 0
   JZ @Failure
 
@@ -1775,7 +1890,7 @@ NESTED_ENTRY Invaders_DuplicateBasicSprite, _TEXT$00
   MOV R12, RAX
   MOV RDX, RAX
   MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
+  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
   CMP RAX, 0
   JE @FailureWithFree
   
@@ -2408,6 +2523,77 @@ NESTED_ENTRY Invaders_GameOver, _TEXT$00
 NESTED_END Invaders_GameOver, _TEXT$00
 
 
+;*********************************************************
+;   Invaders_EnterHiScore
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_EnterHiScore, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL Invaders_ScreenBlast
+  
+  MOV R9, TITLE_Y
+  MOV R8, TITLE_X
+  MOV RDX, OFFSET SpTitle
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  ;
+  ; Display High Score with random color
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  MOV ECX, EAX
+  SHR EAX, 8
+  SHL ECX, 8
+  OR EAX, ECX
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], RAX
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], HS_GAME_OVER_SIZE
+  MOV R9, HS_GAME_OVER_Y
+  MOV R8, HS_GAME_OVER_X
+  MOV RDX, OFFSET HighScoreText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], ENTER_INITIALS_SIZE
+  MOV R9, ENTER_INITIALS_Y
+  MOV R8, ENTER_INITIALS_X
+  MOV RDX, OFFSET EnterInitials
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INITIALS_SIZE
+  MOV R9, INITIALS_Y
+  MOV R8, INITIALS_X
+  MOV RDX, OFFSET InitialsEnter
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  MOV RAX, SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_EnterHiScore, _TEXT$00
+
+
+
 
 ;*********************************************************
 ;   Invaders_HiScoreScreen
@@ -2493,8 +2679,6 @@ NESTED_ENTRY Invaders_HiScoreScreen, _TEXT$00
   RET
 
 NESTED_END Invaders_HiScoreScreen, _TEXT$00
-
-
 
 
 
@@ -2640,7 +2824,9 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL Invaders_ScreenCapture
-  
+
+  DEBUG_FUNCTION_CALL Invaders_CheckHiScores  ; Easier to just update here.
+
   MOV [SpaceCurrentState], SPACE_INVADERS_END_GAME
   MOV RAX, [SpaceCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -2660,6 +2846,107 @@ NESTED_END Invaders_LevelOne, _TEXT$00
 ;***************************************************************************************************************************************************************************
 ; Generic Support Functions
 ;***************************************************************************************************************************************************************************
+
+
+  
+
+
+;*********************************************************
+;   Invaders_UpdateHighScore
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_UpdateHighScore, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO 
+
+  ;
+  ; No Error Checking, assume this is all correct.
+  ;
+  MOV RDX, [HiScoreListPtr]
+  ADD RDX, (120-12)          ; Set it to the last entry
+
+@MoveAllScores:
+  CMP RDX, [HiScoreLocationPtr]
+  JE @FoundLocation
+  
+  MOV RAX, QWORD PTR [RDX-12]
+  MOV QWORD PTR [RDX], RAX
+  MOV EAX, DWORD PTR [RDX-4]
+  MOV DWORD PTR [RDX+8], EAX
+  SUB RDX, 12
+  JMP @MoveAllScores
+
+@FoundLocation:
+  ;
+  ; Update Hi-Scores
+  ;
+  MOV RCX, OFFSET InitialsEnter
+  MOV EAX, DWORD PTR [RCX]
+  MOV DWORD PTR [RDX], EAX
+  MOV RCX, [PlayerScore]
+  MOV QWORD PTR [RDX + 4], RCX
+  MOV [InitialsEnterPtr], RCX
+        
+  MOV [HiScoreLocationPtr], 0
+  
+  ;  
+  ; Save the scores in the file.
+  ;
+  DEBUG_FUNCTION_CALL Invaders_UpdateHiScores
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+  
+NESTED_END Invaders_UpdateHighScore, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_HiScoreEnterUpdate
+;
+;        Parameters: Double Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_HiScoreEnterUpdate, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO 
+
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  JNE @NoScoreUpdate
+
+  MOV RCX, [InitialsEnterPtr]
+  ADD BYTE PTR [RCX], AL
+
+  CMP BYTE PTR [RCX], 'A'
+  JAE @CheckAbove
+
+  MOV BYTE PTR [RCX], 'Z'
+
+@CheckAbove:
+  CMP BYTE PTR [RCX], 'Z'
+  JBE @CompleteandDone
+
+  MOV BYTE PTR [RCX], 'A'
+
+@CompleteandDone:
+@NoScoreUpdate:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+  
+NESTED_END Invaders_HiScoreEnterUpdate, _TEXT$00
 
 
 ;*********************************************************
@@ -2850,14 +3137,40 @@ NESTED_ENTRY Invaders_CheckHiScores, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  ;
+  ;   Reset High Scores
+  ;
+  MOV RAX, OFFSET InitialsConst
+  MOV EAX, [RAX]
+  MOV RCX, OFFSET InitialsEnter
+  MOV [RCX], EAX
+  MOV [InitialsEnterPtr], RCX
+        
   MOV RDX, [HiScoreListPtr]
+  XOR R8, R8
+  MOV RCX, [PlayerScore]
   
   
-  XOR RAX, RAX
+  MOV [HiScoreLocationPtr], 0
+
+@CheckNextScore:
+  CMP RCX, QWORD PTR [RDX + 4]
+  JA @NewHighScore
+
+  ADD RDX, 12
+  INC R8
+  CMP R8, MAX_HI_SCORES
+  JB @CheckNextScore
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-  
+
+@NewHighScore:
+  MOV [HiScoreLocationPtr], RDX                 ; Update New High Score Location!
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
 NESTED_END Invaders_CheckHiScores, _TEXT$00
 
 
