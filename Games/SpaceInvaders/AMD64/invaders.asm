@@ -96,6 +96,7 @@ SPRITE_STRUCT  struct
    SpriteFire      dq ?
    SpriteMaxFire   dq ?
    HitPoints       dq ?   ; Amount of damage needed to be destroyed
+   MaxHp           dq ?
    Damage          dq ?   ; How much damage this sprite does on collsion
    pNext           dq ?
    pPrev           dq ?
@@ -105,6 +106,7 @@ SPRITE_STRUCT  struct
    SpriteCategory        dq ?
    SpriteBasePointsValue dq ?
    pfnSpriteMovementUpdate  dq ?                        ; Movement update function pointer
+   pfnAddedBackToList    dq ?
 SPRITE_STRUCT  ends 
 
 ;
@@ -167,7 +169,37 @@ MAX_SPRITE_LIST        EQU <18>
 ALIEN_SHIP_MAX_VEL_X   EQU <6>
 ALIEN_SHIP_MAX_VEL_Y   EQU <6>
 SMALL_SHIP_BASE_VALUE  EQU <15>
+TOTAL_ENEMY_LISTS      EQU <8>
 
+ASTROIDS_DAMAGE           EQU   <1>
+ALIEN_SHIP_MAX_FIRE       EQU   <3>
+ALIEN_SHIP_HIT_POINTS     EQU   <2>
+ALIEN_SHIP_DAMAGE         EQU   <2>
+ALIEN_SHIP_L_MAX_VX       EQU   <4>
+ALIEN_SHIP_L_MAX_VY       EQU   <3>
+LARGE_SHIP_BASE_VALUE     EQU   <50>
+LARGE_SHIP_MAX_FIRE       EQU   <5>
+LARGE_SHIP_HIT_POINTS     EQU   <15>
+LARGE_SHIP_DAMAGE         EQU   <20>
+ALIEN_FIRE_MAX_VEL_X      EQU   <0>
+ALIEN_FIRE_MAX_VEL_Y      EQU   <-3>
+ALIEN_FIRE_BASE_VALUE     EQU   <1>
+ALIEN_FIRE_DAMAGE            EQU <1>
+ALIEN_LARGE_FIRE_MAX_VELX    EQU <0>
+ALIEN_LARGE_FIRE_MAX_VELY    EQU <2>
+ALIEN_LARGE_FIRE_BASE_VALUE  EQU <5>
+ALIEN_LARGE_FIRE_DAMAGE      EQU <5>
+SPACE_MINES_MAX_VEL_X        EQU <2>
+SPACE_MINES_MAX_VEL_Y        EQU <2>
+SPACE_MINES_BASE_POINTS      EQU <5>
+SPACE_MINES_DAMAGE           EQU <5>
+LARGE_ASTROID_MAX_VEL_X      EQU <3>
+LARGE_ASTROID_MAX_VEL_Y      EQU <2>
+LARGE_ASTROID_BASE_VALUE     EQU <5>
+LARGE_ASTROID_DAMAGE         EQU <5>
+POWER_UP_MAX_VEL_X           EQU <5>
+POWER_UP_MAX_VEL_Y           EQU <5>
+POWER_UP_SPECIAL_DAMAGE      EQU <01337h>
 
 
 ;
@@ -200,7 +232,7 @@ ALIEN_FIRE_BASIC_SPRITE              EQU <77>
 ALIEN_FIRE_BASIC_SPRITE_EXPLODE      EQU <78>
 ALIEN_FIRE_BASIC_SPRITE_NUM          EQU <1>
 
-
+MAX_SHIPS_SCREEN                     EQU <1>
 ;
 ; We will hard code these dimenstions for now.
 ;
@@ -339,22 +371,38 @@ ENDM
     GameActiveListPtr               dq ?
     
     ;
-    ; Inactive Lists
+    ; Inactive Lists - Change the constant "TOTAL_ENEMY_LISTS" if additional are added or removed.
     ;
     AstroidsSmallInActivePtr             dq ?
-    AlienFreeSmallShipsPtr               dq ?
-    AlienFreeLargeShipsPtr               dq ?
-    AlienFireInactivePtr                 dq ?
-    AlienFireInactiveLargePtr            dq ?
-    SpaceMinesInactivePtr                dq ?
-    LargeAstroidInactivePtr              dq ?
-    PowerUpInactivePtr                   dq ?
+    AstroidsSmallPrototype               SPRITE_STRUCT <?>
 
+    AlienFreeSmallShipsPtr               dq ?
+    AlienSmallShipPrototype              SPRITE_STRUCT <?>
+ 
+    AlienFreeLargeShipsPtr               dq ?
+    AlienLargeShipPrototype              SPRITE_STRUCT <?>
+
+    AlienFireInactivePtr                 dq ?
+    AlienFirePrototype                   SPRITE_STRUCT <?>
+
+    AlienFireInactiveLargePtr            dq ?
+    AlienFireLargePrototype              SPRITE_STRUCT <?>
+
+    SpaceMinesInactivePtr                dq ?
+    SpaceMinesPrototype                  SPRITE_STRUCT <?>
+
+    LargeAstroidInactivePtr              dq ?
+    LargeAstroidPrototype                SPRITE_STRUCT <?>
+
+    PowerUpInactivePtr                   dq ?
+    PowerUpPrototype                     SPRITE_STRUCT <?>
+
+    ShipScreenCounter                    dq 0
     ;
     ; Prototypes for populating new sprites and resetting game engine.
     ;
-    AstroidsSmallPrototype      SPRITE_STRUCT <?>
-    AlienSmallShipPrototype     SPRITE_STRUCT <?>
+
+    
 
     ;
     ; Game Text
@@ -1539,25 +1587,124 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AstroidsSmallPrototype.SpriteMaxFire], 0
   MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS
   MOV [AstroidsSmallPrototype.HitPoints], 0
-  MOV [AstroidsSmallPrototype.Damage], 1
+  MOV [AstroidsSmallPrototype.MaxHp], 0
+  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AstroidsSmallPrototype.pfnAddedBackToList], RCX
 
+  
 
   MOV [AlienSmallShipPrototype.SpriteVelX], 0
   MOV [AlienSmallShipPrototype.SpriteVelY], 0
   MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X
   MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y
-  MOV [AlienSmallShipPrototype.SpriteMaxFire], 3
+  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE
   MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE
-  MOV [AlienSmallShipPrototype.HitPoints], 2
-  MOV [AlienSmallShipPrototype.Damage], 2
+  MOV [AlienSmallShipPrototype.HitPoints], 0
+  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS
+  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE
   MOV [AlienSmallShipPrototype.KillOffscreen], 0
   MOV RCX, OFFSET Invaders_SmallShipMovement
   MOV [AlienSmallShipPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_SmallShipAddToList
+  MOV [AlienSmallShipPrototype.pfnAddedBackToList], RCX
 
-  
+  MOV [AlienLargeShipPrototype.SpriteVelX], 0
+  MOV [AlienLargeShipPrototype.SpriteVelY], 0
+  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX
+  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY
+  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE
+  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE
+  MOV [AlienLargeShipPrototype.HitPoints], 0
+  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
+  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
+  MOV [AlienLargeShipPrototype.KillOffscreen], 0
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienLargeShipPrototype.pfnAddedBackToList], RCX
+
+
+  MOV [AlienFirePrototype.SpriteVelX], 0
+  MOV [AlienFirePrototype.SpriteVelY], 0
+  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X
+  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y
+  MOV [AlienFirePrototype.SpriteMaxFire], 0
+  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE
+  MOV [AlienFirePrototype.HitPoints], 0
+  MOV [AlienFirePrototype.MaxHp], 0
+  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE
+  MOV [AlienFirePrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienFirePrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienFirePrototype.pfnAddedBackToList], RCX
+
+  MOV [AlienFireLargePrototype.SpriteVelX], 0
+  MOV [AlienFireLargePrototype.SpriteVelY], 0
+  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX
+  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY
+  MOV [AlienFireLargePrototype.SpriteMaxFire], 3
+  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE
+  MOV [AlienFireLargePrototype.HitPoints], 0
+  MOV [AlienFireLargePrototype.MaxHp], 0
+  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE
+  MOV [AlienFireLargePrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienFireLargePrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienFireLargePrototype.pfnAddedBackToList], RCX
+
+
+  MOV [SpaceMinesPrototype.SpriteVelX], 0
+  MOV [SpaceMinesPrototype.SpriteVelY], 0
+  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X
+  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y
+  MOV [SpaceMinesPrototype.SpriteMaxFire], 3
+  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS
+  MOV [SpaceMinesPrototype.HitPoints], 0
+  MOV [SpaceMinesPrototype.MaxHp], 0
+  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE
+  MOV [SpaceMinesPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [SpaceMinesPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [SpaceMinesPrototype.pfnAddedBackToList], RCX
+
+  MOV [LargeAstroidPrototype.SpriteVelX], 0
+  MOV [LargeAstroidPrototype.SpriteVelY], 0
+  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X
+  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y
+  MOV [LargeAstroidPrototype.SpriteMaxFire], 0
+  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE
+  MOV [LargeAstroidPrototype.HitPoints], 0
+  MOV [LargeAstroidPrototype.MaxHp], 0
+  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE
+  MOV [LargeAstroidPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [LargeAstroidPrototype.pfnAddedBackToList], RCX
+
+
+  MOV [PowerUpPrototype.SpriteVelX], 0
+  MOV [PowerUpPrototype.SpriteVelY], 0
+  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X
+  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y
+  MOV [PowerUpPrototype.SpriteMaxFire], 3
+  MOV [PowerUpPrototype.SpriteBasePointsValue], 0
+  MOV [PowerUpPrototype.HitPoints], 0
+  MOV [PowerUpPrototype.MaxHp], 0
+  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE
+  MOV [PowerUpPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [PowerUpPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [PowerUpPrototype.pfnAddedBackToList], RCX
+
   
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -2277,6 +2424,12 @@ NESTED_ENTRY Invaders_EmptyActiveList, _TEXT$00
   MOV SPRITE_STRUCT.SpriteAlive[RDI], 0
 
   ;
+  ; Notify adding back to list.
+  ;
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL SPRITE_STRUCT.pfnAddedBackToList[RDI]
+
+  ;
   ; Add back to the inactive list
   ;
   MOV R11, SPRITE_STRUCT.SpriteInactiveListPtr[RDI]
@@ -2351,15 +2504,21 @@ NESTED_ENTRY Invaders_ResetActiveInactiveSprites, _TEXT$00
   MOV R9, SPRITE_STRUCT.SpriteMaxFire[R8]
   MOV SPRITE_STRUCT.SpriteMaxFire[RDI], R9
 
-  MOV R9, SPRITE_STRUCT.HitPoints[R8]
+  MOV R9, SPRITE_STRUCT.MaxHp[R8]
   MOV SPRITE_STRUCT.HitPoints[RDI], R9
+
+  MOV R9, SPRITE_STRUCT.MaxHp[R8]
+  MOV SPRITE_STRUCT.MaxHp[RDI], R9
+
 
   MOV R9, SPRITE_STRUCT.Damage[R8]
   MOV SPRITE_STRUCT.Damage[RDI], R9
 
   MOV R9, SPRITE_STRUCT.pfnSpriteMovementUpdate[R8]
   MOV SPRITE_STRUCT.pfnSpriteMovementUpdate[RDI], R9
- 
+
+  MOV R9, SPRITE_STRUCT.pfnAddedBackToList[R8]
+  MOV SPRITE_STRUCT.pfnAddedBackToList[RDI], R9
   
   MOV RDI, SPRITE_STRUCT.pNext[RDI]
   CMP RDI, 0
@@ -2486,15 +2645,25 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
   DEBUG_FUNCTION_CALL Invaders_EmptyActiveList
 
   ;
+  ; To allow for later levels to change the prototypes, Re-Initialize them now.
+  ;
+  DEBUG_FUNCTION_CALL Invaders_SetupPrototypes
+
+  ;
   ; Initialize All of the Inactive Lists.
   ;
-  MOV RDX, OFFSET AstroidsSmallPrototype
-  MOV RCX, OFFSET AstroidsSmallInActivePtr
+  XOR R12, R12
+  MOV RSI, OFFSET AstroidsSmallInActivePtr
+@ReInitializeEnemyListsWithPrototype:
+  MOV RCX, RSI
+  ADD RSI, 8
+  MOV RDX, RSI
   DEBUG_FUNCTION_CALL Invaders_ResetActiveInactiveSprites
 
-  MOV RDX, OFFSET AlienSmallShipPrototype
-  MOV RCX, OFFSET AlienFreeSmallShipsPtr  
-  DEBUG_FUNCTION_CALL Invaders_ResetActiveInactiveSprites
+  ADD RSI, SIZEOF SPRITE_STRUCT
+  INC R12
+  CMP R12, TOTAL_ENEMY_LISTS
+  JB @ReInitializeEnemyListsWithPrototype
 
   ;
   ; Set the Level Intro Timer.
@@ -3047,6 +3216,9 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_RandomAstroids
 
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_RandomShips
+
   ;
   ;  Level Action - Section Two - Collision Detection
   ;
@@ -3120,8 +3292,6 @@ NESTED_END Invaders_LevelOne, _TEXT$00
 
 
   
-
-
 ;*********************************************************
 ;   Invaders_UpdateHighScore
 ;
@@ -3591,6 +3761,83 @@ NESTED_ENTRY Invaders_RandomAstroids, _TEXT$00
 
 NESTED_END Invaders_RandomAstroids, _TEXT$00
 
+
+;*********************************************************
+;   Invaders_RandomShips
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_RandomShips, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND EAX, 07h
+  MOV EBX, EAX
+  CMP EBX, 0
+  JE @NoShips
+  
+
+@SetupAnotherAstroid:
+  CMP [ShipScreenCounter], MAX_SHIPS_SCREEN
+  JAE @NoShips
+  INC [ShipScreenCounter]
+  MOV RDI, [AlienFreeSmallShipsPtr] 
+
+  CMP RDI, 0
+  JE @NoShips
+  MOV R8, SPRITE_STRUCT.pNext[RDI]
+  MOV [AlienFreeSmallShipsPtr], R8
+  CMP R8, 0
+  JZ @NothingToUpdateZero
+  MOV SPRITE_STRUCT.pPrev[R8], 0 
+@NothingToUpdateZero:
+  MOV SPRITE_STRUCT.SpriteAlive[RDI], 1
+  MOV SPRITE_STRUCT.SpriteY[RDI], 1
+
+  ;
+  ; Randomize X Location
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], RDX
+
+  ;
+  ; Randomize Velocity
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelY[RDI], RDX
+
+  MOV R8, [GameActiveListPtr]
+  MOV SPRITE_STRUCT.pNext[RDI], R8
+  MOV SPRITE_STRUCT.pPrev[RDI], 0  
+  CMP R8, 0
+  JE @NoUpdatePrev
+  MOV SPRITE_STRUCT.pPrev[R8], RDI
+@NoUpdatePrev:
+  MOV [GameActiveListPtr], RDI
+  DEC EBX
+  JNZ @SetupAnotherAstroid
+
+  
+@NoShips:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_RandomShips, _TEXT$00
+
 ;***************************************************************************************************************************************************************************
 ; Colission Detection Functions
 ;***************************************************************************************************************************************************************************
@@ -3822,10 +4069,48 @@ NESTED_ENTRY Invaders_CollisionPlayer, _TEXT$00
 NESTED_END Invaders_CollisionPlayer, _TEXT$00
 
 ;***************************************************************************************************************************************************************************
-; Sprite Movement Functions
+; Sprite Movement & Callback  Functions
 ;***************************************************************************************************************************************************************************
 
 
+
+  ;*********************************************************
+;   Invaders_SmallShipAddToList
+;
+;        Parameters: Sprite Structure
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_SmallShipAddToList, _TEXT$00
+.ENDPROLOG 
+  MOV R9, SPRITE_STRUCT.MaxHp[RCX]
+  MOV SPRITE_STRUCT.HitPoints[RCX], R9
+
+  MOV RCX, SPRITE_STRUCT.ExplodePointer[RCX]
+  DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
+  DEC [ShipScreenCounter]
+  RET
+  
+NESTED_END Invaders_SmallShipAddToList, _TEXT$00
+
+;*********************************************************
+;   Invaders_DefaultAddToList
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_DefaultAddToList, _TEXT$00
+.ENDPROLOG 
+  ; This function does nothing it's a place holder so we don't 
+  ; have to check if the function pointer is NULL.
+  RET
+  
+NESTED_END Invaders_DefaultAddToList, _TEXT$00
 
 
 ;*********************************************************
@@ -3867,10 +4152,44 @@ NESTED_END Invaders_DefaultMovement, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Invaders_SmallShipMovement, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
-  ;
-  ; TBD
-  ;
+  MOV RDI, RCX
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  MOV R8, SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  SHL R8, 1
+  DIV R8
+  CMP RDX, SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  JB @VelReadyY
+  SUB RDX, SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  NEG RDX
+@VelReadyY:  
+
+  MOV RAX, SPRITE_STRUCT.SpriteY[RDI]
+  ADD RAX, RDX
+  MOV SPRITE_STRUCT.SpriteY[RDI], RAX
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  MOV R8, SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  SHL R8, 1
+  DIV R8
+  CMP RDX, SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  JB @VelReadyX
+  SUB RDX, SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  NEG RDX
+@VelReadyX:  
+
+  MOV RAX, SPRITE_STRUCT.SpriteX[RDI]
+  ADD RAX, RDX
+  MOV SPRITE_STRUCT.SpriteX[RDI], RAX
+
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END Invaders_SmallShipMovement, _TEXT$00
@@ -4132,21 +4451,28 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   ;
   MOV RCX, SPRITE_STRUCT.SpriteY[RDI]
   ADD RCX, SPRITE_STRUCT.SpriteHeight[RDI]
-
   CMP RCX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   JAE @SpriteResetCheck
 
   MOV RCX, SPRITE_STRUCT.SpriteX[RDI]
   ADD RCX, SPRITE_STRUCT.SpriteWidth[RDI]
   CMP RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  JB @DisplayGameGfx
+  JAE @SpriteResetCheck
+
+  CMP SPRITE_STRUCT.SpriteX[RDI], 0
+  JLE @SpriteResetCheck
+
+  CMP SPRITE_STRUCT.SpriteY[RDI], 0
+  JLE @SpriteResetCheck
+
+  JMP @DisplayGameGfx
 
 @SpriteResetCheck:
   ;
   ; Check if Sprite Should be Removed or reset.
   ;
   CMP SPRITE_STRUCT.KillOffscreen[RDI], 0
-  JB @PutBackOnScreen
+  JE @PutBackOnScreen
 @SpriteRemove:  
 
 
@@ -4187,7 +4513,13 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
 @UpdateInactiveList:  
 
   ;
-  ; Add Fire to the inactive list
+  ; Notify adding back to list.
+  ;
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL SPRITE_STRUCT.pfnAddedBackToList[RDI]
+
+  ;
+  ; Add Graphics back to the inactive list
   ; 
   MOV R8, SPRITE_STRUCT.SpriteInactiveListPtr[RDI]
   MOV R8, [R8]
@@ -4203,19 +4535,23 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   CMP RDI, 0
   JNE @GameDisplayLoop
   JMP @DisplayComplete
+
+  ;
+  ; Put the sprite back on screen.
+  ;
 @PutBackOnScreen:
   CMP SPRITE_STRUCT.SpriteY[RDI], 0
-  JA @SkipYStart
+  JG @SkipYStart
   MOV SPRITE_STRUCT.SpriteY[RDI], 1
 @SkipYStart:
   CMP SPRITE_STRUCT.SpriteX[RDI], 0
-  JA @SkipXStart
+  JG @SkipXStart
   MOV SPRITE_STRUCT.SpriteX[RDI], 1
 @SkipXStart:
   MOV R8, SPRITE_STRUCT.SpriteX[RDI]
   ADD R8, SPRITE_STRUCT.SpriteWidth[RDI]
   CMP R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  JL @SkipXEnd
+  JB @SkipXEnd
   MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R8
   SUB R8, SPRITE_STRUCT.SpriteWidth[RDI]
@@ -4224,7 +4560,7 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   MOV R8, SPRITE_STRUCT.SpriteY[RDI]
   ADD R8, SPRITE_STRUCT.SpriteHeight[RDI]
   CMP R8, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  JL @SkipYEnd
+  JB @SkipYEnd
   MOV R8, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
   DEC R8
   SUB R8, SPRITE_STRUCT.SpriteHeight[RDI]
