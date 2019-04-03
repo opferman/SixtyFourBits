@@ -91,6 +91,7 @@ SPRITE_STRUCT  struct
    SpriteVelY      dq ?
    SpriteVelMaxX   dq ?
    SpriteVelMaxY   dq ?
+   SpriteOwnerPtr  dq ?
    SpriteWidth     dq ?
    SpriteHeight    dq ?
    SpriteFire      dq ?
@@ -1587,6 +1588,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AstroidsSmallPrototype.SpriteMaxFire], 0
   MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS
   MOV [AstroidsSmallPrototype.HitPoints], 0
+  MOV [AstroidsSmallPrototype.SpriteOwnerPtr], 0
   MOV [AstroidsSmallPrototype.MaxHp], 0
   MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
@@ -1604,6 +1606,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE
   MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE
   MOV [AlienSmallShipPrototype.HitPoints], 0
+  MOV [AlienSmallShipPrototype.SpriteOwnerPtr], 0
   MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS
   MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE
   MOV [AlienSmallShipPrototype.KillOffscreen], 0
@@ -1619,6 +1622,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE
   MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE
   MOV [AlienLargeShipPrototype.HitPoints], 0
+  MOV [AlienLargeShipPrototype.SpriteOwnerPtr], 0
   MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
   MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
   MOV [AlienLargeShipPrototype.KillOffscreen], 0
@@ -1635,6 +1639,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AlienFirePrototype.SpriteMaxFire], 0
   MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE
   MOV [AlienFirePrototype.HitPoints], 0
+  MOV [AlienFirePrototype.SpriteOwnerPtr], 0
   MOV [AlienFirePrototype.MaxHp], 0
   MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE
   MOV [AlienFirePrototype.KillOffscreen], 1
@@ -1650,6 +1655,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AlienFireLargePrototype.SpriteMaxFire], 3
   MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE
   MOV [AlienFireLargePrototype.HitPoints], 0
+  MOV [AlienFireLargePrototype.SpriteOwnerPtr], 0
   MOV [AlienFireLargePrototype.MaxHp], 0
   MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE
   MOV [AlienFireLargePrototype.KillOffscreen], 1
@@ -1667,6 +1673,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS
   MOV [SpaceMinesPrototype.HitPoints], 0
   MOV [SpaceMinesPrototype.MaxHp], 0
+  MOV [SpaceMinesPrototype.SpriteOwnerPtr], 0
   MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE
   MOV [SpaceMinesPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
@@ -1682,6 +1689,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE
   MOV [LargeAstroidPrototype.HitPoints], 0
   MOV [LargeAstroidPrototype.MaxHp], 0
+  MOV [LargeAstroidPrototype.SpriteOwnerPtr], 0
   MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE
   MOV [LargeAstroidPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
@@ -1697,6 +1705,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [PowerUpPrototype.SpriteMaxFire], 3
   MOV [PowerUpPrototype.SpriteBasePointsValue], 0
   MOV [PowerUpPrototype.HitPoints], 0
+  MOV [PowerUpPrototype.SpriteOwnerPtr], 0
   MOV [PowerUpPrototype.MaxHp], 0
   MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE
   MOV [PowerUpPrototype.KillOffscreen], 1
