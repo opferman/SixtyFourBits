@@ -140,7 +140,7 @@ PLAYER_MAX_FIRE        EQU <5>          ; Starting Level 1 max
 PLAYER_START_HP        EQU <1>
 PLAYER_DAMAGE          EQU <2>
 PLAYER_FIRE_MAX_Y      EQU <-5>
-LARGE_GAME_ALLOCATION  EQU <1024*1024*100> ; 100 MB
+LARGE_GAME_ALLOCATION  EQU <1024*1024*5> ; 5 MB
 MAXIMUM_PLAYER_FIRE    EQU <5>          ; Total Game Maximum Fire
 SMALL_ALIEN_SHIPS_MAX  EQU <18*10>
 LARGE_ALIEN_SHIPS_MAX  EQU <10>
@@ -2132,7 +2132,7 @@ NESTED_ENTRY Invaders_DuplicateBasicSprite, _TEXT$00
  
   MOV RDX, SIZEOF SPRITE_BASIC_INFORMATION
   MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
+  DEBUG_FUNCTION_CALL Invaders_AllocateMemory 
   CMP RAX, 0
   JZ @Failure
 
@@ -2159,35 +2159,15 @@ NESTED_ENTRY Invaders_DuplicateBasicSprite, _TEXT$00
   MOV EDX, SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RSI]
   MOV SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RAX], EDX
 
-;  MOV R15, RAX
-;  XOR RDX, RDX
-;  MOV RAX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RSI]
-;  MUL SPRITE_BASIC_INFORMATION.SpriteOffsets[RSI]          
-;  MOV R12, RAX
-;  MOV RDX, RAX
-;  MOV RCX, LMEM_ZEROINIT
-;  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
-;  CMP RAX, 0
-;  JE @FailureWithFree
 ;
 ; No reason to re-allocate the sprite memory itself, the context is enough
 ;
   
   MOV RDX, SPRITE_BASIC_INFORMATION.SpriteListPtr[RSI]   
 
-;  MOV RDI, RAX
-;  MOV RCX, R12
-;  REP MOVSB
-
   MOV SPRITE_BASIC_INFORMATION.SpriteListPtr[RAX], RDX
   MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[RAX], RDX
-;  MOV RAX, R15
-  JMP @Success
 
-@FailureWithFree:
-  MOV RCX, R15
-  DEBUG_FUNCTION_CALL LocalFree
-  XOR RAX, RAX
 @Failure:
 @Success:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
