@@ -2158,25 +2158,30 @@ NESTED_ENTRY Invaders_DuplicateBasicSprite, _TEXT$00
 
   MOV EDX, SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RSI]
   MOV SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RAX], EDX
-  MOV R15, RAX
-  XOR RDX, RDX
-  MOV RAX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RSI]
-  MUL SPRITE_BASIC_INFORMATION.SpriteOffsets[RSI]          
-  MOV R12, RAX
-  MOV RDX, RAX
-  MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
-  CMP RAX, 0
-  JE @FailureWithFree
-  
-  MOV RSI, SPRITE_BASIC_INFORMATION.SpriteListPtr[RSI]   
-  MOV RDI, RAX
-  MOV RCX, R12
-  REP MOVSB
 
-  MOV SPRITE_BASIC_INFORMATION.SpriteListPtr[R15], RAX
-  MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[R15], RAX
-  MOV RAX, R15
+;  MOV R15, RAX
+;  XOR RDX, RDX
+;  MOV RAX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RSI]
+;  MUL SPRITE_BASIC_INFORMATION.SpriteOffsets[RSI]          
+;  MOV R12, RAX
+;  MOV RDX, RAX
+;  MOV RCX, LMEM_ZEROINIT
+;  DEBUG_FUNCTION_CALL Invaders_AllocateMemory
+;  CMP RAX, 0
+;  JE @FailureWithFree
+;
+; No reason to re-allocate the sprite memory itself, the context is enough
+;
+  
+  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteListPtr[RSI]   
+
+;  MOV RDI, RAX
+;  MOV RCX, R12
+;  REP MOVSB
+
+  MOV SPRITE_BASIC_INFORMATION.SpriteListPtr[RAX], RDX
+  MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[RAX], RDX
+;  MOV RAX, R15
   JMP @Success
 
 @FailureWithFree:
