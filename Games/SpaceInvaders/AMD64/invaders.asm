@@ -74,10 +74,12 @@ SPACE_INVADERS_STATE_ABOUT                EQU <5>
 SPACE_INVADERS_END_GAME                   EQU <6>
 SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <7>
 SPACE_INVADERS_LEVEL_ONE                  EQU <8>
-SPACE_INVADERS_LEVEL_TWO                  EQU <9>
-SPACE_INVADERS_LEVEL_THREE                EQU <10>
-SPACE_INVADERS_LEVEL_FOUR                 EQU <11>
-SPACE_INVADERS_LEVEL_FIVE                 EQU <12>
+SPACE_INVADERS_LEVEL_ONE_WAVE2            EQU <9>
+
+;SPACE_INVADERS_LEVEL_TWO                  EQU <9>
+;SPACE_INVADERS_LEVEL_THREE                EQU <10>
+;SPACE_INVADERS_LEVEL_FOUR                 EQU <11>
+;SPACE_INVADERS_LEVEL_FIVE                 EQU <12>
 
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
@@ -202,7 +204,7 @@ POWER_UP_MAX_VEL_X           EQU <5>
 POWER_UP_MAX_VEL_Y           EQU <5>
 POWER_UP_SPECIAL_DAMAGE      EQU <01337h>
 
-
+LEVEL_WAVE_TIMER_ONE         EQU <2000>
 ;
 ; Sprite Setup
 ;
@@ -336,6 +338,7 @@ ENDM
                        dq  Invaders_GameOver            ; SPACE_INVADERS_END_GAME
                        dq  Invaders_EnterHiScore        ; SPACE_INVADERS_STATE_ENTER_HI_SCORE
                        dq  Invaders_LevelOne            ; SPACE_INVADERS_LEVEL_ONE
+                       dq  Invaders_LevelOneWave2       ; SPACE_INVADERS_LEVEL_ONE_WAVE2
                   
     ;
     ;  Graphic Resources 
@@ -446,11 +449,19 @@ ENDM
                                     dq 325, 425
                                     db "Meteor Shower",0
                                     dq 0
+
+    LevelOneWave2                   dq 370, 375
+                                    db "Level One", 0
+                                    dq 375, 425
+                                    db "Wave Two",0
+                                    dq 0
+
     HiScoreFormatString             db "%s - %I64u", 0
     HiScoreString                   db "                                      ",0
     
     LevelIntroTimer                dq LEVEL_INTRO_TIMER_SIZE
     LevelTimer                     dq ?
+    LevelWaveTimer                 dq LEVEL_WAVE_TIMER_ONE
     HiScoreLocationPtr             dq ?
 
     ;
@@ -2674,6 +2685,7 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
   CMP R12, TOTAL_ENEMY_LISTS
   JB @ReInitializeEnemyListsWithPrototype
 
+  MOV [LevelWaveTimer], LEVEL_WAVE_TIMER_ONE
   ;
   ; Set the Level Intro Timer.
   ;
@@ -3198,6 +3210,9 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV RDI, RDX
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE
+
   ;
   ; Level Background
   ;
@@ -3216,7 +3231,7 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   MOV RDX, OFFSET LevelOne
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
-  JMP @SkipLevelAction
+  JMP @ContinueGoing
 
 @LevelAction:
   ;
@@ -3224,6 +3239,118 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   ;
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_RandomAstroids
+
+
+  ;
+  ;  Level Action - Section Two - Collision Detection
+  ;
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_CollisionPlayerFire
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_CollisionPlayer
+
+  ;
+  ; Level Action - Display Sprites and Graphics
+  ;  
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayPlayer
+  MOV R12, RAX
+  
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayPlayerFire
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayGameGraphics
+  
+
+  
+  CMP R12, 0
+  JE @GameStillGoing
+  
+  ;
+  ; Reset Level Time!
+  ;
+  DEC [PlayerLives]
+  DEBUG_FUNCTION_CALL Invaders_LevelOneReset
+  
+@GameStillGoing:
+  
+  ;
+  ;  Display the Game Panel After Updating Lives!
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
+
+  DEC [LevelWaveTimer]
+  CMP [LevelWaveTimer], 0
+  JNE @DoNotUpdate
+  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE_WAVE2
+@DoNotUpdate:
+  CMP [PlayerLives], 0
+  JA @ContinueGoing
+  
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL Invaders_ScreenCapture
+
+  DEBUG_FUNCTION_CALL Invaders_CheckHiScores  ; Easier to just update here.
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_END_GAME
+  MOV RAX, [SpaceCurrentState]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@ContinueGoing:
+ 
+  MOV RAX, [SpaceCurrentState]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_LevelOne, _TEXT$00
+
+;*********************************************************
+;   Invaders_LevelOneWave2
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LevelOneWave2, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  ;
+  ; Level Background
+  ;
+  MOV RDX, OFFSET Level1Screen
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  ;
+  ; Level Introduction Timer
+  ;
+  CMP [LevelIntroTimer], 0
+  JE @LevelAction
+
+  DEC [LevelIntroTimer]
+
+  MOV R8, 20
+  MOV RDX, OFFSET LevelOneWave2
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+  JMP @SkipLevelAction
+
+@LevelAction:
+  ;
+  ; Level Action - Section One - New Enemies
+  ;
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_RandomShips
@@ -3286,13 +3413,13 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   RET
 
 @ContinueGoing:
-  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE
+  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE_WAVE2
   MOV RAX, [SpaceCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
-NESTED_END Invaders_LevelOne, _TEXT$00
+NESTED_END Invaders_LevelOneWave2, _TEXT$00
 
 
 ;***************************************************************************************************************************************************************************
@@ -3654,7 +3781,7 @@ NESTED_ENTRY Invaders_LevelOneReset, _TEXT$00
   ADD RCX, SIZE SPRITE_BASIC_INFORMATION*4
   DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
 
-
+  MOV [LevelWaveTimer], LEVEL_WAVE_TIMER_ONE
 
   MOV RDI, [PlayerFireActivePtr]
   MOV [PlayerFireActivePtr], 0
