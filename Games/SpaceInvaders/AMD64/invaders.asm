@@ -476,7 +476,7 @@ ENDM
     MenuIntroTimer                  dq 0
     PlayerLives                     dq PLAYER_START_LIVES
     PlayerScore                     dq 0
-    PlayerOutputText                db "                              ",0
+    PlayerOutputText                db 256 DUP(?)
     PlayerHpText                    db "Hit Points: %I64u",0
     PlayerLivesText                 db "Lives: %I64u",0
     PlayerScoreFormat               db "%I64u", 0
@@ -4296,13 +4296,8 @@ NESTED_ENTRY Invaders_SmallShipMovement, _TEXT$00
   DEBUG_FUNCTION_CALL Math_Rand
   XOR RDX, RDX
   MOV R8, SPRITE_STRUCT.SpriteVelMaxY[RDI]
-  SHL R8, 1
   DIV R8
-  CMP RDX, SPRITE_STRUCT.SpriteVelMaxY[RDI]
-  JB @VelReadyY
-  SUB RDX, SPRITE_STRUCT.SpriteVelMaxY[RDI]
-  NEG RDX
-@VelReadyY:  
+
 
   MOV RAX, SPRITE_STRUCT.SpriteY[RDI]
   ADD RAX, RDX
