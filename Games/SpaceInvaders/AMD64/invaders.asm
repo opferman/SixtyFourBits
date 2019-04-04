@@ -70,11 +70,12 @@ SPACE_INVADERS_STATE_INTRO                EQU <1>
 SPACE_INVADERS_STATE_MENU                 EQU <2>
 SPACE_INVADERS_GAMEPLAY                   EQU <3>
 SPACE_INVADERS_HISCORE                    EQU <4>
-SPACE_INVADERS_STATE_ABOUT                EQU <5>
-SPACE_INVADERS_END_GAME                   EQU <6>
-SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <7>
-SPACE_INVADERS_LEVEL_ONE                  EQU <8>
-SPACE_INVADERS_LEVEL_ONE_WAVE2            EQU <9>
+SPACE_INVADERS_STATE_OPTIONS              EQU <5>
+SPACE_INVADERS_STATE_ABOUT                EQU <6>
+SPACE_INVADERS_END_GAME                   EQU <7>
+SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <8>
+SPACE_INVADERS_LEVEL_ONE                  EQU <9>
+SPACE_INVADERS_LEVEL_ONE_WAVE2            EQU <10>
 
 ;SPACE_INVADERS_LEVEL_TWO                  EQU <9>
 ;SPACE_INVADERS_LEVEL_THREE                EQU <10>
@@ -104,7 +105,6 @@ SPRITE_STRUCT  struct
    pNext           dq ?
    pPrev           dq ?
    KillOffscreen   dq ?   ; If it goes off screen, it ends or should it be reset.
-   SpritePrototypePtr    dq ?
    SpriteInactiveListPtr dq ?
    SpriteCategory        dq ?
    SpriteBasePointsValue dq ?
@@ -130,10 +130,10 @@ TITLE_Y                EQU <10>
 INTRO_Y                EQU <768 - 40>
 INTRO_X                EQU <300>
 INTRO_FONT_SIZE        EQU <3>
-
+MAX_GAME_OPTIONS       EQU <3>
 NUMBER_OF_SPRITES      EQU <(SpriteInformationEnd - SpriteInformation) / (6*8)>
 
-MAX_MENU_SELECTION     EQU <5>
+MAX_MENU_SELECTION     EQU <6>
 MENU_MAX_TIMEOUT       EQU <30*50> ; About 22 Seconds
 MOVEMENT_DEBOUNCE      EQU <0>
 PLAYER_MAX_Y_LOC       EQU <500>
@@ -154,7 +154,10 @@ ASTROIDS_MAX_VELOCITY  EQU <7>
 LEVEL_INTRO_TIMER_SIZE EQU <30*5>   
 ASTROID_BASE_POINTS    EQU <10>
 PLAYER_START_LIVES     EQU <3>
-HI_SCORE_Y_START       EQU <350>
+HI_SCORE_MODE_Y        EQU <325>
+HI_SCORE_MODE_X        EQU <350>
+HI_SCORE_MODE_FONT     EQU <3>
+HI_SCORE_Y_START       EQU <400>
 HI_SCORE_Y_INC         EQU <25>
 HI_SCORE_X             EQU <350>
 HI_SCORE_FONT_SIZE     EQU <2>
@@ -264,6 +267,19 @@ INITIALS_X    EQU <350>
 INITIALS_Y    EQU <500>
 INITIALS_SIZE EQU <10>
 
+
+PLAYER_SCORE_FONT_SIZE EQU <INTRO_FONT_SIZE>
+PLAYER_SCORE_X         EQU <500>
+PLAYER_SCORE_Y         EQU <10>
+
+PLAYER_SIDE_PANEL_FONT_SIZE EQU <INTRO_FONT_SIZE-1>
+PLAYER_SP_LIVES_X EQU <700>
+PLAYER_SP_LIVES_Y EQU <50>
+PLAYER_SP_HITP_X EQU <700>
+PLAYER_SP_HITP_Y EQU <70>
+PLAYER_SP_BOMB_X EQU <700>
+PLAYER_SP_BOMB_Y EQU <90>
+
 ;*********************************************************
 ; Macros
 ;*********************************************************
@@ -334,6 +350,7 @@ ENDM
                        dq  Invaders_MenuScreen          ; SPACE_INVADERS_STATE_MENU
                        dq  Invaders_BoxIt               ; SPACE_INVADERS_GAMEPLAY
                        dq  Invaders_HiScoreScreen       ; SPACE_INVADERS_HISCORE
+                       dq  Invaders_OptionsScreen       ; SPACE_INVADERS_STATE_OPTIONS
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
                        dq  Invaders_GameOver            ; SPACE_INVADERS_END_GAME
                        dq  Invaders_EnterHiScore        ; SPACE_INVADERS_STATE_ENTER_HI_SCORE
@@ -411,6 +428,15 @@ ENDM
     ;
     ; Game Text
     ;
+	GameModeSelect                  dq 0
+    ModeSelectText                  dq 400, 300
+                                    db "Easy Mode", 0
+                                    dq 365, 350
+                                    db "Medium Mode",0
+                                    dq 400, 400
+                                    db "Hard Mode", 0
+									dq 0
+	
     PressSpaceToContinue            db "<Press Spacebar>", 0
     MenuText                        dq 400, 300
                                     db "Play Game", 0
@@ -418,9 +444,11 @@ ENDM
                                     db "Instructions",0
                                     dq 400, 400
                                     db "Hi-Scores", 0
-                                    dq 440, 450
+                                    dq 420, 450
+									db "Options",0
+									dq 440, 500
                                     db "About", 0
-                                    dq 445, 500
+                                    dq 445, 550
                                     db "Quit", 0
                                     dq 0
 
@@ -443,11 +471,20 @@ ENDM
                                     dq 50, 625
                                     db "github.com/opferman/SixtyFourBits", 0									
                                     dq 0
+									
     HighScoresText                  db "High Scores", 0
+	EasyModeText                    db "Easy Mode",0
+	MediumModeText                  db "Medium Mode", 0
+	HardModeText                    db "Hard Mode",0
+	
+	
+	;
+	; Level Texts
+	;
     LevelOne                        dq 370, 375
                                     db "Level One", 0
-                                    dq 325, 425
-                                    db "Meteor Shower",0
+                                    dq 375, 425
+                                    db "Wave One",0
                                     dq 0
 
     LevelOneWave2                   dq 370, 375
@@ -471,14 +508,17 @@ ENDM
     MenuToState                     dq SPACE_INVADERS_LEVEL_ONE
                                     dq SPACE_INVADERS_GAMEPLAY
                                     dq SPACE_INVADERS_HISCORE
+									dq SPACE_INVADERS_STATE_OPTIONS
                                     dq SPACE_INVADERS_STATE_ABOUT
                                     dq SPACE_INVADERS_FAILURE_STATE  ; Quit
     MenuIntroTimer                  dq 0
     PlayerLives                     dq PLAYER_START_LIVES
+	PlayerBombs                     dq 0
     PlayerScore                     dq 0
     PlayerOutputText                db 256 DUP(?)
     PlayerHpText                    db "Hit Points: %I64u",0
     PlayerLivesText                 db "Lives: %I64u",0
+	PlayerBombsText                 db "Bombs: %I64u", 0
     PlayerScoreFormat               db "%I64u", 0
     SpriteImageFileListAttributes   db 1, 2
     
@@ -661,7 +701,7 @@ ENDM
     SpInvaders         IMAGE_INFORMATION  <?>
     SpGeneral          IMAGE_INFORMATION  <?>
     HiScoreListPtr     dq OFFSET HiScoreListConst
-    HiScoreListConst   db "TEO", 0
+    HiScoreListConst   db "TEO", 0  ; Easy Mode Scores
 	                   dq 0
 					   db "TEO", 0
 					   dq 0
@@ -681,6 +721,46 @@ ENDM
 					   dq 0
 					   db "TEO", 0
 					   dq 0
+                       db "TEO", 0  ; Medium Mode Scores
+	                   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0					   
+                       db "TEO", 0  ; Hard Mode Scores
+	                   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0
+					   db "TEO", 0
+					   dq 0					   
 
 					   
 .CODE
@@ -920,6 +1000,10 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+    
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_OPTIONS
+  JE @GameOptions
+
   CMP [SpaceCurrentState], SPACE_INVADERS_HISCORE
   JE @GoToMenu
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ABOUT
@@ -1004,6 +1088,15 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
+@GameOptions:
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  MOV RCX, SPACE_INVADERS_STATE_MENU
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+  
 NESTED_END Invaders_SpaceBar, _TEXT$00
 
 
@@ -1021,6 +1114,10 @@ NESTED_ENTRY Invaders_Enter, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_OPTIONS
+  JE @GameOptions
+  
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   JNE @CheckOtherState
 
@@ -1041,7 +1138,10 @@ NESTED_ENTRY Invaders_Enter, _TEXT$00
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-
+@GameOptions:
+  MOV RCX, SPACE_INVADERS_STATE_MENU
+  MOV [SpaceCurrentState], RCX
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
 @CheckOtherState:
   ;ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1298,6 +1398,9 @@ NESTED_ENTRY Invaders_DownArrow, _TEXT$00
 
   MOV [PlayerSprite.SpriteVelY], 0
   MOV [DeBounceMovement], 0
+  
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_OPTIONS
+  JE @OptionsMenu
 
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   JNE @CheckOtherState
@@ -1313,7 +1416,12 @@ NESTED_ENTRY Invaders_DownArrow, _TEXT$00
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-
+@OptionsMenu:
+  INC QWORD PTR [GameModeSelect]
+  
+  CMP QWORD PTR [GameModeSelect], MAX_GAME_OPTIONS
+  JB @NoResetToStart
+  MOV [GameModeSelect], 0  
 @CheckOtherState:
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1339,6 +1447,9 @@ NESTED_ENTRY Invaders_UpArrow, _TEXT$00
   MOV [PlayerSprite.SpriteVelY], 0
   MOV [DeBounceMovement], 0
 
+  CMP [SpaceCurrentState], SPACE_INVADERS_STATE_OPTIONS
+  JE @GameOptions
+  
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
   JNE @CheckOtherState
 
@@ -1353,7 +1464,13 @@ NESTED_ENTRY Invaders_UpArrow, _TEXT$00
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-
+@GameOptions:  
+  CMP QWORD PTR [GameModeSelect], 0 
+  JA @PerformSelectionDecrement  
+  MOV [GameModeSelect], MAX_GAME_OPTIONS
+@PerformSelectionDecrement:
+  DEC [GameModeSelect]
+  
 @CheckOtherState:
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1474,7 +1591,7 @@ NESTED_ENTRY Invaders_SetupHiScores, _TEXT$00
   ;
   LEA R9, STD_FUNCTION_STACK.Parameters.Param7[RSP]
   MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 0
-  MOV R8, 120				; File Size is fixed to 120 bytes.
+  MOV R8, 120*3				; File Size is fixed to 120 bytes.
   MOV RDX, [HiScoreListPtr]
   MOV RSI, RAX
   MOV RCX, RSI
@@ -1554,7 +1671,7 @@ NESTED_ENTRY Invaders_CreateHiScores, _TEXT$00
   ;
   LEA R9, STD_FUNCTION_STACK.Parameters.Param7[RSP]
   MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 0
-  MOV R8, 120				; File Size is fixed to 120 bytes.
+  MOV R8, 120*3				; File Size is fixed to 120 bytes.
   MOV RDX, [HiScoreListPtr]
   MOV RSI, RAX
   MOV RCX, RSI
@@ -3095,7 +3212,34 @@ NESTED_ENTRY Invaders_HiScoreScreen, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
 
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], HI_SCORE_MODE_FONT
+  MOV R9, HI_SCORE_MODE_Y
+  MOV R8, HI_SCORE_MODE_X
+  CMP [GameModeSelect], 0
+  JNE @ItsNotEasy
+  MOV RDX, OFFSET EasyModeText
   MOV RDI, [HiScoreListPtr]
+  JMP @PrintTheMode
+@ItsNotEasy:
+  CMP [GameModeSelect], 1
+  JNE @ItsHard
+  MOV RDI, [HiScoreListPtr]
+  ADD RDI, 120
+  MOV RDX, OFFSET MediumModeText
+  JMP @PrintTheMode
+@ItsHard:
+  MOV RDI, [HiScoreListPtr]
+  ADD RDI, 120*2
+  MOV RDX, OFFSET HardModeText    
+@PrintTheMode:
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+
+  
   XOR RBX, RBX
   MOV R12, HI_SCORE_Y_START
 @DisplayHighScoreLoop:
@@ -3138,6 +3282,47 @@ NESTED_ENTRY Invaders_HiScoreScreen, _TEXT$00
 
 NESTED_END Invaders_HiScoreScreen, _TEXT$00
 
+
+
+
+
+;*********************************************************
+;   Invaders_OptionsScreen
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_OptionsScreen, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV RDX, OFFSET SpGeneral
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  MOV R9, TITLE_Y
+  MOV R8, TITLE_X
+  MOV RDX, OFFSET SpTitle
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  MOV R8, [GameModeSelect]
+  MOV RDX, OFFSET ModeSelectText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_OPTIONS
+  MOV RAX, [SpaceCurrentState]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_OptionsScreen, _TEXT$00
 
 
 
@@ -3447,6 +3632,14 @@ NESTED_ENTRY Invaders_UpdateHighScore, _TEXT$00
   ; No Error Checking, assume this is all correct.
   ;
   MOV RDX, [HiScoreListPtr]
+  CMP [GameModeSelect], 0
+  JE @EasyMode
+  ADD RDX, 120
+  CMP [GameModeSelect], 1
+  JE @MediumMode
+  ADD RDX, 120
+@MediumMode:
+@EasyMode:
   ADD RDX, (120-12)          ; Set it to the last entry
 
 @MoveAllScores:
@@ -3681,7 +3874,7 @@ NESTED_ENTRY Invaders_UpdateHiScores, _TEXT$00
   ;
   LEA R9, STD_FUNCTION_STACK.Parameters.Param7[RSP]
   MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 0
-  MOV R8, 120				; File Size is fixed to 120 bytes.
+  MOV R8, 120*3				; File Size is fixed to 120*3 bytes.
   MOV RDX, [HiScoreListPtr]
   MOV RSI, RAX
   MOV RCX, RSI
@@ -3724,6 +3917,14 @@ NESTED_ENTRY Invaders_CheckHiScores, _TEXT$00
   MOV [InitialsEnterPtr], RCX
         
   MOV RDX, [HiScoreListPtr]
+  CMP [GameModeSelect], 0
+  JE @EasyMode
+  ADD RDX, 120
+  CMP [GameModeSelect], 1
+  JE @MediumMode
+  ADD RDX, 120
+@MediumMode:
+@EasyMode:
   XOR R8, R8
   MOV RCX, [PlayerScore]
   
@@ -4801,9 +5002,9 @@ NESTED_ENTRY Invaders_DisplayGamePanel, _TEXT$00
   
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
   MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
-  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
-  MOV R9, 10
-  MOV R8, 500
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SCORE_FONT_SIZE
+  MOV R9, PLAYER_SCORE_Y
+  MOV R8, PLAYER_SCORE_X
   MOV RDX, OFFSET PlayerOutputText
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
@@ -4815,9 +5016,9 @@ NESTED_ENTRY Invaders_DisplayGamePanel, _TEXT$00
   
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
   MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
-  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE-1
-  MOV R9, 50
-  MOV R8, 700
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
+  MOV R9, PLAYER_SP_LIVES_Y
+  MOV R8, PLAYER_SP_LIVES_X
   MOV RDX, OFFSET PlayerOutputText
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
@@ -4829,12 +5030,27 @@ NESTED_ENTRY Invaders_DisplayGamePanel, _TEXT$00
   
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
   MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
-  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE-1
-  MOV R9, 70
-  MOV R8, 700
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
+  MOV R9, PLAYER_SP_HITP_Y
+  MOV R8, PLAYER_SP_HITP_X
   MOV RDX, OFFSET PlayerOutputText
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV R8, [PlayerBombs]
+  MOV RDX, OFFSET PlayerBombsText
+  MOV RCX, OFFSET PlayerOutputText
+  DEBUG_FUNCTION_CALL sprintf
+  
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
+  MOV R9, PLAYER_SP_BOMB_Y
+  MOV R8, PLAYER_SP_BOMB_X
+  MOV RDX, OFFSET PlayerOutputText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
