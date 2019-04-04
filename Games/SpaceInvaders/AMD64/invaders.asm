@@ -281,6 +281,32 @@ PLAYER_SP_HITP_Y EQU <70>
 PLAYER_SP_BOMB_X EQU <700>
 PLAYER_SP_BOMB_Y EQU <90>
 
+
+PLAYER_SHIP_GAMEPLAY_Y EQU <300> 
+PLAYER_SHIP_GAMEPLAY_X EQU <300>
+ALIEN_SHIP_GAMEPLAY_START_X     EQU <50>
+ALIEN_SHIP_GAMEPLAY_START_Y     EQU <400>
+ALIEN_SHIP_GAMEPLAY_X_INC       EQU <10>
+ALIEN_SHIP_GAMEPLAY_Y_INC       EQU <10>
+ALIEN_SHIP_GAMEPLAY_NUMBER_ALIEN_SHIPS EQU <18>
+
+ALIEN_BOSSSHIP_GAMEPLAY_START_X     EQU <50>
+ALIEN_BOSSSHIP_GAMEPLAY_START_Y     EQU <550>
+ALIEN_BOSSSHIP_GAMEPLAY_X_INC       EQU <10>
+ALIEN_BOSSSHIP_GAMEPLAY_Y_INC       EQU <10>
+ALIEN_BOSSSHIP_GAMEPLAY_NUMBER_ALIEN_SHIPS EQU <10>
+
+ASTEROIDS_GAMEPLAY_Y EQU <350> 
+ASTEROIDS_GAMEPLAY_X EQU <350>
+GAMEPLAY_GENERIC_X_INC EQU <10>
+POWERUPS_GAMEPLAY_Y EQU <450>
+POWERUPS_GAMEPLAY_X EQU <350>
+SPACEMINES_GAMEPLAY_Y EQU <550>
+SPACEMINES_GAMEPLAY_X EQU <350>
+SPACEMINES_GAMEPLAY_NUMBER EQU <2>
+POWERUPS_GAMEPLAY_NUMBER EQU <2>
+ASTEROIDS_GAMEPLAY_NUMBER EQU <3>
+
 ;*********************************************************
 ; Macros
 ;*********************************************************
@@ -349,7 +375,7 @@ ENDM
     SpaceStateFuncPtrs dq  Invaders_Loading             ; SPACE_INVADERS_STATE_LOADING
                        dq  Invaders_IntroScreen         ; SPACE_INVADERS_STATE_INTRO
                        dq  Invaders_MenuScreen          ; SPACE_INVADERS_STATE_MENU
-                       dq  Invaders_BoxIt               ; SPACE_INVADERS_GAMEPLAY
+                       dq  Invaders_GamePlayScreen      ; SPACE_INVADERS_GAMEPLAY
                        dq  Invaders_HiScoreScreen       ; SPACE_INVADERS_HISCORE
                        dq  Invaders_OptionsScreen       ; SPACE_INVADERS_STATE_OPTIONS
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
@@ -370,7 +396,62 @@ ENDM
     SpaceInvaderSprites             db "SPRITES_GIF", 0
     SpaceInvadersGeneral            db "GENERAL_GIF", 0
     SpaceInvadersLevel1             db "LEVEL1_GIF", 0
-    
+	GamePlayPage                    dq 0
+    GamePlayTextOne                 dq 50, 300
+                                    db "The year is 2143 and the Earth is", 0
+                                    dq 50, 350
+                                    db "under attack from an interstellar",0
+                                    dq 50, 400
+                                    db "agency determined to create a new", 0
+                                    dq 50, 450
+									db "By-Pass and the Earth is in the way!",0  
+									dq 50, 500
+                                    db "Your job is to defend the Earth",0
+                                    dq 50, 550
+                                    db "and push the Aliens out of the ", 0
+                                    dq 50, 600
+									db "solar system!", 0
+									dq 0
+
+    GamePlayTextTwo                 dq 50, 300
+                                    db "Your Ship", 0
+                                    dq 50, 350
+                                    db "The Alien worker ships",0
+									dq 50, 400
+									db " ",0
+									dq 50, 450
+									db " ", 0
+									dq 50, 500
+									db "The Alien boss ships", 0
+									dq 0
+    GamePlayTextThree               dq 50, 300
+                                    db "Watch out for Asteroids!", 0
+                                    dq 50, 350
+								    db " ",0
+                                    dq 50, 400									
+                                    db "Power Ups provide treasures!",0
+									dq 50, 450
+									db " ", 0
+									dq 50, 500
+									db "Be careful of Space Mines!", 0
+									dq 0
+    GamePlayTextFour                dq 50, 300
+                                    db "Use the arrow keys to move your  ", 0
+                                    dq 50, 350
+                                    db "ship.  Spacebar will fire your",0
+                                    dq 50, 400
+                                    db "missile.  If you get BOMBS, use ", 0
+                                    dq 50, 450
+									db "the `B` key to deploy.  Every ",0  
+									dq 50, 500
+                                    db "ship has a certain number of Hit",0
+                                    dq 50, 550
+                                    db "Points and everything inflicts a", 0
+                                    dq 50, 600
+									db "certain amount of damage.", 0
+                                    dq 50, 650
+									db "GOOD LUCK!", 0									
+									dq 0
 	;
     ;  Player Support Structures
     ;	
@@ -1001,7 +1082,13 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-    
+  
+  CMP [SpaceCurrentState],SPACE_INVADERS_GAMEPLAY
+  JNE @TryNextItem
+  
+  INC [GamePlayPage]
+  
+@TryNextItem:    
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_OPTIONS
   JE @GameOptions
 
@@ -3703,6 +3790,229 @@ NESTED_ENTRY Invaders_MenuScreen, _TEXT$00
   RET
 
 NESTED_END Invaders_MenuScreen, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_GamePlayScreen
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_GamePlayScreen, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV RDX, OFFSET SpGeneral
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  MOV R9, TITLE_Y
+  MOV R8, TITLE_X
+  MOV RDX, OFFSET SpTitle
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+  
+  MOV [SpaceCurrentState], SPACE_INVADERS_GAMEPLAY
+  
+  CMP [GamePlayPage], 0
+  JE @GamePlayPageOne
+  CMP [GamePlayPage], 1
+  JE @GamePlayPageTwo
+  CMP [GamePlayPage], 2
+  JE @GamePlayPageThree
+  CMP [GamePlayPage], 3
+  JE @GamePlayPageFour
+  
+  MOV [GamePlayPage], 0
+  
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_MENU
+  JMP @GoToMenu
+  
+@GamePlayPageOne:
+  MOV R8, 50
+  MOV RDX, OFFSET GamePlayTextOne
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+
+JMP @ScreenDrawComplete
+
+@GamePlayPageTwo:
+
+  MOV R8, 50
+  MOV RDX, OFFSET GamePlayTextTwo
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+
+  MOV R9, PLAYER_SHIP_GAMEPLAY_Y
+  MOV R8, PLAYER_SHIP_GAMEPLAY_X
+  MOV RDX, [SpritePointer]
+  ADD RDX, SIZE SPRITE_BASIC_INFORMATION
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+  ;
+  ; Display Alien Small Ship Fleet
+  ;
+  MOV RDI, [SpritePointer]
+  ADD RDI, SMALL_ALIEN_BASIC_SPRITE * SIZE SPRITE_BASIC_INFORMATION
+  MOV R13, ALIEN_SHIP_GAMEPLAY_START_Y     
+  XOR RBX, RBX
+@StartDisplayShipsY:
+  MOV R12, ALIEN_SHIP_GAMEPLAY_START_X 
+@StartDisplayShipsX:
+  MOV R9, R13
+  MOV R8, R12
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+  INC RBX
+  CMP RBX, ALIEN_SHIP_GAMEPLAY_NUMBER_ALIEN_SHIPS
+  JAE @CompleteDisplay
+  ADD R12, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R12, ALIEN_SHIP_GAMEPLAY_X_INC
+  ADD RDI, SIZE SPRITE_BASIC_INFORMATION
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SUB RAX, 10
+  SUB RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  MOV RCX, R12
+  ADD RCX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  CMP RCX, RAX
+  JB @StartDisplayShipsX
+  ADD R13, ALIEN_SHIP_GAMEPLAY_Y_INC
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R13, RAX
+  SHR RAX, 1
+  ADD R13, RAX
+  JMP @StartDisplayShipsY
+@CompleteDisplay:
+
+  MOV RDI, [SpritePointer]
+  ADD RDI, LARGE_ALIEN_BASIC_SPRITE * SIZE SPRITE_BASIC_INFORMATION
+  MOV R13, ALIEN_BOSSSHIP_GAMEPLAY_START_Y     
+  XOR RBX, RBX
+@StartDisplayLargeShipsY:
+  MOV R12, ALIEN_BOSSSHIP_GAMEPLAY_START_X 
+@StartDisplayLargeShipsX:
+  MOV R9, R13
+  MOV R8, R12
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+  INC RBX
+  CMP RBX, ALIEN_BOSSSHIP_GAMEPLAY_NUMBER_ALIEN_SHIPS
+  JAE @CompleteDisplayLarge
+  ADD R12, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R12, ALIEN_BOSSSHIP_GAMEPLAY_X_INC
+  ADD RDI, SIZE SPRITE_BASIC_INFORMATION
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SUB RAX, 10
+  SUB RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  MOV RCX, R12
+  ADD RCX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  CMP RCX, RAX
+  JB @StartDisplayLargeShipsX
+  ADD R13, ALIEN_BOSSSHIP_GAMEPLAY_Y_INC
+  MOV RAX, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R13, RAX
+  SHR RAX, 1
+  ADD R13, RAX
+  JMP @StartDisplayLargeShipsY
+@CompleteDisplayLarge:
+
+
+  JMP @ScreenDrawComplete
+@GamePlayPageThree:
+
+  MOV R8, 50
+  MOV RDX, OFFSET GamePlayTextThree
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+
+
+  MOV RDI, [SpritePointer]
+  ADD RDI, LARGE_ASTROID_BASIC_SPRITE * SIZE SPRITE_BASIC_INFORMATION
+  MOV R13, ASTEROIDS_GAMEPLAY_Y     
+  XOR RBX, RBX
+  MOV R12, ASTEROIDS_GAMEPLAY_X 
+@StartDisplayAsteroids:
+  MOV R9, R13
+  MOV R8, R12
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+  INC RBX
+  CMP RBX, ASTEROIDS_GAMEPLAY_NUMBER
+  JAE @CompleteDisplayAsteroids
+  ADD R12, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R12, GAMEPLAY_GENERIC_X_INC
+  ADD RDI, SIZE SPRITE_BASIC_INFORMATION
+  JMP @StartDisplayAsteroids
+@CompleteDisplayAsteroids:
+
+
+
+  MOV RDI, [SpritePointer]
+  ADD RDI, POWER_UPS_BASIC_SPRITE * SIZE SPRITE_BASIC_INFORMATION
+  MOV R13, POWERUPS_GAMEPLAY_Y    
+  XOR RBX, RBX
+  MOV R12, POWERUPS_GAMEPLAY_X 
+@StartDisplayPowerUps:
+  MOV R9, R13
+  MOV R8, R12
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+  INC RBX
+  CMP RBX, POWERUPS_GAMEPLAY_NUMBER
+  JAE @CompleteDisplayPowerUps
+  ADD R12, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R12, GAMEPLAY_GENERIC_X_INC
+  ADD RDI, SIZE SPRITE_BASIC_INFORMATION
+  JMP @StartDisplayPowerUps
+@CompleteDisplayPowerUps:
+
+
+
+  MOV RDI, [SpritePointer]
+  ADD RDI, SPACE_MINE_BASIC_SPRITE * SIZE SPRITE_BASIC_INFORMATION
+  MOV R13, SPACEMINES_GAMEPLAY_Y
+  XOR RBX, RBX
+  MOV R12, SPACEMINES_GAMEPLAY_X 
+@StartDisplaySpaceMines:
+  MOV R9, R13
+  MOV R8, R12
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+  INC RBX
+  CMP RBX, SPACEMINES_GAMEPLAY_NUMBER
+  JAE @CompleteDisplaySpaceMines
+  ADD R12, SPRITE_BASIC_INFORMATION.SpriteWidth[RDI]
+  ADD R12, GAMEPLAY_GENERIC_X_INC
+  ADD RDI, SIZE SPRITE_BASIC_INFORMATION
+  JMP @StartDisplaySpaceMines
+@CompleteDisplaySpaceMines:
+
+JMP @ScreenDrawComplete
+@GamePlayPageFour:
+
+  MOV R8, 50
+  MOV RDX, OFFSET GamePlayTextFour
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
+
+@GoToMenu:  
+@ScreenDrawComplete:
+  MOV RAX, [SpaceCurrentState]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_GamePlayScreen, _TEXT$00
 
 
 ;***************************************************************************************************************************************************************************
