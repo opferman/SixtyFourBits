@@ -99,6 +99,7 @@ SPRITE_STRUCT  struct
    SpriteHeight    dq ?
    SpriteFire      dq ?
    SpriteMaxFire   dq ?
+   DisplayHit      dq ?
    HitPoints       dq ?   ; Amount of damage needed to be destroyed
    MaxHp           dq ?
    Damage          dq ?   ; How much damage this sprite does on collsion
@@ -149,7 +150,7 @@ LARGE_GAME_ALLOCATION  EQU <1024*1024*5> ; 5 MB
 MAXIMUM_PLAYER_FIRE    EQU <5>          ; Total Game Maximum Fire
 SMALL_ALIEN_SHIPS_MAX  EQU <18*10>
 LARGE_ALIEN_SHIPS_MAX  EQU <10>
-ASTROIDS_SMALL_MAX     EQU <100>
+ASTROIDS_SMALL_MAX     EQU <10> ;<100>
 ASTROIDS_MAX_VELOCITY  EQU <7>
 LEVEL_INTRO_TIMER_SIZE EQU <30*5>   
 ASTROID_BASE_POINTS    EQU <10>
@@ -1694,7 +1695,7 @@ NESTED_END Invaders_CreateHiScores, _TEXT$00
 ;*********************************************************
 ;   Invaders_SetupPrototypes
 ;
-;        Parameters: Master Context
+;        Parameters: None
 ;
 ;        Return Value: None
 ;
@@ -1847,6 +1848,322 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Invaders_SetupPrototypes, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_SetupPrototypesMedium
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  ;
+  ; Astroids Small Prototype
+  ;  
+  MOV [AstroidsSmallPrototype.SpriteVelX], 0
+  MOV [AstroidsSmallPrototype.SpriteVelY], 0
+  MOV [AstroidsSmallPrototype.SpriteVelMaxX], 0
+  MOV [AstroidsSmallPrototype.SpriteVelMaxY], ASTROIDS_MAX_VELOCITY
+  MOV [AstroidsSmallPrototype.SpriteMaxFire], 0
+  MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS
+  MOV [AstroidsSmallPrototype.HitPoints], 0
+  MOV [AstroidsSmallPrototype.SpriteOwnerPtr], 0
+  MOV [AstroidsSmallPrototype.MaxHp], 0
+  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE
+  MOV [AstroidsSmallPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AstroidsSmallPrototype.pfnAddedBackToList], RCX
+
+  
+
+  MOV [AlienSmallShipPrototype.SpriteVelX], 0
+  MOV [AlienSmallShipPrototype.SpriteVelY], 0
+  MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X
+  MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y
+  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE
+  MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE
+  MOV [AlienSmallShipPrototype.HitPoints], 0
+  MOV [AlienSmallShipPrototype.SpriteOwnerPtr], 0
+  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS
+  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE
+  MOV [AlienSmallShipPrototype.KillOffscreen], 0
+  MOV RCX, OFFSET Invaders_SmallShipMovement
+  MOV [AlienSmallShipPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_SmallShipAddToList
+  MOV [AlienSmallShipPrototype.pfnAddedBackToList], RCX
+
+  MOV [AlienLargeShipPrototype.SpriteVelX], 0
+  MOV [AlienLargeShipPrototype.SpriteVelY], 0
+  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX
+  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY
+  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE
+  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE
+  MOV [AlienLargeShipPrototype.HitPoints], 0
+  MOV [AlienLargeShipPrototype.SpriteOwnerPtr], 0
+  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
+  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
+  MOV [AlienLargeShipPrototype.KillOffscreen], 0
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienLargeShipPrototype.pfnAddedBackToList], RCX
+
+
+  MOV [AlienFirePrototype.SpriteVelX], 0
+  MOV [AlienFirePrototype.SpriteVelY], 0
+  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X
+  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y
+  MOV [AlienFirePrototype.SpriteMaxFire], 0
+  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE
+  MOV [AlienFirePrototype.HitPoints], 0
+  MOV [AlienFirePrototype.SpriteOwnerPtr], 0
+  MOV [AlienFirePrototype.MaxHp], 0
+  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE
+  MOV [AlienFirePrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienFirePrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienFirePrototype.pfnAddedBackToList], RCX
+
+  MOV [AlienFireLargePrototype.SpriteVelX], 0
+  MOV [AlienFireLargePrototype.SpriteVelY], 0
+  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX
+  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY
+  MOV [AlienFireLargePrototype.SpriteMaxFire], 3
+  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE
+  MOV [AlienFireLargePrototype.HitPoints], 0
+  MOV [AlienFireLargePrototype.SpriteOwnerPtr], 0
+  MOV [AlienFireLargePrototype.MaxHp], 0
+  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE
+  MOV [AlienFireLargePrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienFireLargePrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienFireLargePrototype.pfnAddedBackToList], RCX
+
+
+  MOV [SpaceMinesPrototype.SpriteVelX], 0
+  MOV [SpaceMinesPrototype.SpriteVelY], 0
+  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X
+  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y
+  MOV [SpaceMinesPrototype.SpriteMaxFire], 3
+  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS
+  MOV [SpaceMinesPrototype.HitPoints], 0
+  MOV [SpaceMinesPrototype.MaxHp], 0
+  MOV [SpaceMinesPrototype.SpriteOwnerPtr], 0
+  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE
+  MOV [SpaceMinesPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [SpaceMinesPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [SpaceMinesPrototype.pfnAddedBackToList], RCX
+
+  MOV [LargeAstroidPrototype.SpriteVelX], 0
+  MOV [LargeAstroidPrototype.SpriteVelY], 0
+  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X
+  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y
+  MOV [LargeAstroidPrototype.SpriteMaxFire], 0
+  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE
+  MOV [LargeAstroidPrototype.HitPoints], 0
+  MOV [LargeAstroidPrototype.MaxHp], 0
+  MOV [LargeAstroidPrototype.SpriteOwnerPtr], 0
+  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE
+  MOV [LargeAstroidPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [LargeAstroidPrototype.pfnAddedBackToList], RCX
+
+
+  MOV [PowerUpPrototype.SpriteVelX], 0
+  MOV [PowerUpPrototype.SpriteVelY], 0
+  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X
+  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y
+  MOV [PowerUpPrototype.SpriteMaxFire], 3
+  MOV [PowerUpPrototype.SpriteBasePointsValue], 0
+  MOV [PowerUpPrototype.HitPoints], 0
+  MOV [PowerUpPrototype.SpriteOwnerPtr], 0
+  MOV [PowerUpPrototype.MaxHp], 0
+  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE
+  MOV [PowerUpPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [PowerUpPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [PowerUpPrototype.pfnAddedBackToList], RCX
+
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Invaders_SetupPrototypesMedium, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_SetupPrototypesHard
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  ;
+  ; Astroids Small Prototype
+  ;  
+  MOV [AstroidsSmallPrototype.SpriteVelX], 0
+  MOV [AstroidsSmallPrototype.SpriteVelY], 0
+  MOV [AstroidsSmallPrototype.SpriteVelMaxX], 0
+  MOV [AstroidsSmallPrototype.SpriteVelMaxY], ASTROIDS_MAX_VELOCITY
+  MOV [AstroidsSmallPrototype.SpriteMaxFire], 0
+  MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS
+  MOV [AstroidsSmallPrototype.HitPoints], 0
+  MOV [AstroidsSmallPrototype.SpriteOwnerPtr], 0
+  MOV [AstroidsSmallPrototype.MaxHp], 0
+  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE
+  MOV [AstroidsSmallPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AstroidsSmallPrototype.pfnAddedBackToList], RCX
+
+  
+
+  MOV [AlienSmallShipPrototype.SpriteVelX], 0
+  MOV [AlienSmallShipPrototype.SpriteVelY], 0
+  MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X
+  MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y
+  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE
+  MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE
+  MOV [AlienSmallShipPrototype.HitPoints], 0
+  MOV [AlienSmallShipPrototype.SpriteOwnerPtr], 0
+  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS
+  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE
+  MOV [AlienSmallShipPrototype.KillOffscreen], 0
+  MOV RCX, OFFSET Invaders_SmallShipMovement
+  MOV [AlienSmallShipPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_SmallShipAddToList
+  MOV [AlienSmallShipPrototype.pfnAddedBackToList], RCX
+
+  MOV [AlienLargeShipPrototype.SpriteVelX], 0
+  MOV [AlienLargeShipPrototype.SpriteVelY], 0
+  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX
+  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY
+  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE
+  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE
+  MOV [AlienLargeShipPrototype.HitPoints], 0
+  MOV [AlienLargeShipPrototype.SpriteOwnerPtr], 0
+  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
+  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
+  MOV [AlienLargeShipPrototype.KillOffscreen], 0
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienLargeShipPrototype.pfnAddedBackToList], RCX
+
+
+  MOV [AlienFirePrototype.SpriteVelX], 0
+  MOV [AlienFirePrototype.SpriteVelY], 0
+  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X
+  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y
+  MOV [AlienFirePrototype.SpriteMaxFire], 0
+  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE
+  MOV [AlienFirePrototype.HitPoints], 0
+  MOV [AlienFirePrototype.SpriteOwnerPtr], 0
+  MOV [AlienFirePrototype.MaxHp], 0
+  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE
+  MOV [AlienFirePrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienFirePrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienFirePrototype.pfnAddedBackToList], RCX
+
+  MOV [AlienFireLargePrototype.SpriteVelX], 0
+  MOV [AlienFireLargePrototype.SpriteVelY], 0
+  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX
+  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY
+  MOV [AlienFireLargePrototype.SpriteMaxFire], 3
+  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE
+  MOV [AlienFireLargePrototype.HitPoints], 0
+  MOV [AlienFireLargePrototype.SpriteOwnerPtr], 0
+  MOV [AlienFireLargePrototype.MaxHp], 0
+  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE
+  MOV [AlienFireLargePrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [AlienFireLargePrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [AlienFireLargePrototype.pfnAddedBackToList], RCX
+
+
+  MOV [SpaceMinesPrototype.SpriteVelX], 0
+  MOV [SpaceMinesPrototype.SpriteVelY], 0
+  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X
+  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y
+  MOV [SpaceMinesPrototype.SpriteMaxFire], 3
+  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS
+  MOV [SpaceMinesPrototype.HitPoints], 0
+  MOV [SpaceMinesPrototype.MaxHp], 0
+  MOV [SpaceMinesPrototype.SpriteOwnerPtr], 0
+  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE
+  MOV [SpaceMinesPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [SpaceMinesPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [SpaceMinesPrototype.pfnAddedBackToList], RCX
+
+  MOV [LargeAstroidPrototype.SpriteVelX], 0
+  MOV [LargeAstroidPrototype.SpriteVelY], 0
+  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X
+  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y
+  MOV [LargeAstroidPrototype.SpriteMaxFire], 0
+  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE
+  MOV [LargeAstroidPrototype.HitPoints], 0
+  MOV [LargeAstroidPrototype.MaxHp], 0
+  MOV [LargeAstroidPrototype.SpriteOwnerPtr], 0
+  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE
+  MOV [LargeAstroidPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [LargeAstroidPrototype.pfnAddedBackToList], RCX
+
+
+  MOV [PowerUpPrototype.SpriteVelX], 0
+  MOV [PowerUpPrototype.SpriteVelY], 0
+  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X
+  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y
+  MOV [PowerUpPrototype.SpriteMaxFire], 3
+  MOV [PowerUpPrototype.SpriteBasePointsValue], 0
+  MOV [PowerUpPrototype.HitPoints], 0
+  MOV [PowerUpPrototype.SpriteOwnerPtr], 0
+  MOV [PowerUpPrototype.MaxHp], 0
+  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE
+  MOV [PowerUpPrototype.KillOffscreen], 1
+  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV [PowerUpPrototype.pfnSpriteMovementUpdate], RCX
+  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV [PowerUpPrototype.pfnAddedBackToList], RCX
+
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Invaders_SetupPrototypesHard, _TEXT$00
 
 
 
@@ -2683,6 +3000,7 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV [PlayerScore], 0
+  MOV [PlayerBombs], 0
   ;
   ; Treat Player Special
   ;
@@ -2783,8 +3101,20 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
 
   ;
   ; To allow for later levels to change the prototypes, Re-Initialize them now.
+  ;    Setup the prototypes based on Easy, Medium or Hard.
   ;
+  CMP [GameModeSelect], 1
+  JAE @MediumOrHard
   DEBUG_FUNCTION_CALL Invaders_SetupPrototypes
+  JMP @SpritePrototypesComplete
+@MediumOrHard:
+  CMP [GameModeSelect], 1
+  JA @HardMode  
+  DEBUG_FUNCTION_CALL Invaders_SetupPrototypesMedium
+  JMP @SpritePrototypesComplete
+@HardMode:  
+  DEBUG_FUNCTION_CALL Invaders_SetupPrototypesHard
+@SpritePrototypesComplete:
 
   ;
   ; Initialize All of the Inactive Lists.
@@ -4261,6 +4591,8 @@ NESTED_ENTRY Invaders_CollisionPlayerFire, _TEXT$00
 
   MOV R8, SPRITE_STRUCT.Damage[RDI]
   SUB SPRITE_STRUCT.HitPoints[RSI], R8
+  
+  MOV SPRITE_STRUCT.DisplayHit[RSI], 1
 
   CMP SPRITE_STRUCT.HitPoints[RSI], 0
   JG @StillAlive
@@ -4902,10 +5234,12 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
 @DisplayGameGfx:
   CMP SPRITE_STRUCT.SpriteAlive[RDI], 0
   JNE @DisplaySprite
-
+  
+  MOV SPRITE_STRUCT.DisplayHit[RDI], 0
+  
   CMP SPRITE_STRUCT.ExplodePointer[RDI], 0
   JE @SpriteRemove
-
+  
   MOV R9, SPRITE_STRUCT.SpriteY[RDI]
   MOV R8, SPRITE_STRUCT.SpriteX[RDI]
   MOV RDX, SPRITE_STRUCT.ExplodePointer[RDI]
@@ -4920,13 +5254,29 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   ;
   ; Display Sprite and then update the sprite movement for next round.
   ;
-
   MOV R9, SPRITE_STRUCT.SpriteY[RDI]
   MOV R8, SPRITE_STRUCT.SpriteX[RDI]
   MOV RDX, SPRITE_STRUCT.ImagePointer[RDI]
   MOV RCX, RSI
+  
+  CMP SPRITE_STRUCT.DisplayHit[RDI], 0
+  JE @NormalDisplay
+  CMP SPRITE_STRUCT.ExplodePointer[RDI], 0
+  JE @NormalDisplay
+  MOV RDX, SPRITE_STRUCT.ExplodePointer[RDI]
+  
+@NormalDisplay:
   DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
-
+ 
+  CMP SPRITE_STRUCT.DisplayHit[RDI], 0
+  JE @NoResetNeeded
+  CMP SPRITE_STRUCT.ExplodePointer[RDI], 0
+  JE @NoExplodeToReset  
+  MOV RCX, SPRITE_STRUCT.ExplodePointer[RDI]
+  DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
+@NoExplodeToReset:  
+  MOV SPRITE_STRUCT.DisplayHit[RDI], 0
+@NoResetNeeded:  
   ;
   ; Update Velocity for next frame.
   ;
