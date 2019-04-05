@@ -53,6 +53,12 @@ LMEM_ZEROINIT EQU <40h>
 ; Structures
 ;*********************************************************
 
+LEVEL_INFORMATION STRUCT 
+  LevelScreen          dq ?
+  LevelText            dq ?   
+  pfnLevelReset        dq ?
+  pfnNextWaveOrLevel   dq ?
+LEVEL_INFORMATION ENDS
 
 
 ;*********************************************************
@@ -74,8 +80,7 @@ SPACE_INVADERS_STATE_OPTIONS              EQU <5>
 SPACE_INVADERS_STATE_ABOUT                EQU <6>
 SPACE_INVADERS_END_GAME                   EQU <7>
 SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <8>
-SPACE_INVADERS_LEVEL_ONE                  EQU <9>
-SPACE_INVADERS_LEVEL_ONE_WAVE2            EQU <10>
+SPACE_INVADERS_LEVELS                     EQU <9>
 
 ;SPACE_INVADERS_LEVEL_TWO                  EQU <9>
 ;SPACE_INVADERS_LEVEL_THREE                EQU <10>
@@ -99,9 +104,14 @@ SPRITE_STRUCT  struct
    SpriteHeight    dq ?
    SpriteFire      dq ?
    SpriteMaxFire   dq ?
+   SpriteFireDebounce dq ?
+   SPriteFireDebounceSetting dq ?
    DisplayHit      dq ?
    HitPoints       dq ?   ; Amount of damage needed to be destroyed
    MaxHp           dq ?
+   PointsGiven     dq ?
+   PointsGivenX    dq ?
+   PointsGivenY    dq ?
    Damage          dq ?   ; How much damage this sprite does on collsion
    pNext           dq ?
    pPrev           dq ?
@@ -151,9 +161,7 @@ MAXIMUM_PLAYER_FIRE    EQU <5>          ; Total Game Maximum Fire
 SMALL_ALIEN_SHIPS_MAX  EQU <18*10>
 LARGE_ALIEN_SHIPS_MAX  EQU <10>
 ASTROIDS_SMALL_MAX     EQU <10> ;<100>
-ASTROIDS_MAX_VELOCITY  EQU <7>
 LEVEL_INTRO_TIMER_SIZE EQU <30*5>   
-ASTROID_BASE_POINTS    EQU <10>
 PLAYER_START_LIVES     EQU <3>
 HI_SCORE_MODE_Y        EQU <325>
 HI_SCORE_MODE_X        EQU <350>
@@ -166,18 +174,24 @@ MAX_HI_SCORES          EQU <10>
 HI_SCORE_TITLE_X       EQU <275>
 HI_SCORE_TITLE_Y       EQU <275>
 HI_SCORE_TITLE_SIZE    EQU <5>
+
+;
+; Counts for each list.
+;
 ALIEN_FIRE_MAX         EQU <500>
 SPACE_MINES_MAX        EQU <15>
 ASTROIDS_LARGE_MAX     EQU <50>
 POWER_UPS_MAX          EQU <7>
 ALIEN_FIRE_LARGE_MAX   EQU <10>
 MAX_SPRITE_LIST        EQU <18>
+TOTAL_ENEMY_LISTS      EQU <8>
 
+;
+; Easy Mode Configuration
+;
 ALIEN_SHIP_MAX_VEL_X   EQU <6>
 ALIEN_SHIP_MAX_VEL_Y   EQU <6>
 SMALL_SHIP_BASE_VALUE  EQU <15>
-TOTAL_ENEMY_LISTS      EQU <8>
-
 ASTROIDS_DAMAGE           EQU   <1>
 ALIEN_SHIP_MAX_FIRE       EQU   <3>
 ALIEN_SHIP_HIT_POINTS     EQU   <2>
@@ -207,6 +221,86 @@ LARGE_ASTROID_DAMAGE         EQU <5>
 POWER_UP_MAX_VEL_X           EQU <5>
 POWER_UP_MAX_VEL_Y           EQU <5>
 POWER_UP_SPECIAL_DAMAGE      EQU <01337h>
+ASTROID_BASE_POINTS          EQU <10>
+ASTROIDS_MAX_VELOCITY        EQU <7>
+
+;
+; Medium Mode Configuration
+;
+ALIEN_SHIP_MAX_VEL_X_M   EQU <6>
+ALIEN_SHIP_MAX_VEL_Y_M   EQU <6>
+SMALL_SHIP_BASE_VALUE_M  EQU <15>
+ASTROIDS_DAMAGE_M           EQU   <1>
+ALIEN_SHIP_MAX_FIRE_M       EQU   <3>
+ALIEN_SHIP_HIT_POINTS_M     EQU   <2>
+ALIEN_SHIP_DAMAGE_M         EQU   <2>
+ALIEN_SHIP_L_MAX_VX_M       EQU   <4>
+ALIEN_SHIP_L_MAX_VY_M       EQU   <3>
+LARGE_SHIP_BASE_VALUE_M     EQU   <50>
+LARGE_SHIP_MAX_FIRE_M       EQU   <5>
+LARGE_SHIP_HIT_POINTS_M     EQU   <15>
+LARGE_SHIP_DAMAGE_M         EQU   <20>
+ALIEN_FIRE_MAX_VEL_X_M      EQU   <0>
+ALIEN_FIRE_MAX_VEL_Y_M      EQU   <-3>
+ALIEN_FIRE_BASE_VALUE_M     EQU   <1>
+ALIEN_FIRE_DAMAGE_M            EQU <1>
+ALIEN_LARGE_FIRE_MAX_VELX_M    EQU <0>
+ALIEN_LARGE_FIRE_MAX_VELY_M    EQU <2>
+ALIEN_LARGE_FIRE_BASE_VALUE_M  EQU <5>
+ALIEN_LARGE_FIRE_DAMAGE_M      EQU <5>
+SPACE_MINES_MAX_VEL_X_M        EQU <2>
+SPACE_MINES_MAX_VEL_Y_M        EQU <2>
+SPACE_MINES_BASE_POINTS_M      EQU <5>
+SPACE_MINES_DAMAGE_M           EQU <5>
+LARGE_ASTROID_MAX_VEL_X_M      EQU <3>
+LARGE_ASTROID_MAX_VEL_Y_M      EQU <2>
+LARGE_ASTROID_BASE_VALUE_M     EQU <5>
+LARGE_ASTROID_DAMAGE_M         EQU <5>
+POWER_UP_MAX_VEL_X_M           EQU <5>
+POWER_UP_MAX_VEL_Y_M           EQU <5>
+POWER_UP_SPECIAL_DAMAGE_M      EQU <01337h>
+ASTROID_BASE_POINTS_M          EQU <10>
+ASTROIDS_MAX_VELOCITY_M        EQU <7>
+
+
+;
+; Hard Mode Configuration
+;
+ALIEN_SHIP_MAX_VEL_X_H   EQU <6>
+ALIEN_SHIP_MAX_VEL_Y_H   EQU <6>
+SMALL_SHIP_BASE_VALUE_H  EQU <15>
+ASTROIDS_DAMAGE_H           EQU   <1>
+ALIEN_SHIP_MAX_FIRE_H       EQU   <3>
+ALIEN_SHIP_HIT_POINTS_H     EQU   <2>
+ALIEN_SHIP_DAMAGE_H         EQU   <2>
+ALIEN_SHIP_L_MAX_VX_H       EQU   <4>
+ALIEN_SHIP_L_MAX_VY_H       EQU   <3>
+LARGE_SHIP_BASE_VALUE_H     EQU   <50>
+LARGE_SHIP_MAX_FIRE_H       EQU   <5>
+LARGE_SHIP_HIT_POINTS_H     EQU   <15>
+LARGE_SHIP_DAMAGE_H         EQU   <20>
+ALIEN_FIRE_MAX_VEL_X_H      EQU   <0>
+ALIEN_FIRE_MAX_VEL_Y_H      EQU   <-3>
+ALIEN_FIRE_BASE_VALUE_H     EQU   <1>
+ALIEN_FIRE_DAMAGE_H            EQU <1>
+ALIEN_LARGE_FIRE_MAX_VELX_H    EQU <0>
+ALIEN_LARGE_FIRE_MAX_VELY_H    EQU <2>
+ALIEN_LARGE_FIRE_BASE_VALUE_H  EQU <5>
+ALIEN_LARGE_FIRE_DAMAGE_H      EQU <5>
+SPACE_MINES_MAX_VEL_X_H        EQU <2>
+SPACE_MINES_MAX_VEL_Y_H        EQU <2>
+SPACE_MINES_BASE_POINTS_H      EQU <5>
+SPACE_MINES_DAMAGE_H           EQU <5>
+LARGE_ASTROID_MAX_VEL_X_H      EQU <3>
+LARGE_ASTROID_MAX_VEL_Y_H      EQU <2>
+LARGE_ASTROID_BASE_VALUE_H     EQU <5>
+LARGE_ASTROID_DAMAGE_H         EQU <5>
+POWER_UP_MAX_VEL_X_H           EQU <5>
+POWER_UP_MAX_VEL_Y_H           EQU <5>
+POWER_UP_SPECIAL_DAMAGE_H      EQU <01337h>
+ASTROID_BASE_POINTS_H          EQU <10>
+ASTROIDS_MAX_VELOCITY_H        EQU <7>
+
 
 LEVEL_WAVE_TIMER_ONE         EQU <2000>
 ;
@@ -381,8 +475,7 @@ ENDM
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
                        dq  Invaders_GameOver            ; SPACE_INVADERS_END_GAME
                        dq  Invaders_EnterHiScore        ; SPACE_INVADERS_STATE_ENTER_HI_SCORE
-                       dq  Invaders_LevelOne            ; SPACE_INVADERS_LEVEL_ONE
-                       dq  Invaders_LevelOneWave2       ; SPACE_INVADERS_LEVEL_ONE_WAVE2
+                       dq  Invaders_Levels               ; SPACE_INVADERS_LEVELS
                   
     ;
     ;  Graphic Resources 
@@ -587,7 +680,7 @@ ENDM
     ; Menu Selection 
     ;
     MenuSelection                   dq 0
-    MenuToState                     dq SPACE_INVADERS_LEVEL_ONE
+    MenuToState                     dq SPACE_INVADERS_LEVELS
                                     dq SPACE_INVADERS_GAMEPLAY
                                     dq SPACE_INVADERS_HISCORE
 									dq SPACE_INVADERS_STATE_OPTIONS
@@ -1006,7 +1099,7 @@ NESTED_ENTRY Invaders_SpacePress, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   
-  CMP [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE
+  CMP [SpaceCurrentState], SPACE_INVADERS_LEVELS
   JB @GameNotActive
 
   CMP [PlayerSprite.SpriteAlive], 0
@@ -1958,13 +2051,13 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
   MOV [AstroidsSmallPrototype.SpriteVelX], 0
   MOV [AstroidsSmallPrototype.SpriteVelY], 0
   MOV [AstroidsSmallPrototype.SpriteVelMaxX], 0
-  MOV [AstroidsSmallPrototype.SpriteVelMaxY], ASTROIDS_MAX_VELOCITY
+  MOV [AstroidsSmallPrototype.SpriteVelMaxY], ASTROIDS_MAX_VELOCITY_M
   MOV [AstroidsSmallPrototype.SpriteMaxFire], 0
-  MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS
+  MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS_M
   MOV [AstroidsSmallPrototype.HitPoints], 0
   MOV [AstroidsSmallPrototype.SpriteOwnerPtr], 0
   MOV [AstroidsSmallPrototype.MaxHp], 0
-  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE
+  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE_M
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
@@ -1975,14 +2068,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [AlienSmallShipPrototype.SpriteVelX], 0
   MOV [AlienSmallShipPrototype.SpriteVelY], 0
-  MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X
-  MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y
-  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE
-  MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE
+  MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X_M
+  MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y_M
+  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE_M
+  MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE_M
   MOV [AlienSmallShipPrototype.HitPoints], 0
   MOV [AlienSmallShipPrototype.SpriteOwnerPtr], 0
-  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS
-  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE
+  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS_M
+  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE_M
   MOV [AlienSmallShipPrototype.KillOffscreen], 0
   MOV RCX, OFFSET Invaders_SmallShipMovement
   MOV [AlienSmallShipPrototype.pfnSpriteMovementUpdate], RCX
@@ -1991,14 +2084,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [AlienLargeShipPrototype.SpriteVelX], 0
   MOV [AlienLargeShipPrototype.SpriteVelY], 0
-  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX
-  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY
-  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE
-  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE
+  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX_M
+  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY_M
+  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE_M
+  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE_M
   MOV [AlienLargeShipPrototype.HitPoints], 0
   MOV [AlienLargeShipPrototype.SpriteOwnerPtr], 0
-  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
-  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
+  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS_M
+  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE_M
   MOV [AlienLargeShipPrototype.KillOffscreen], 0
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
@@ -2008,14 +2101,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [AlienFirePrototype.SpriteVelX], 0
   MOV [AlienFirePrototype.SpriteVelY], 0
-  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X
-  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y
+  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X_M
+  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y_M
   MOV [AlienFirePrototype.SpriteMaxFire], 0
-  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE
+  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE_M
   MOV [AlienFirePrototype.HitPoints], 0
   MOV [AlienFirePrototype.SpriteOwnerPtr], 0
   MOV [AlienFirePrototype.MaxHp], 0
-  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE
+  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE_M
   MOV [AlienFirePrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AlienFirePrototype.pfnSpriteMovementUpdate], RCX
@@ -2024,14 +2117,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [AlienFireLargePrototype.SpriteVelX], 0
   MOV [AlienFireLargePrototype.SpriteVelY], 0
-  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX
-  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY
+  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX_M
+  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY_M
   MOV [AlienFireLargePrototype.SpriteMaxFire], 3
-  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE
+  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE_M
   MOV [AlienFireLargePrototype.HitPoints], 0
   MOV [AlienFireLargePrototype.SpriteOwnerPtr], 0
   MOV [AlienFireLargePrototype.MaxHp], 0
-  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE
+  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE_M
   MOV [AlienFireLargePrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AlienFireLargePrototype.pfnSpriteMovementUpdate], RCX
@@ -2041,14 +2134,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [SpaceMinesPrototype.SpriteVelX], 0
   MOV [SpaceMinesPrototype.SpriteVelY], 0
-  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X
-  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y
+  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X_M
+  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y_M
   MOV [SpaceMinesPrototype.SpriteMaxFire], 3
-  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS
+  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS_M
   MOV [SpaceMinesPrototype.HitPoints], 0
   MOV [SpaceMinesPrototype.MaxHp], 0
   MOV [SpaceMinesPrototype.SpriteOwnerPtr], 0
-  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE
+  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE_M
   MOV [SpaceMinesPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [SpaceMinesPrototype.pfnSpriteMovementUpdate], RCX
@@ -2057,14 +2150,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [LargeAstroidPrototype.SpriteVelX], 0
   MOV [LargeAstroidPrototype.SpriteVelY], 0
-  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X
-  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y
+  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X_M
+  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y_M
   MOV [LargeAstroidPrototype.SpriteMaxFire], 0
-  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE
+  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE_M
   MOV [LargeAstroidPrototype.HitPoints], 0
   MOV [LargeAstroidPrototype.MaxHp], 0
   MOV [LargeAstroidPrototype.SpriteOwnerPtr], 0
-  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE
+  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE_M
   MOV [LargeAstroidPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
@@ -2074,14 +2167,14 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
 
   MOV [PowerUpPrototype.SpriteVelX], 0
   MOV [PowerUpPrototype.SpriteVelY], 0
-  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X
-  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y
+  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X_M
+  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y_M
   MOV [PowerUpPrototype.SpriteMaxFire], 3
   MOV [PowerUpPrototype.SpriteBasePointsValue], 0
   MOV [PowerUpPrototype.HitPoints], 0
   MOV [PowerUpPrototype.SpriteOwnerPtr], 0
   MOV [PowerUpPrototype.MaxHp], 0
-  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE
+  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE_M
   MOV [PowerUpPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [PowerUpPrototype.pfnSpriteMovementUpdate], RCX
@@ -2116,13 +2209,13 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
   MOV [AstroidsSmallPrototype.SpriteVelX], 0
   MOV [AstroidsSmallPrototype.SpriteVelY], 0
   MOV [AstroidsSmallPrototype.SpriteVelMaxX], 0
-  MOV [AstroidsSmallPrototype.SpriteVelMaxY], ASTROIDS_MAX_VELOCITY
+  MOV [AstroidsSmallPrototype.SpriteVelMaxY], ASTROIDS_MAX_VELOCITY_H
   MOV [AstroidsSmallPrototype.SpriteMaxFire], 0
-  MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS
+  MOV [AstroidsSmallPrototype.SpriteBasePointsValue], ASTROID_BASE_POINTS_H
   MOV [AstroidsSmallPrototype.HitPoints], 0
   MOV [AstroidsSmallPrototype.SpriteOwnerPtr], 0
   MOV [AstroidsSmallPrototype.MaxHp], 0
-  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE
+  MOV [AstroidsSmallPrototype.Damage], ASTROIDS_DAMAGE_H
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
@@ -2133,14 +2226,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [AlienSmallShipPrototype.SpriteVelX], 0
   MOV [AlienSmallShipPrototype.SpriteVelY], 0
-  MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X
-  MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y
-  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE
-  MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE
+  MOV [AlienSmallShipPrototype.SpriteVelMaxX], ALIEN_SHIP_MAX_VEL_X_H
+  MOV [AlienSmallShipPrototype.SpriteVelMaxY], ALIEN_SHIP_MAX_VEL_Y_H
+  MOV [AlienSmallShipPrototype.SpriteMaxFire], ALIEN_SHIP_MAX_FIRE_H
+  MOV [AlienSmallShipPrototype.SpriteBasePointsValue], SMALL_SHIP_BASE_VALUE_H
   MOV [AlienSmallShipPrototype.HitPoints], 0
   MOV [AlienSmallShipPrototype.SpriteOwnerPtr], 0
-  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS
-  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE
+  MOV [AlienSmallShipPrototype.MaxHp], ALIEN_SHIP_HIT_POINTS_H
+  MOV [AlienSmallShipPrototype.Damage], ALIEN_SHIP_DAMAGE_H
   MOV [AlienSmallShipPrototype.KillOffscreen], 0
   MOV RCX, OFFSET Invaders_SmallShipMovement
   MOV [AlienSmallShipPrototype.pfnSpriteMovementUpdate], RCX
@@ -2149,14 +2242,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [AlienLargeShipPrototype.SpriteVelX], 0
   MOV [AlienLargeShipPrototype.SpriteVelY], 0
-  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX
-  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY
-  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE
-  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE
+  MOV [AlienLargeShipPrototype.SpriteVelMaxX], ALIEN_SHIP_L_MAX_VX_H
+  MOV [AlienLargeShipPrototype.SpriteVelMaxY], ALIEN_SHIP_L_MAX_VY_H
+  MOV [AlienLargeShipPrototype.SpriteMaxFire], LARGE_SHIP_MAX_FIRE_H
+  MOV [AlienLargeShipPrototype.SpriteBasePointsValue], LARGE_SHIP_BASE_VALUE_H
   MOV [AlienLargeShipPrototype.HitPoints], 0
   MOV [AlienLargeShipPrototype.SpriteOwnerPtr], 0
-  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
-  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
+  MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS_H
+  MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE_H
   MOV [AlienLargeShipPrototype.KillOffscreen], 0
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
@@ -2166,14 +2259,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [AlienFirePrototype.SpriteVelX], 0
   MOV [AlienFirePrototype.SpriteVelY], 0
-  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X
-  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y
+  MOV [AlienFirePrototype.SpriteVelMaxX], ALIEN_FIRE_MAX_VEL_X_H
+  MOV [AlienFirePrototype.SpriteVelMaxY], ALIEN_FIRE_MAX_VEL_Y_H
   MOV [AlienFirePrototype.SpriteMaxFire], 0
-  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE
+  MOV [AlienFirePrototype.SpriteBasePointsValue], ALIEN_FIRE_BASE_VALUE_H
   MOV [AlienFirePrototype.HitPoints], 0
   MOV [AlienFirePrototype.SpriteOwnerPtr], 0
   MOV [AlienFirePrototype.MaxHp], 0
-  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE
+  MOV [AlienFirePrototype.Damage], ALIEN_FIRE_DAMAGE_H
   MOV [AlienFirePrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AlienFirePrototype.pfnSpriteMovementUpdate], RCX
@@ -2182,14 +2275,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [AlienFireLargePrototype.SpriteVelX], 0
   MOV [AlienFireLargePrototype.SpriteVelY], 0
-  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX
-  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY
+  MOV [AlienFireLargePrototype.SpriteVelMaxX], ALIEN_LARGE_FIRE_MAX_VELX_H
+  MOV [AlienFireLargePrototype.SpriteVelMaxY], ALIEN_LARGE_FIRE_MAX_VELY_H
   MOV [AlienFireLargePrototype.SpriteMaxFire], 3
-  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE
+  MOV [AlienFireLargePrototype.SpriteBasePointsValue], ALIEN_LARGE_FIRE_BASE_VALUE_H
   MOV [AlienFireLargePrototype.HitPoints], 0
   MOV [AlienFireLargePrototype.SpriteOwnerPtr], 0
   MOV [AlienFireLargePrototype.MaxHp], 0
-  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE
+  MOV [AlienFireLargePrototype.Damage], ALIEN_LARGE_FIRE_DAMAGE_H
   MOV [AlienFireLargePrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AlienFireLargePrototype.pfnSpriteMovementUpdate], RCX
@@ -2199,14 +2292,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [SpaceMinesPrototype.SpriteVelX], 0
   MOV [SpaceMinesPrototype.SpriteVelY], 0
-  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X
-  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y
+  MOV [SpaceMinesPrototype.SpriteVelMaxX], SPACE_MINES_MAX_VEL_X_H
+  MOV [SpaceMinesPrototype.SpriteVelMaxY], SPACE_MINES_MAX_VEL_Y_H
   MOV [SpaceMinesPrototype.SpriteMaxFire], 3
-  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS
+  MOV [SpaceMinesPrototype.SpriteBasePointsValue], SPACE_MINES_BASE_POINTS_H
   MOV [SpaceMinesPrototype.HitPoints], 0
   MOV [SpaceMinesPrototype.MaxHp], 0
   MOV [SpaceMinesPrototype.SpriteOwnerPtr], 0
-  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE
+  MOV [SpaceMinesPrototype.Damage], SPACE_MINES_DAMAGE_H
   MOV [SpaceMinesPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [SpaceMinesPrototype.pfnSpriteMovementUpdate], RCX
@@ -2215,14 +2308,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [LargeAstroidPrototype.SpriteVelX], 0
   MOV [LargeAstroidPrototype.SpriteVelY], 0
-  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X
-  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y
+  MOV [LargeAstroidPrototype.SpriteVelMaxX], LARGE_ASTROID_MAX_VEL_X_H
+  MOV [LargeAstroidPrototype.SpriteVelMaxY], LARGE_ASTROID_MAX_VEL_Y_H
   MOV [LargeAstroidPrototype.SpriteMaxFire], 0
-  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE
+  MOV [LargeAstroidPrototype.SpriteBasePointsValue], LARGE_ASTROID_BASE_VALUE_H
   MOV [LargeAstroidPrototype.HitPoints], 0
   MOV [LargeAstroidPrototype.MaxHp], 0
   MOV [LargeAstroidPrototype.SpriteOwnerPtr], 0
-  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE
+  MOV [LargeAstroidPrototype.Damage], LARGE_ASTROID_DAMAGE_H
   MOV [LargeAstroidPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
@@ -2232,14 +2325,14 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
 
   MOV [PowerUpPrototype.SpriteVelX], 0
   MOV [PowerUpPrototype.SpriteVelY], 0
-  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X
-  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y
+  MOV [PowerUpPrototype.SpriteVelMaxX], POWER_UP_MAX_VEL_X_H
+  MOV [PowerUpPrototype.SpriteVelMaxY], POWER_UP_MAX_VEL_Y_H
   MOV [PowerUpPrototype.SpriteMaxFire], 3
   MOV [PowerUpPrototype.SpriteBasePointsValue], 0
   MOV [PowerUpPrototype.HitPoints], 0
   MOV [PowerUpPrototype.SpriteOwnerPtr], 0
   MOV [PowerUpPrototype.MaxHp], 0
-  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE
+  MOV [PowerUpPrototype.Damage], POWER_UP_SPECIAL_DAMAGE_H
   MOV [PowerUpPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [PowerUpPrototype.pfnSpriteMovementUpdate], RCX
@@ -3105,6 +3198,7 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
   MOV [PlayerSprite.SpriteFire], 0
   MOV [PlayerSprite.SpriteMaxFire], PLAYER_MAX_FIRE
   MOV [PlayerSprite.HitPoints], PLAYER_START_HP
+  MOV [PlayerSprite.MaxHp], PLAYER_START_HP
   MOV [PlayerSprite.Damage], PLAYER_DAMAGE
   MOV [PlayerLives], PLAYER_START_LIVES     
 
@@ -4020,7 +4114,7 @@ NESTED_END Invaders_GamePlayScreen, _TEXT$00
 ;***************************************************************************************************************************************************************************
 
 ;*********************************************************
-;   Invaders_LevelOne
+;   Invaders_Levels
 ;
 ;        Parameters: Master Context, Double Buffer
 ;
@@ -4028,20 +4122,20 @@ NESTED_END Invaders_GamePlayScreen, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Invaders_LevelOne, _TEXT$00
+NESTED_ENTRY Invaders_Levels, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV RDI, RDX
-
-  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE
+  MOV [SpaceCurrentState], SPACE_INVADERS_LEVELS
 
   ;
-  ; Level Background
+  ; Display the background for this level
   ;
-  MOV RDX, OFFSET Level1Screen
+  MOV RBX, [CurrentLevelInformationPtr]
+  MOV RDX, LEVEL_INFORMATION.LevelScreen[RBX]
   DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
 
   ;
@@ -4053,32 +4147,35 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   DEC [LevelIntroTimer]
 
   MOV R8, 20
-  MOV RDX, OFFSET LevelOne
+  MOV RDX, LEVEL_INFORMATION.LevelText[RBX]
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
   JMP @ContinueGoing
 
 @LevelAction:
-  ;
+
+  ;**************************************************************
   ; Level Action - Section One - New Enemies
-  ;
+  ;**************************************************************
+  MOV RDX, RBX
   MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_RandomAstroids
+  DEBUG_FUNCTION_CALL Invaders_DispatchEnemies 
+
+;  DEBUG_FUNCTION_CALL Invaders_RandomAstroids
 
 
-  ;
-  ;  Level Action - Section Two - Collision Detection
-  ;
-
+  ;**************************************************************
+  ; Level Action - Section Two - Collision Detection
+  ;**************************************************************
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_CollisionPlayerFire
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_CollisionPlayer
 
-  ;
-  ; Level Action - Display Sprites and Graphics
-  ;  
+  ;**************************************************************
+  ; Level Action - Section Three - Display Graphics and Sprites
+  ;**************************************************************
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayPlayer
   MOV R12, RAX
@@ -4090,7 +4187,9 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   DEBUG_FUNCTION_CALL Invaders_DisplayGameGraphics
   
 
-  
+  ;***************************************************************
+  ; Determine if the player has died and level needs reset
+  ;***************************************************************
   CMP R12, 0
   JE @GameStillGoing
   
@@ -4098,29 +4197,34 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   ; Reset Level Time!
   ;
   DEC [PlayerLives]
-  DEBUG_FUNCTION_CALL Invaders_LevelOneReset
+  DEBUG_FUNCTION_CALL  LEVEL_INFORMATION.pfnLevelReset[RBX]
   
 @GameStillGoing:
   
-  ;
-  ;  Display the Game Panel After Updating Lives!
-  ;
+  ;***************************************************************
+  ; Display the game panel
+  ;***************************************************************
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
 
   DEC [LevelWaveTimer]
   CMP [LevelWaveTimer], 0
   JNE @DoNotUpdate
-  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE_WAVE2
+  ;
+  ; TBD Update to next level / Wave, check if completed the game.
+  ;
+  DEBUG_FUNCTION_CALL  LEVEL_INFORMATION.pfnNextWaveOrLevel[RBX]
 @DoNotUpdate:
   CMP [PlayerLives], 0
   JA @ContinueGoing
-  
+
+  ;
+  ; Game Over
+  ; 
+ 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL Invaders_ScreenCapture
-
   DEBUG_FUNCTION_CALL Invaders_CheckHiScores  ; Easier to just update here.
-
   MOV [SpaceCurrentState], SPACE_INVADERS_END_GAME
   MOV RAX, [SpaceCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -4134,117 +4238,7 @@ NESTED_ENTRY Invaders_LevelOne, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
-NESTED_END Invaders_LevelOne, _TEXT$00
-
-;*********************************************************
-;   Invaders_LevelOneWave2
-;
-;        Parameters: Master Context, Double Buffer
-;
-;        Return Value: State
-;
-;
-;*********************************************************  
-NESTED_ENTRY Invaders_LevelOneWave2, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RSI, RCX
-  MOV RDI, RDX
-  ;
-  ; Level Background
-  ;
-  MOV RDX, OFFSET Level1Screen
-  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
-
-  ;
-  ; Level Introduction Timer
-  ;
-  CMP [LevelIntroTimer], 0
-  JE @LevelAction
-
-  DEC [LevelIntroTimer]
-
-  MOV R8, 20
-  MOV RDX, OFFSET LevelOneWave2
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayScrollText
-  JMP @SkipLevelAction
-
-@LevelAction:
-  ;
-  ; Level Action - Section One - New Enemies
-  ;
-
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_RandomShips
-
-  ;
-  ;  Level Action - Section Two - Collision Detection
-  ;
-
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_CollisionPlayerFire
-
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_CollisionPlayer
-
-  ;
-  ; Level Action - Display Sprites and Graphics
-  ;  
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayPlayer
-  MOV R12, RAX
-  
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayPlayerFire
-
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayGameGraphics
-  
-
-  
-  CMP R12, 0
-  JE @GameStillGoing
-  
-  ;
-  ; Reset Level Time!
-  ;
-  DEC [PlayerLives]
-  DEBUG_FUNCTION_CALL Invaders_LevelOneReset
-  
-@GameStillGoing:
-
-  ;
-  ;  Display the Game Panel After Updating Lives!
-  ;
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
-
-@SkipLevelAction:
-  CMP [PlayerLives], 0
-  JA @ContinueGoing
-  
-  MOV RCX, RDI
-  DEBUG_FUNCTION_CALL Invaders_ScreenCapture
-
-  DEBUG_FUNCTION_CALL Invaders_CheckHiScores  ; Easier to just update here.
-
-  MOV [SpaceCurrentState], SPACE_INVADERS_END_GAME
-  MOV RAX, [SpaceCurrentState]
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-@ContinueGoing:
-  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE_WAVE2
-  MOV RAX, [SpaceCurrentState]
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END Invaders_LevelOneWave2, _TEXT$00
+NESTED_END Invaders_Levels, _TEXT$00
 
 
 ;***************************************************************************************************************************************************************************
@@ -4598,32 +4592,48 @@ NESTED_END Invaders_CheckHiScores, _TEXT$00
 
 
 ;*********************************************************
-;   Invaders_LevelOneReset
+;   Invaders_ResetLevel
 ;
-;        Parameters: None
+;        Parameters: Level Information
 ;
 ;        Return Value: None
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Invaders_LevelOneReset, _TEXT$00
+NESTED_ENTRY Invaders_ResetLevel, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RDI, RCX
 
-  MOV [PlayerSprite.HitPoints], PLAYER_START_HP
+  ;
+  ; Empty the Active list
+  ;
   DEBUG_FUNCTION_CALL Invaders_EmptyActiveList
-  MOV [LevelIntroTimer], LEVEL_INTRO_TIMER_SIZE/2
+  
+  ;
+  ; Reset the Player's Sprite
+  ;
+  MOV RDX, [PlayerSprite.MaxHp]
+  MOV [PlayerSprite.HitPoints], RDX
   MOV [PlayerSprite.SpriteAlive], 1
   MOV [PlayerSprite.SpriteFire], 0
 
   MOV RCX, [SpritePointer]
   ADD RCX, SIZE SPRITE_BASIC_INFORMATION*4
   DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
+  
+  ;  
+  ;  Reset the timers
+  ;
+  MOV RCX, LEVEL_INFORMATION.LevelWaveTimer[RDI]
+  MOV [LevelWaveTimer], RCX
+  MOV [LevelIntroTimer], LEVEL_INTRO_TIMER_SIZE/2
 
-  MOV [LevelWaveTimer], LEVEL_WAVE_TIMER_ONE
-
+  ;
+  ; Dump the Player's Fire
+  ;
   MOV RDI, [PlayerFireActivePtr]
   MOV [PlayerFireActivePtr], 0
 
@@ -4659,7 +4669,7 @@ NESTED_ENTRY Invaders_LevelOneReset, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
-NESTED_END Invaders_LevelOneReset, _TEXT$00
+NESTED_END Invaders_ResetLevel, _TEXT$00
 
 ;***************************************************************************************************************************************************************************
 ; Creating Enemies
@@ -5020,6 +5030,14 @@ NESTED_ENTRY Invaders_CollisionPlayer, _TEXT$00
   ; Collision, inflict damage
   ;
   MOV R8, SPRITE_STRUCT.Damage[RSI]
+  CMP R8, POWER_UP_SPECIAL_DAMAGE_M
+  JE @NotAPowerUp
+
+  ;
+  ; Add Power Up Here.
+  ;
+  JMP @KillThePowerUp
+@NotAPowerUp:
   SUB SPRITE_STRUCT.HitPoints[RDI], R8
 
   MOV R8, SPRITE_STRUCT.Damage[RDI]
@@ -5027,6 +5045,7 @@ NESTED_ENTRY Invaders_CollisionPlayer, _TEXT$00
 
   CMP SPRITE_STRUCT.HitPoints[RSI], 0
   JG @StillAlive
+@KillThePowerUp:
   MOV SPRITE_STRUCT.SpriteAlive[RSI], 0
 @StillAlive:
   CMP SPRITE_STRUCT.HitPoints[RDI], 0
@@ -5771,8 +5790,8 @@ NESTED_ENTRY Invaders_SpriteTest, _TEXT$00
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
 
 
-  MOV [SpaceCurrentState], SPACE_INVADERS_LEVEL_ONE
-  MOV RAX, SPACE_INVADERS_LEVEL_ONE
+  MOV [SpaceCurrentState], SPACE_INVADERS_LEVELS
+  MOV RAX, SPACE_INVADERS_LEVELS
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
