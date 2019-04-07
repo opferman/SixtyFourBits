@@ -58,6 +58,17 @@ LEVEL_INFORMATION STRUCT
   LevelText            dq ?   
   pfnLevelReset        dq ?
   pfnNextWaveOrLevel   dq ?
+  pfnPowerUpSelect     dq ?
+  NumberSmallAstroids  dq ?
+  NumberLargeAstroids  dq ?
+  NumberSmallShips     dq ?
+  NumberLargeShips     dq ?
+  CategoryLargeShips   dq ?
+  NumberPowerUps       dq ?
+  LevelWaveTimer       dq ?
+  LevelNumber           dq ?
+  WaveNumber           dq ?
+  PowerUpRarity        dq ?
 LEVEL_INFORMATION ENDS
 
 
@@ -81,13 +92,10 @@ SPACE_INVADERS_STATE_ABOUT                EQU <6>
 SPACE_INVADERS_END_GAME                   EQU <7>
 SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <8>
 SPACE_INVADERS_LEVELS                     EQU <9>
-
-;SPACE_INVADERS_LEVEL_TWO                  EQU <9>
-;SPACE_INVADERS_LEVEL_THREE                EQU <10>
-;SPACE_INVADERS_LEVEL_FOUR                 EQU <11>
-;SPACE_INVADERS_LEVEL_FIVE                 EQU <12>
-
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
+
+
+
 
 SPRITE_STRUCT  struct
    ImagePointer    dq ?   ; Sprite Basic Information
@@ -97,6 +105,7 @@ SPRITE_STRUCT  struct
    SpriteY         dq ?
    SpriteVelX      dq ?
    SpriteVelY      dq ?
+   SpriteMovementDebounce dq ?
    SpriteVelMaxX   dq ?
    SpriteVelMaxY   dq ?
    SpriteOwnerPtr  dq ?
@@ -109,6 +118,7 @@ SPRITE_STRUCT  struct
    DisplayHit      dq ?
    HitPoints       dq ?   ; Amount of damage needed to be destroyed
    MaxHp           dq ?
+   PointsTimer     dq ?
    PointsGiven     dq ?
    PointsGivenX    dq ?
    PointsGivenY    dq ?
@@ -126,6 +136,8 @@ SPRITE_STRUCT  ends
 ;
 ; Space Invaders Constants
 ;
+SMALL_SHIP_DEBOUNCE_RANGE EQU <400>
+SMALL_SHIP_DEBOUNCE_MIN   EQU <300>
 MAX_SCORES             EQU <5>
 MAX_SHIELDS            EQU <3>
 MAX_ALIENS_PER_ROW     EQU <1>
@@ -156,11 +168,11 @@ PLAYER_MAX_FIRE        EQU <5>          ; Starting Level 1 max
 PLAYER_START_HP        EQU <1>
 PLAYER_DAMAGE          EQU <2>
 PLAYER_FIRE_MAX_Y      EQU <-5>
-LARGE_GAME_ALLOCATION  EQU <1024*1024*5> ; 5 MB
+LARGE_GAME_ALLOCATION  EQU <1024*1024*10> ; 5 MB
 MAXIMUM_PLAYER_FIRE    EQU <5>          ; Total Game Maximum Fire
 SMALL_ALIEN_SHIPS_MAX  EQU <18*10>
 LARGE_ALIEN_SHIPS_MAX  EQU <10>
-ASTROIDS_SMALL_MAX     EQU <10> ;<100>
+ASTROIDS_SMALL_MAX     EQU <100>
 LEVEL_INTRO_TIMER_SIZE EQU <30*5>   
 PLAYER_START_LIVES     EQU <3>
 HI_SCORE_MODE_Y        EQU <325>
@@ -174,7 +186,7 @@ MAX_HI_SCORES          EQU <10>
 HI_SCORE_TITLE_X       EQU <275>
 HI_SCORE_TITLE_Y       EQU <275>
 HI_SCORE_TITLE_SIZE    EQU <5>
-
+POINTS_TIMER           EQU <12>
 ;
 ; Counts for each list.
 ;
@@ -189,8 +201,8 @@ TOTAL_ENEMY_LISTS      EQU <8>
 ;
 ; Easy Mode Configuration
 ;
-ALIEN_SHIP_MAX_VEL_X   EQU <6>
-ALIEN_SHIP_MAX_VEL_Y   EQU <6>
+ALIEN_SHIP_MAX_VEL_X   EQU <4>
+ALIEN_SHIP_MAX_VEL_Y   EQU <4>
 SMALL_SHIP_BASE_VALUE  EQU <15>
 ASTROIDS_DAMAGE           EQU   <1>
 ALIEN_SHIP_MAX_FIRE       EQU   <3>
@@ -203,7 +215,7 @@ LARGE_SHIP_MAX_FIRE       EQU   <5>
 LARGE_SHIP_HIT_POINTS     EQU   <15>
 LARGE_SHIP_DAMAGE         EQU   <20>
 ALIEN_FIRE_MAX_VEL_X      EQU   <0>
-ALIEN_FIRE_MAX_VEL_Y      EQU   <-3>
+ALIEN_FIRE_MAX_VEL_Y      EQU   <3>
 ALIEN_FIRE_BASE_VALUE     EQU   <1>
 ALIEN_FIRE_DAMAGE            EQU <1>
 ALIEN_LARGE_FIRE_MAX_VELX    EQU <0>
@@ -214,7 +226,7 @@ SPACE_MINES_MAX_VEL_X        EQU <2>
 SPACE_MINES_MAX_VEL_Y        EQU <2>
 SPACE_MINES_BASE_POINTS      EQU <5>
 SPACE_MINES_DAMAGE           EQU <5>
-LARGE_ASTROID_MAX_VEL_X      EQU <3>
+LARGE_ASTROID_MAX_VEL_X      EQU <2>
 LARGE_ASTROID_MAX_VEL_Y      EQU <2>
 LARGE_ASTROID_BASE_VALUE     EQU <5>
 LARGE_ASTROID_DAMAGE         EQU <5>
@@ -231,78 +243,80 @@ ALIEN_SHIP_MAX_VEL_X_M   EQU <6>
 ALIEN_SHIP_MAX_VEL_Y_M   EQU <6>
 SMALL_SHIP_BASE_VALUE_M  EQU <15>
 ASTROIDS_DAMAGE_M           EQU   <1>
-ALIEN_SHIP_MAX_FIRE_M       EQU   <3>
-ALIEN_SHIP_HIT_POINTS_M     EQU   <2>
-ALIEN_SHIP_DAMAGE_M         EQU   <2>
-ALIEN_SHIP_L_MAX_VX_M       EQU   <4>
+ALIEN_SHIP_MAX_FIRE_M       EQU   <4>
+ALIEN_SHIP_HIT_POINTS_M     EQU   <3>
+ALIEN_SHIP_DAMAGE_M         EQU   <3>
+ALIEN_SHIP_L_MAX_VX_M       EQU   <5>
 ALIEN_SHIP_L_MAX_VY_M       EQU   <3>
 LARGE_SHIP_BASE_VALUE_M     EQU   <50>
-LARGE_SHIP_MAX_FIRE_M       EQU   <5>
-LARGE_SHIP_HIT_POINTS_M     EQU   <15>
+LARGE_SHIP_MAX_FIRE_M       EQU   <6>
+LARGE_SHIP_HIT_POINTS_M     EQU   <20>
 LARGE_SHIP_DAMAGE_M         EQU   <20>
 ALIEN_FIRE_MAX_VEL_X_M      EQU   <0>
-ALIEN_FIRE_MAX_VEL_Y_M      EQU   <-3>
+ALIEN_FIRE_MAX_VEL_Y_M      EQU   <3>
 ALIEN_FIRE_BASE_VALUE_M     EQU   <1>
 ALIEN_FIRE_DAMAGE_M            EQU <1>
 ALIEN_LARGE_FIRE_MAX_VELX_M    EQU <0>
 ALIEN_LARGE_FIRE_MAX_VELY_M    EQU <2>
 ALIEN_LARGE_FIRE_BASE_VALUE_M  EQU <5>
 ALIEN_LARGE_FIRE_DAMAGE_M      EQU <5>
-SPACE_MINES_MAX_VEL_X_M        EQU <2>
-SPACE_MINES_MAX_VEL_Y_M        EQU <2>
+SPACE_MINES_MAX_VEL_X_M        EQU <3>
+SPACE_MINES_MAX_VEL_Y_M        EQU <3>
 SPACE_MINES_BASE_POINTS_M      EQU <5>
 SPACE_MINES_DAMAGE_M           EQU <5>
 LARGE_ASTROID_MAX_VEL_X_M      EQU <3>
-LARGE_ASTROID_MAX_VEL_Y_M      EQU <2>
+LARGE_ASTROID_MAX_VEL_Y_M      EQU <3>
 LARGE_ASTROID_BASE_VALUE_M     EQU <5>
 LARGE_ASTROID_DAMAGE_M         EQU <5>
 POWER_UP_MAX_VEL_X_M           EQU <5>
 POWER_UP_MAX_VEL_Y_M           EQU <5>
 POWER_UP_SPECIAL_DAMAGE_M      EQU <01337h>
 ASTROID_BASE_POINTS_M          EQU <10>
-ASTROIDS_MAX_VELOCITY_M        EQU <7>
+ASTROIDS_MAX_VELOCITY_M        EQU <8>
 
 
 ;
 ; Hard Mode Configuration
 ;
-ALIEN_SHIP_MAX_VEL_X_H   EQU <6>
-ALIEN_SHIP_MAX_VEL_Y_H   EQU <6>
+ALIEN_SHIP_MAX_VEL_X_H   EQU <7>
+ALIEN_SHIP_MAX_VEL_Y_H   EQU <7>
 SMALL_SHIP_BASE_VALUE_H  EQU <15>
 ASTROIDS_DAMAGE_H           EQU   <1>
-ALIEN_SHIP_MAX_FIRE_H       EQU   <3>
-ALIEN_SHIP_HIT_POINTS_H     EQU   <2>
+ALIEN_SHIP_MAX_FIRE_H       EQU   <5>
+ALIEN_SHIP_HIT_POINTS_H     EQU   <4>
 ALIEN_SHIP_DAMAGE_H         EQU   <2>
-ALIEN_SHIP_L_MAX_VX_H       EQU   <4>
-ALIEN_SHIP_L_MAX_VY_H       EQU   <3>
+ALIEN_SHIP_L_MAX_VX_H       EQU   <5>
+ALIEN_SHIP_L_MAX_VY_H       EQU   <4>
 LARGE_SHIP_BASE_VALUE_H     EQU   <50>
-LARGE_SHIP_MAX_FIRE_H       EQU   <5>
-LARGE_SHIP_HIT_POINTS_H     EQU   <15>
+LARGE_SHIP_MAX_FIRE_H       EQU   <8>
+LARGE_SHIP_HIT_POINTS_H     EQU   <25>
 LARGE_SHIP_DAMAGE_H         EQU   <20>
 ALIEN_FIRE_MAX_VEL_X_H      EQU   <0>
-ALIEN_FIRE_MAX_VEL_Y_H      EQU   <-3>
+ALIEN_FIRE_MAX_VEL_Y_H      EQU   <3>
 ALIEN_FIRE_BASE_VALUE_H     EQU   <1>
 ALIEN_FIRE_DAMAGE_H            EQU <1>
 ALIEN_LARGE_FIRE_MAX_VELX_H    EQU <0>
-ALIEN_LARGE_FIRE_MAX_VELY_H    EQU <2>
+ALIEN_LARGE_FIRE_MAX_VELY_H    EQU <4>
 ALIEN_LARGE_FIRE_BASE_VALUE_H  EQU <5>
 ALIEN_LARGE_FIRE_DAMAGE_H      EQU <5>
-SPACE_MINES_MAX_VEL_X_H        EQU <2>
-SPACE_MINES_MAX_VEL_Y_H        EQU <2>
+SPACE_MINES_MAX_VEL_X_H        EQU <4>
+SPACE_MINES_MAX_VEL_Y_H        EQU <4>
 SPACE_MINES_BASE_POINTS_H      EQU <5>
 SPACE_MINES_DAMAGE_H           EQU <5>
-LARGE_ASTROID_MAX_VEL_X_H      EQU <3>
-LARGE_ASTROID_MAX_VEL_Y_H      EQU <2>
+LARGE_ASTROID_MAX_VEL_X_H      EQU <4>
+LARGE_ASTROID_MAX_VEL_Y_H      EQU <5>
 LARGE_ASTROID_BASE_VALUE_H     EQU <5>
 LARGE_ASTROID_DAMAGE_H         EQU <5>
 POWER_UP_MAX_VEL_X_H           EQU <5>
 POWER_UP_MAX_VEL_Y_H           EQU <5>
 POWER_UP_SPECIAL_DAMAGE_H      EQU <01337h>
 ASTROID_BASE_POINTS_H          EQU <10>
-ASTROIDS_MAX_VELOCITY_H        EQU <7>
+ASTROIDS_MAX_VELOCITY_H        EQU <9>
 
 
 LEVEL_WAVE_TIMER_ONE         EQU <2000>
+LEVEL_INFINITE               EQU <-1>
+
 ;
 ; Sprite Setup
 ;
@@ -374,7 +388,10 @@ PLAYER_SP_HITP_X EQU <700>
 PLAYER_SP_HITP_Y EQU <70>
 PLAYER_SP_BOMB_X EQU <700>
 PLAYER_SP_BOMB_Y EQU <90>
-
+PLAYER_SP_LEVEL_X EQU <700>
+PLAYER_SP_LEVEL_Y EQU <110>
+PLAYER_SP_WAVE_X EQU <700>
+PLAYER_SP_WAVE_Y EQU <130>
 
 PLAYER_SHIP_GAMEPLAY_Y EQU <300> 
 PLAYER_SHIP_GAMEPLAY_X EQU <300>
@@ -400,6 +417,9 @@ SPACEMINES_GAMEPLAY_X EQU <350>
 SPACEMINES_GAMEPLAY_NUMBER EQU <2>
 POWERUPS_GAMEPLAY_NUMBER EQU <2>
 ASTEROIDS_GAMEPLAY_NUMBER EQU <3>
+
+PLAYER_SP_ALIEN_HP_Y EQU <70>
+PLAYER_SP_ALIEN_HP_X EQU <5>
 
 ;*********************************************************
 ; Macros
@@ -489,7 +509,10 @@ ENDM
     SpaceInvaderSprites             db "SPRITES_GIF", 0
     SpaceInvadersGeneral            db "GENERAL_GIF", 0
     SpaceInvadersLevel1             db "LEVEL1_GIF", 0
-	GamePlayPage                    dq 0
+    SpaceInvadersLevel2             db "LEVEL2_GIF", 0
+    SpaceInvadersLevel3             db "LEVEL3_GIF", 0
+    SpaceInvadersLevel4             db "LEVEL4_GIF", 0
+	GamePlayPage                dq 0
     GamePlayTextOne                 dq 50, 300
                                     db "The year is 2143 and the Earth is", 0
                                     dq 50, 350
@@ -545,14 +568,14 @@ ENDM
                                     dq 50, 650
 									db "GOOD LUCK!", 0									
 									dq 0
-	;
+    ;
     ;  Player Support Structures
-    ;	
+    ;
     PlayerSprite                    SPRITE_STRUCT <?>
     PlayerFireActivePtr             dq ?
     PlayerFireInActivePtr           dq ?
     DeBounceMovement                dq 0                        ; I don't think this is needed.
-    
+    AlientHpCounterText             db "Alien Boss HP: %I64u", 0
 	;
 	; Hi Score File Name
 	;
@@ -593,17 +616,60 @@ ENDM
     PowerUpInactivePtr                   dq ?
     PowerUpPrototype                     SPRITE_STRUCT <?>
 
-    ShipScreenCounter                    dq 0
+    
     ;
     ; Prototypes for populating new sprites and resetting game engine.
     ;
+    CurrentCountSmallAstroids            dq 0
+    CurrentCountSmallShips               dq 0
+    CurrentCountLargeShips               dq 0
+    CurrentCountLargeAstroids            dq 0
 
-    
+     ;
+     ;  These are hard coded but they could be scripted.
+     ;
+    CurrentLevelInformationPtr           dq ? 
+       EasyLevel1              LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 20, 0, 0, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0>
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 3, 0, 5, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0>
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3, Invaders_ResetLevel, Invaders_NextLevel_New, 0, 3, 0, 0, 1, 1, 0, LEVEL_INFINITE, 1, 3, 0>
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,      Invaders_ResetLevel, Invaders_NextLevel, 0, 25, 10, 10, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 2, 1, 5>
+                               LEVEL_INFORMATION <?>
+                               LEVEL_INFORMATION <?>
+                               LEVEL_INFORMATION <?>
+                               LEVEL_INFORMATION <?>
+                               LEVEL_INFORMATION <?>
+                               LEVEL_INFORMATION <?>
+
+       MediumLevel1             LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 50, 0, 0, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0>
+                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 5, 0, 10, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0>
+                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3, Invaders_ResetLevel, Invaders_NextLevel_New, 0, 5, 0, 0, 1, 1, 0, LEVEL_INFINITE, 1, 3, 0>
+                                LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,      Invaders_ResetLevel, Invaders_NextLevel, 0, 35, 15, 15, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 2, 1, 10>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+
+       HardLevel1               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 200, 0, 0, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0>
+                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 10, 0, 20, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0>
+                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3, Invaders_ResetLevel, Invaders_NextLevel_New, 0, 10, 0, 0, 1, 1, 0, LEVEL_INFINITE, 1, 3, 0>
+                                LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,      Invaders_ResetLevel, Invaders_NextLevel, 0, 50, 30, 20, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 2, 1, 15>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
+                                LEVEL_INFORMATION <?>
 
     ;
     ; Game Text
     ;
-	GameModeSelect                  dq 0
+	GameModeSelect              dq 0
     ModeSelectText                  dq 400, 300
                                     db "Easy Mode", 0
                                     dq 365, 350
@@ -620,8 +686,8 @@ ENDM
                                     dq 400, 400
                                     db "Hi-Scores", 0
                                     dq 420, 450
-									db "Options",0
-									dq 440, 500
+				    db "Options",0
+				    dq 440, 500
                                     db "About", 0
                                     dq 445, 550
                                     db "Quit", 0
@@ -648,9 +714,9 @@ ENDM
                                     dq 0
 									
     HighScoresText                  db "High Scores", 0
-	EasyModeText                    db "Easy Mode",0
-	MediumModeText                  db "Medium Mode", 0
-	HardModeText                    db "Hard Mode",0
+	EasyModeText                db "Easy Mode",0
+	MediumModeText              db "Medium Mode", 0
+	HardModeText                db "Hard Mode",0
 	
 	
 	;
@@ -667,6 +733,22 @@ ENDM
                                     dq 375, 425
                                     db "Wave Two",0
                                     dq 0
+                                     
+    LevelOneWave3                   dq 370, 375
+                                    db "Level One", 0
+                                    dq 375, 425
+                                    db "Wave Three",0
+                                    dq 0
+
+    LevelTwo                        dq 370, 375
+                                    db "Level Two", 0
+                                    dq 375, 425
+                                    db "Wave One",0
+                                    dq 0
+
+
+    PointsScoreFormat               db "%I64u",0
+    PointsScoreString               db 256 DUP(?)
 
     HiScoreFormatString             db "%s - %I64u", 0
     HiScoreString                   db "                                      ",0
@@ -683,17 +765,19 @@ ENDM
     MenuToState                     dq SPACE_INVADERS_LEVELS
                                     dq SPACE_INVADERS_GAMEPLAY
                                     dq SPACE_INVADERS_HISCORE
-									dq SPACE_INVADERS_STATE_OPTIONS
+			            dq SPACE_INVADERS_STATE_OPTIONS
                                     dq SPACE_INVADERS_STATE_ABOUT
                                     dq SPACE_INVADERS_FAILURE_STATE  ; Quit
     MenuIntroTimer                  dq 0
     PlayerLives                     dq PLAYER_START_LIVES
-	PlayerBombs                     dq 0
+    PlayerBombs                     dq 0
     PlayerScore                     dq 0
     PlayerOutputText                db 256 DUP(?)
     PlayerHpText                    db "Hit Points: %I64u",0
     PlayerLivesText                 db "Lives: %I64u",0
-	PlayerBombsText                 db "Bombs: %I64u", 0
+    PlayerBombsText                 db "Bombs: %I64u", 0
+    PlayerCurLevelText              db "Level: %I64u", 0
+    PlayerCurWaveText               db "Wave: %I64u", 0
     PlayerScoreFormat               db "%I64u", 0
     SpriteImageFileListAttributes   db 1, 2
     
@@ -869,6 +953,9 @@ ENDM
     SpriteConvert      SPRITE_CONVERT     <?>
     GameEngInit        GAME_ENGINE_INIT   <?>
     Level1Screen       IMAGE_INFORMATION  <?>
+    Level2Screen       IMAGE_INFORMATION  <?>
+    Level3Screen       IMAGE_INFORMATION  <?>
+    Level4Screen       IMAGE_INFORMATION  <?>
     LoadingScreen      IMAGE_INFORMATION  <?>
     IntroScreen        IMAGE_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
@@ -1903,7 +1990,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_AstroidsAddedBackToList
   MOV [AstroidsSmallPrototype.pfnAddedBackToList], RCX
 
   
@@ -1935,9 +2022,9 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS
   MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE
   MOV [AlienLargeShipPrototype.KillOffscreen], 0
-  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV RCX, OFFSET Invaders_LargeShipMovement
   MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_LargeShipAddToList
   MOV [AlienLargeShipPrototype.pfnAddedBackToList], RCX
 
 
@@ -2003,7 +2090,7 @@ NESTED_ENTRY Invaders_SetupPrototypes, _TEXT$00
   MOV [LargeAstroidPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_LargeAstroidsAddedBackToList
   MOV [LargeAstroidPrototype.pfnAddedBackToList], RCX
 
 
@@ -2061,7 +2148,7 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_AstroidsAddedBackToList
   MOV [AstroidsSmallPrototype.pfnAddedBackToList], RCX
 
   
@@ -2093,9 +2180,9 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
   MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS_M
   MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE_M
   MOV [AlienLargeShipPrototype.KillOffscreen], 0
-  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV RCX, OFFSET Invaders_LargeShipMovement
   MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_LargeShipAddToList
   MOV [AlienLargeShipPrototype.pfnAddedBackToList], RCX
 
 
@@ -2161,7 +2248,7 @@ NESTED_ENTRY Invaders_SetupPrototypesMedium, _TEXT$00
   MOV [LargeAstroidPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_LargeAstroidsAddedBackToList
   MOV [LargeAstroidPrototype.pfnAddedBackToList], RCX
 
 
@@ -2219,7 +2306,7 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
   MOV [AstroidsSmallPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [AstroidsSmallPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_AstroidsAddedBackToList
   MOV [AstroidsSmallPrototype.pfnAddedBackToList], RCX
 
   
@@ -2251,9 +2338,9 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
   MOV [AlienLargeShipPrototype.MaxHp], LARGE_SHIP_HIT_POINTS_H
   MOV [AlienLargeShipPrototype.Damage], LARGE_SHIP_DAMAGE_H
   MOV [AlienLargeShipPrototype.KillOffscreen], 0
-  MOV RCX, OFFSET Invaders_DefaultMovement
+  MOV RCX, OFFSET Invaders_LargeShipMovement
   MOV [AlienLargeShipPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_LargeShipAddToList
   MOV [AlienLargeShipPrototype.pfnAddedBackToList], RCX
 
 
@@ -2319,7 +2406,7 @@ NESTED_ENTRY Invaders_SetupPrototypesHard, _TEXT$00
   MOV [LargeAstroidPrototype.KillOffscreen], 1
   MOV RCX, OFFSET Invaders_DefaultMovement
   MOV [LargeAstroidPrototype.pfnSpriteMovementUpdate], RCX
-  MOV RCX, OFFSET Invaders_DefaultAddToList
+  MOV RCX, OFFSET Invaders_LargeAstroidsAddedBackToList
   MOV [LargeAstroidPrototype.pfnAddedBackToList], RCX
 
 
@@ -2674,7 +2761,62 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [Level1Screen.IncrementX], XMM0
   MOVSD [Level1Screen.IncrementY], XMM0
 
-  
+
+  MOV RCX, OFFSET SpaceInvadersLevel2
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET Level2Screen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [Level2Screen.StartX], 0
+  MOV [Level2Screen.StartY], 0
+  MOV [Level2Screen.InflateCountDown], 0
+  MOV [Level2Screen.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [Level2Screen.IncrementX], XMM0
+  MOVSD [Level2Screen.IncrementY], XMM0
+
+
+  MOV RCX, OFFSET SpaceInvadersLevel3
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET Level3Screen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [Level3Screen.StartX], 0
+  MOV [Level3Screen.StartY], 0
+  MOV [Level3Screen.InflateCountDown], 0
+  MOV [Level3Screen.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [Level3Screen.IncrementX], XMM0
+  MOVSD [Level3Screen.IncrementY], XMM0
+
+
+  MOV RCX, OFFSET SpaceInvadersLevel4
+  DEBUG_FUNCTION_CALL Invaders_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET Level4Screen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [Level4Screen.StartX], 0
+  MOV [Level4Screen.StartY], 0
+  MOV [Level4Screen.InflateCountDown], 0
+  MOV [Level4Screen.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [Level4Screen.IncrementX], XMM0
+  MOVSD [Level4Screen.IncrementY], XMM0
+
+
+
 
   MOV RCX, OFFSET SpaceInvadersGeneral
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
@@ -2749,6 +2891,10 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOV RCX, OFFSET AlienFreeLargeShipsPtr
   DEBUG_FUNCTION_CALL Invaders_SetupSpriteImages
 
+  MOV RDX, 10
+  MOV RCX, OFFSET AlienFreeLargeShipsPtr
+  DEBUG_FUNCTION_CALL Invaders_SetupCategories
+
 
   ;
   ; Setup Alien Fire
@@ -2819,6 +2965,40 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   RET
 NESTED_END Invaders_LoadingThread, _TEXT$00
 
+
+
+
+;*********************************************************
+;   Invaders_SetupCategories
+;
+;        Parameters: Offset Inactive List Ptr, Starting Category
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_SetupCategories, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV R12, QWORD PTR [RCX]
+
+@SetupSpriteCategory:
+ 
+  MOV SPRITE_STRUCT.SpriteCategory[R12], RDX
+  DEC RDX
+  MOV R12, SPRITE_STRUCT.pNext[R12]
+  CMP R12, 0
+  JNE @SetupSpriteCategory
+
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_SetupCategories, _TEXT$00
 
 
 ;*********************************************************
@@ -3143,7 +3323,7 @@ NESTED_ENTRY Invaders_ResetActiveInactiveSprites, _TEXT$00
 
   MOV R9, SPRITE_STRUCT.MaxHp[R8]
   MOV SPRITE_STRUCT.MaxHp[RDI], R9
-
+  MOV SPRITE_STRUCT.HitPoints[RDI], R9
 
   MOV R9, SPRITE_STRUCT.Damage[R8]
   MOV SPRITE_STRUCT.Damage[RDI], R9
@@ -3287,15 +3467,27 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
   CMP [GameModeSelect], 1
   JAE @MediumOrHard
   DEBUG_FUNCTION_CALL Invaders_SetupPrototypes
+  MOV RCX, OFFSET EasyLevel1
   JMP @SpritePrototypesComplete
 @MediumOrHard:
   CMP [GameModeSelect], 1
   JA @HardMode  
   DEBUG_FUNCTION_CALL Invaders_SetupPrototypesMedium
+  MOV RCX, OFFSET MediumLevel1
   JMP @SpritePrototypesComplete
 @HardMode:  
   DEBUG_FUNCTION_CALL Invaders_SetupPrototypesHard
+  MOV RCX, OFFSET HardLevel1
 @SpritePrototypesComplete:
+
+  MOV [CurrentLevelInformationPtr], RCX
+
+  ;  
+  ; Clear the counters. (these should actually already be cleared when the lists are emptied)
+  ;
+  MOV [CurrentCountSmallAstroids], 0
+  MOV [CurrentCountSmallShips], 0
+  MOV [CurrentCountLargeShips], 0
 
   ;
   ; Initialize All of the Inactive Lists.
@@ -3313,7 +3505,13 @@ NESTED_ENTRY Invaders_ResetGame, _TEXT$00
   CMP R12, TOTAL_ENEMY_LISTS
   JB @ReInitializeEnemyListsWithPrototype
 
-  MOV [LevelWaveTimer], LEVEL_WAVE_TIMER_ONE
+  ;
+  ;  Setup Level Timers
+  ;
+  MOV RDI, [CurrentLevelInformationPtr]
+  MOV RCX, LEVEL_INFORMATION.LevelWaveTimer[RDI]
+  MOV [LevelWaveTimer], RCX
+
   ;
   ; Set the Level Intro Timer.
   ;
@@ -4161,11 +4359,8 @@ NESTED_ENTRY Invaders_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DispatchEnemies 
 
-;  DEBUG_FUNCTION_CALL Invaders_RandomAstroids
-
-
   ;**************************************************************
-  ; Level Action - Section Two - Collision Detection
+  ; Level Action - Section Two - Detection
   ;**************************************************************
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_CollisionPlayerFire
@@ -4198,18 +4393,29 @@ NESTED_ENTRY Invaders_Levels, _TEXT$00
   ;
   DEC [PlayerLives]
   DEBUG_FUNCTION_CALL  LEVEL_INFORMATION.pfnLevelReset[RBX]
+  JMP @DoNotUpdate
   
 @GameStillGoing:
   
   ;***************************************************************
   ; Display the game panel
   ;***************************************************************
+  MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Invaders_DisplayGamePanel
+  CMP [LevelWaveTimer], LEVEL_INFINITE
+  JNE @CheckNormalTimer
 
+  CMP [CurrentCountLargeShips], 0
+  JE @NextLevel
+  JMP @DoNotUpdate
+
+@CheckNormalTimer:
   DEC [LevelWaveTimer]
   CMP [LevelWaveTimer], 0
   JNE @DoNotUpdate
+
+@NextLevel:
   ;
   ; TBD Update to next level / Wave, check if completed the game.
   ;
@@ -4221,7 +4427,6 @@ NESTED_ENTRY Invaders_Levels, _TEXT$00
   ;
   ; Game Over
   ; 
- 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL Invaders_ScreenCapture
   DEBUG_FUNCTION_CALL Invaders_CheckHiScores  ; Easier to just update here.
@@ -4587,14 +4792,14 @@ NESTED_END Invaders_CheckHiScores, _TEXT$00
 
 
 ;***************************************************************************************************************************************************************************
-; Level Resets
+; Level Resets & Maintaince
 ;***************************************************************************************************************************************************************************
 
 
 ;*********************************************************
 ;   Invaders_ResetLevel
 ;
-;        Parameters: Level Information
+;        Parameters: None
 ;
 ;        Return Value: None
 ;
@@ -4605,8 +4810,6 @@ NESTED_ENTRY Invaders_ResetLevel, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV RDI, RCX
-
   ;
   ; Empty the Active list
   ;
@@ -4627,6 +4830,7 @@ NESTED_ENTRY Invaders_ResetLevel, _TEXT$00
   ;  
   ;  Reset the timers
   ;
+  MOV RDI, [CurrentLevelInformationPtr]
   MOV RCX, LEVEL_INFORMATION.LevelWaveTimer[RDI]
   MOV [LevelWaveTimer], RCX
   MOV [LevelIntroTimer], LEVEL_INTRO_TIMER_SIZE/2
@@ -4671,14 +4875,276 @@ NESTED_ENTRY Invaders_ResetLevel, _TEXT$00
 
 NESTED_END Invaders_ResetLevel, _TEXT$00
 
+
+;*********************************************************
+;   Invaders_NextLevel
+;
+;        Parameters: Level Information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_NextLevel, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RBX, [CurrentLevelInformationPtr]
+  ADD RBX, SIZEOF LEVEL_INFORMATION
+  MOV [CurrentLevelInformationPtr], RBX
+  MOV RCX, LEVEL_INFORMATION.LevelWaveTimer[RBX]
+  MOV [LevelWaveTimer], RCX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_NextLevel, _TEXT$00
+
+;*********************************************************
+;   Invaders_NextLevel_New
+;
+;        Parameters: Level Information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_NextLevel_New, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RBX, [CurrentLevelInformationPtr]
+  ADD RBX, SIZEOF LEVEL_INFORMATION
+  MOV [CurrentLevelInformationPtr], RBX
+  MOV RCX, LEVEL_INFORMATION.LevelWaveTimer[RBX]
+  MOV [LevelWaveTimer], RCX
+
+  TEST LEVEL_INFORMATION.LevelNumber[RBX], 1
+  JZ @NoUpdates
+  ;
+  ; Add Level updates
+  ;
+
+
+@NoUpdates:
+  DEBUG_FUNCTION_CALL Invaders_ResetLevel
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_NextLevel_New, _TEXT$00
+
+
+
+
 ;***************************************************************************************************************************************************************************
 ; Creating Enemies
 ;***************************************************************************************************************************************************************************
 
+
+;*********************************************************
+;   Invaders_DispatchEnemies
+;
+;
+;        Parameters: Master context, level information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_DispatchEnemies, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  MOV RSI, RCX
+  MOV RBX, RDX
+
+  CMP LEVEL_INFORMATION.NumberSmallAstroids[RBX], 0
+  JE @SkipAstroids
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_RandomAstroids
+  
+@SkipAstroids:  
+  CMP LEVEL_INFORMATION.NumberLargeAstroids[RBX], 0
+  JE @SkipLargeAstroids
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_RandomLargeAstroids
+
+@SkipLargeAstroids:
+  CMP LEVEL_INFORMATION.NumberSmallShips[RBX], 0
+  JE @SkipSmallShips
+
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_RandomShips
+
+@SkipSmallShips:
+  CMP LEVEL_INFORMATION.NumberLargeShips[RBX], 0
+  JE @SkipLargeShips
+
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Invaders_RandomLargeShips
+
+@SkipLargeShips:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_DispatchEnemies, _TEXT$00
+
+
+
+
+;*********************************************************
+;   Invaders_RandomLargeShips
+;
+;        Parameters: Master Context, Level Info
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_RandomLargeShips, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV R15, RDX
+  MOV RDI, [AlienFreeLargeShipsPtr] 
+
+  MOV RCX, LEVEL_INFORMATION.CategoryLargeShips[R15]
+  CMP RCX, 0
+  JG @GetSingleShip
+  
+  ;
+  ; TODO: Launch many ships
+  ;
+
+@GetSingleShip:
+  CMP RDI, 0
+  JE @NoLargeShips
+   
+  CMP RCX, SPRITE_STRUCT.SpriteCategory[RDI]
+  JE @FoundShip
+  MOV RDI, SPRITE_STRUCT.pNext[RDI]
+  JMP @GetSingleShip
+
+@FoundShip:
+  MOV SPRITE_STRUCT.SpriteAlive[RDI], 1
+  MOV SPRITE_STRUCT.SpriteY[RDI], 1
+  INC [CurrentCountLargeShips]
+  
+  MOV RDX, RDI
+  MOV RCX, OFFSET AlienFreeLargeShipsPtr
+  DEBUG_FUNCTION_CALL Invaders_RemoveFromLinkedList
+
+  ;
+  ; Randomize X Location
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], RDX
+
+  ;
+  ; Randomize Velocity
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelY[RDI], RDX
+
+  ;
+  ; Randomize Velocity
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelX[RDI], RDX
+
+  MOV R8, [GameActiveListPtr]
+  MOV SPRITE_STRUCT.pNext[RDI], R8
+  MOV SPRITE_STRUCT.pPrev[RDI], 0  
+  CMP R8, 0
+  JE @NoUpdatePrev
+  MOV SPRITE_STRUCT.pPrev[R8], RDI
+@NoUpdatePrev:
+  MOV [GameActiveListPtr], RDI
+
+@NoLargeShips:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_RandomLargeShips, _TEXT$00
+
+
+
+
+
+;*********************************************************
+;   Invaders_RemoveFromLinkedList
+;
+;        Parameters: Sprite Inactive List, Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_RemoveFromLinkedList, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  CMP SPRITE_STRUCT.pPrev[RDX], 0
+  JE @RemoveEntryOfList
+  
+  CMP SPRITE_STRUCT.pNext[RDX], 0
+  JE @RemoveLastEntryOfList
+
+  MOV R8, SPRITE_STRUCT.pNext[RDX]
+  MOV R9, SPRITE_STRUCT.pPrev[RDX]
+  MOV SPRITE_STRUCT.pPrev[R8], R9
+  MOV SPRITE_STRUCT.pNext[R9], R8
+  JMP @Complete 
+  
+@RemoveEntryOfList:
+  MOV R8, SPRITE_STRUCT.pNext[RDX]
+  MOV [RCX], R8
+  MOV SPRITE_STRUCT.pPrev[R8], 0
+  JMP @Complete
+@RemoveLastEntryOfList:
+  MOV R8, SPRITE_STRUCT.pPrev[RDX]
+  MOV SPRITE_STRUCT.pNext[R8], 0
+@Complete:
+
+  MOV SPRITE_STRUCT.pNext[RDX], 0
+  MOV SPRITE_STRUCT.pPrev[RDX], 0
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_RemoveFromLinkedList, _TEXT$00
+
+
 ;*********************************************************
 ;   Invaders_RandomAstroids
 ;
-;        Parameters: Master Context
+;        Parameters: Master Context, Level Info
 ;
 ;        Return Value: None
 ;
@@ -4690,7 +5156,11 @@ NESTED_ENTRY Invaders_RandomAstroids, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
-  
+  MOV R15, RDX
+  MOV RCX, LEVEL_INFORMATION.NumberSmallAstroids[R15]
+  CMP [CurrentCountSmallAstroids], RCX
+  JAE @EnoughAstroids
+
   DEBUG_FUNCTION_CALL Math_Rand
   AND EAX, 07h
   MOV EBX, EAX
@@ -4703,6 +5173,12 @@ NESTED_ENTRY Invaders_RandomAstroids, _TEXT$00
 
   CMP RDI, 0
   JE @NoAstroids
+  
+  MOV RCX, LEVEL_INFORMATION.NumberSmallAstroids[R15]
+  CMP [CurrentCountSmallAstroids], RCX
+  JAE @EnoughAstroids
+
+
   MOV R8, SPRITE_STRUCT.pNext[RDI]
   MOV [AstroidsSmallInActivePtr], R8
   CMP R8, 0
@@ -4729,6 +5205,7 @@ NESTED_ENTRY Invaders_RandomAstroids, _TEXT$00
   INC RDX
   MOV SPRITE_STRUCT.SpriteVelY[RDI], RDX
 
+  INC [CurrentCountSmallAstroids]
   MOV R8, [GameActiveListPtr]
   MOV SPRITE_STRUCT.pNext[RDI], R8
   MOV SPRITE_STRUCT.pPrev[RDI], 0  
@@ -4740,7 +5217,7 @@ NESTED_ENTRY Invaders_RandomAstroids, _TEXT$00
   DEC EBX
   JNZ @SetupAnotherAstroid
 
-  
+@EnoughAstroids:  
 @NoAstroids:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -4749,39 +5226,47 @@ NESTED_ENTRY Invaders_RandomAstroids, _TEXT$00
 NESTED_END Invaders_RandomAstroids, _TEXT$00
 
 
+
 ;*********************************************************
-;   Invaders_RandomShips
+;   Invaders_RandomLargeAstroids
 ;
-;        Parameters: Master Context
+;        Parameters: Master Context, Level Info
 ;
 ;        Return Value: None
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Invaders_RandomShips, _TEXT$00
+NESTED_ENTRY Invaders_RandomLargeAstroids, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
-  
+  MOV R15, RDX
+  MOV RCX, LEVEL_INFORMATION.NumberLargeAstroids[R15]
+  CMP [CurrentCountLargeAstroids], RCX
+  JAE @EnoughAstroids
+
   DEBUG_FUNCTION_CALL Math_Rand
   AND EAX, 07h
   MOV EBX, EAX
   CMP EBX, 0
-  JE @NoShips
+  JE @NoAstroids
   
 
 @SetupAnotherAstroid:
-  CMP [ShipScreenCounter], MAX_SHIPS_SCREEN
-  JAE @NoShips
-  INC [ShipScreenCounter]
-  MOV RDI, [AlienFreeSmallShipsPtr] 
+  MOV RDI, [LargeAstroidInactivePtr] 
 
   CMP RDI, 0
-  JE @NoShips
+  JE @NoAstroids
+  
+  MOV RCX, LEVEL_INFORMATION.NumberLargeAstroids[R15]
+  CMP [CurrentCountLargeAstroids], RCX
+  JAE @EnoughAstroids
+
+
   MOV R8, SPRITE_STRUCT.pNext[RDI]
-  MOV [AlienFreeSmallShipsPtr], R8
+  MOV [LargeAstroidInactivePtr], R8
   CMP R8, 0
   JZ @NothingToUpdateZero
   MOV SPRITE_STRUCT.pPrev[R8], 0 
@@ -4806,6 +5291,22 @@ NESTED_ENTRY Invaders_RandomShips, _TEXT$00
   INC RDX
   MOV SPRITE_STRUCT.SpriteVelY[RDI], RDX
 
+  ;
+  ; Randomize Velocity
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  MOV R8, SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  SHL R8, 1
+  DIV R8
+  CMP RDX, SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  JB @UpdateXVel
+  SHR RDX, 1
+  NEG RDX
+@UpdateXVel:  
+  MOV SPRITE_STRUCT.SpriteVelX[RDI], RDX
+
+  INC [CurrentCountLargeAstroids]
   MOV R8, [GameActiveListPtr]
   MOV SPRITE_STRUCT.pNext[RDI], R8
   MOV SPRITE_STRUCT.pPrev[RDI], 0  
@@ -4817,7 +5318,82 @@ NESTED_ENTRY Invaders_RandomShips, _TEXT$00
   DEC EBX
   JNZ @SetupAnotherAstroid
 
+@EnoughAstroids:  
+@NoAstroids:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_RandomLargeAstroids, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_RandomShips
+;
+;        Parameters: Master Context, Level Info
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_RandomShips, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV R15, RDX
   
+  MOV RCX, LEVEL_INFORMATION.NumberSmallShips[R15]
+  CMP [CurrentCountSmallShips], RCX
+  JAE @EnoughShips
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND EAX, 07h
+  MOV EBX, EAX
+  CMP EBX, 0
+  JE @NoShips
+  
+
+@SetupAnotherShip:
+
+  MOV RCX, LEVEL_INFORMATION.NumberSmallShips[R15]
+  CMP [CurrentCountSmallShips], RCX
+  JAE @EnoughShips
+
+  MOV RDI, [AlienFreeSmallShipsPtr] 
+
+  CMP RDI, 0
+  JE @NoShips
+  MOV R8, SPRITE_STRUCT.pNext[RDI]
+  MOV [AlienFreeSmallShipsPtr], R8
+  CMP R8, 0
+  JZ @NothingToUpdateZero
+  MOV SPRITE_STRUCT.pPrev[R8], 0 
+@NothingToUpdateZero:
+  MOV SPRITE_STRUCT.SpriteAlive[RDI], 1
+  MOV SPRITE_STRUCT.SpriteY[RDI], 1
+  INC [CurrentCountSmallShips]
+  ;
+  ; Randomize X Location
+  ;
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], RDX
+
+  MOV R8, [GameActiveListPtr]
+  MOV SPRITE_STRUCT.pNext[RDI], R8
+  MOV SPRITE_STRUCT.pPrev[RDI], 0  
+  CMP R8, 0
+  JE @NoUpdatePrev
+  MOV SPRITE_STRUCT.pPrev[R8], RDI
+@NoUpdatePrev:
+  MOV [GameActiveListPtr], RDI
+  DEC EBX
+  JNZ @SetupAnotherShip
+
+@EnoughShips:  
 @NoShips:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -4843,6 +5419,7 @@ NESTED_ENTRY Invaders_CollisionPlayerFire, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
+  MOV R15, RCX
 
   MOV RDI, [PlayerFireActivePtr]
   CMP RDI, 0
@@ -4930,12 +5507,42 @@ NESTED_ENTRY Invaders_CollisionPlayerFire, _TEXT$00
   MOV RAX, SPRITE_STRUCT.SpriteBasePointsValue[RSI]
   MOV R8, SPRITE_STRUCT.SpriteVelX[RSI]
   MOV R9, SPRITE_STRUCT.SpriteVelY[RSI]
+  ;
+  ; Convert to positive.
+  ;
+  CMP R8, 0
+  JGE @NoNeedToUpdateX
+  NEG R8
+@NoNeedToUpdateX:
+  CMP R9, 0
+  JGE @NoNeedToUpdateY
+  NEG R9
+@NoNeedToUpdateY:
   CMP R8, R9
   JA @UseVelocityX
   MOV R8, R9                    ; Use velocity Y
 @UseVelocityX:
   MUL R8
   ADD [PlayerScore], RAX
+  MOV SPRITE_STRUCT.PointsTimer[RSI], POINTS_TIMER
+  MOV SPRITE_STRUCT.PointsGiven[RSI], RAX
+  MOV RAX, SPRITE_STRUCT.SpriteX[RSI]
+  MOV SPRITE_STRUCT.PointsGivenX[RSI], RAX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R15]
+  SUB RAX, 20
+
+  CMP SPRITE_STRUCT.SpriteX[RSI], RAX
+  JB @FineUpdate
+  MOV SPRITE_STRUCT.PointsGivenX[RSI], RAX
+@FineUpdate:
+
+  MOV RAX, SPRITE_STRUCT.SpriteY[RSI]
+  MOV SPRITE_STRUCT.PointsGivenY[RSI], RAX
+  MOV RAX, 20
+  CMP SPRITE_STRUCT.SpriteY[RSI], RAX
+  JA @FineUpdate2
+  MOV SPRITE_STRUCT.PointsGivenY[RSI], RAX
+@FineUpdate2:
 
 @NotAlive:   
 @NoCollision:   
@@ -5031,7 +5638,7 @@ NESTED_ENTRY Invaders_CollisionPlayer, _TEXT$00
   ;
   MOV R8, SPRITE_STRUCT.Damage[RSI]
   CMP R8, POWER_UP_SPECIAL_DAMAGE_M
-  JE @NotAPowerUp
+  JNE @NotAPowerUp
 
   ;
   ; Add Power Up Here.
@@ -5082,16 +5689,53 @@ NESTED_END Invaders_CollisionPlayer, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY Invaders_SmallShipAddToList, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   MOV R9, SPRITE_STRUCT.MaxHp[RCX]
   MOV SPRITE_STRUCT.HitPoints[RCX], R9
+  MOV SPRITE_STRUCT.PointsTimer[RCX], 0
+  DEC [CurrentCountSmallShips]
 
+  MOV SPRITE_STRUCT.SpriteVelY[RCX], 0
+  MOV SPRITE_STRUCT.SpriteVelX[RCX], 0
   MOV RCX, SPRITE_STRUCT.ExplodePointer[RCX]
   DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
-  DEC [ShipScreenCounter]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK  
+  RET
+NESTED_END Invaders_SmallShipAddToList, _TEXT$00
+
+
+
+
+  ;*********************************************************
+;   Invaders_LargeShipAddToList
+;
+;        Parameters: Sprite Structure
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LargeShipAddToList, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  MOV R9, SPRITE_STRUCT.MaxHp[RCX]
+  MOV SPRITE_STRUCT.HitPoints[RCX], R9
+  MOV SPRITE_STRUCT.PointsTimer[RCX], 0
+  DEC [CurrentCountLargeShips]
+
+  MOV SPRITE_STRUCT.SpriteVelY[RCX], 0
+  MOV SPRITE_STRUCT.SpriteVelX[RCX], 0
+  MOV RCX, SPRITE_STRUCT.ExplodePointer[RCX]
+  DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
   
-NESTED_END Invaders_SmallShipAddToList, _TEXT$00
+NESTED_END Invaders_LargeShipAddToList, _TEXT$00
 
 ;*********************************************************
 ;   Invaders_DefaultAddToList
@@ -5111,6 +5755,50 @@ NESTED_ENTRY Invaders_DefaultAddToList, _TEXT$00
 NESTED_END Invaders_DefaultAddToList, _TEXT$00
 
 
+
+;*********************************************************
+;   Invaders_AstroidsAddedBackToList
+;
+;        Parameters: Sprite Structure
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_AstroidsAddedBackToList, _TEXT$00
+.ENDPROLOG 
+  MOV SPRITE_STRUCT.PointsTimer[RCX], 0
+  DEC [CurrentCountSmallAstroids]
+  RET
+  
+NESTED_END Invaders_AstroidsAddedBackToList, _TEXT$00
+
+
+;*********************************************************
+;   Invaders_LargeAstroidsAddedBackToList
+;
+;        Parameters: Sprite Structure
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LargeAstroidsAddedBackToList, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  MOV SPRITE_STRUCT.PointsTimer[RCX], 0
+  DEC [CurrentCountLargeAstroids]
+  MOV RCX, SPRITE_STRUCT.ExplodePointer[RCX]
+  DEBUG_FUNCTION_CALL Invaders_ResetSpriteBasicInformation
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+  
+NESTED_END Invaders_LargeAstroidsAddedBackToList, _TEXT$00
+
+
+
 ;*********************************************************
 ;   Invaders_DefaultMovement
 ;
@@ -5118,7 +5806,7 @@ NESTED_END Invaders_DefaultAddToList, _TEXT$00
 ;    the location based on velocity and lets other game code
 ;    rebalance if it was offscreen.
 ;
-;        Parameters: Sprite
+;        Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -5126,13 +5814,13 @@ NESTED_END Invaders_DefaultAddToList, _TEXT$00
 ;*********************************************************  
 NESTED_ENTRY Invaders_DefaultMovement, _TEXT$00
 .ENDPROLOG 
-  MOV RDX, SPRITE_STRUCT.SpriteY[RCX]
-  ADD RDX, SPRITE_STRUCT.SpriteVelY[RCX]
-  MOV SPRITE_STRUCT.SpriteY[RDI], RDX
+  MOV R8, SPRITE_STRUCT.SpriteY[RDX]
+  ADD R8, SPRITE_STRUCT.SpriteVelY[RDX]
+  MOV SPRITE_STRUCT.SpriteY[RDX], R8
 
-  MOV RDX, SPRITE_STRUCT.SpriteX[RCX]
-  ADD RDX, SPRITE_STRUCT.SpriteVelX[RCX]
-  MOV SPRITE_STRUCT.SpriteX[RCX], RDX
+  MOV R8, SPRITE_STRUCT.SpriteX[RDX]
+  ADD R8, SPRITE_STRUCT.SpriteVelX[RDX]
+  MOV SPRITE_STRUCT.SpriteX[RDX], R8
   RET
 
 NESTED_END Invaders_DefaultMovement, _TEXT$00
@@ -5143,7 +5831,7 @@ NESTED_END Invaders_DefaultMovement, _TEXT$00
 ;   Invaders_SmallShipMovement
 ;
 ;
-;        Parameters: Sprite
+;        Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -5153,43 +5841,241 @@ NESTED_ENTRY Invaders_SmallShipMovement, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
-  MOV RDI, RCX
+  MOV RSI, RCX
+  MOV RDI, RDX
 
+  CMP SPRITE_STRUCT.SpriteMovementDebounce[RDI], 0
+  JE @RandomizeVelocities
+
+  DEC SPRITE_STRUCT.SpriteMovementDebounce[RDI]
+
+  CMP SPRITE_STRUCT.SpriteVelY[RDI], 0
+  JNE @PerformUpdate
+
+  CMP SPRITE_STRUCT.SpriteVelX[RDI], 0
+  JNE @PerformUpdate
+
+@RandomizeVelocities:
   DEBUG_FUNCTION_CALL Math_Rand
   XOR RDX, RDX
-  MOV R8, SPRITE_STRUCT.SpriteVelMaxY[RDI]
-  DIV R8
+  DIV SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelY[RDI], RDX
 
-
-  MOV RAX, SPRITE_STRUCT.SpriteY[RDI]
-  ADD RAX, RDX
-  MOV SPRITE_STRUCT.SpriteY[RDI], RAX
-
-  DEBUG_FUNCTION_CALL Math_Rand
   XOR RDX, RDX
-  MOV R8, SPRITE_STRUCT.SpriteVelMaxX[RDI]
-  SHL R8, 1
-  DIV R8
-  CMP RDX, SPRITE_STRUCT.SpriteVelMaxX[RDI]
-  JB @VelReadyX
-  SUB RDX, SPRITE_STRUCT.SpriteVelMaxX[RDI]
-  NEG RDX
-@VelReadyX:  
+  DEBUG_FUNCTION_CALL Math_Rand
+  DIV SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelX[RDI], RDX
 
-  MOV RAX, SPRITE_STRUCT.SpriteX[RDI]
-  ADD RAX, RDX
-  MOV SPRITE_STRUCT.SpriteX[RDI], RAX
+  XOR RDX, RDX
+  DEBUG_FUNCTION_CALL Math_Rand
+  MOV RCX, SMALL_SHIP_DEBOUNCE_RANGE
+  DIV RCX
+  ADD RDX, SMALL_SHIP_DEBOUNCE_MIN
+  MOV SPRITE_STRUCT.SpriteMovementDebounce[RDI], RDX
 
+  
+@PerformUpdate:
+  MOV R8, SPRITE_STRUCT.SpriteY[RDI]
+  ADD R8, SPRITE_STRUCT.SpriteVelY[RDI]
+  MOV SPRITE_STRUCT.SpriteY[RDI], R8
 
+  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
+  ADD R8, SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], R8
+@CheckOffScreen:
+ 
+ CMP SPRITE_STRUCT.SpriteX[RDI], 0
+ JL @FixLessX 
+
+@NextCheck:
+ CMP SPRITE_STRUCT.SpriteY[RDI], 0
+ JL @FixLessY
+
+@CheckOtherSide:
+ MOV R8, SPRITE_STRUCT.SpriteWidth[RDI]
+ ADD R8, SPRITE_STRUCT.SpriteX[RDI]
+ MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+ CMP R8, RDX
+ JAE @FixOffScreenX 
+
+@CheckBottom:
+ MOV R8, SPRITE_STRUCT.SpriteHeight[RDI]
+ ADD R8, SPRITE_STRUCT.SpriteY[RDI]
+ CMP R8, PLAYER_MAX_Y_LOC
+ JAE @FixOffScreenY 
+
+@Done:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
+
+@FixLessX:
+  NEG SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], 2
+  JMP @NextCheck
+
+@FixLessY:
+  NEG SPRITE_STRUCT.SpriteVelY[RDI]
+  MOV SPRITE_STRUCT.SpriteY[RDI], 2
+  JMP @CheckOtherSide
+
+@FixOffScreenX:
+  NEG SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SUB R8,  SPRITE_STRUCT.SpriteWidth[RDI]
+  SUB R8, 5 ; Padding
+  MOV SPRITE_STRUCT.SpriteX[RDI], R8
+  JMP @CheckBottom
+
+@FixOffScreenY:
+  NEG SPRITE_STRUCT.SpriteVelY[RDI]
+  MOV R8, PLAYER_MAX_Y_LOC
+  SUB R8, SPRITE_STRUCT.SpriteHeight[RDI]
+  SUB R8, 5 ; Padding
+  MOV SPRITE_STRUCT.SpriteY[RDI], R8
+  JMP @Done
+
+
 
 NESTED_END Invaders_SmallShipMovement, _TEXT$00
 
 
 
+;*********************************************************
+;   Invaders_LargeShipMovement
+;
+;
+;        Parameters: Master Context, Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_LargeShipMovement, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  MOV RSI, RCX
+  MOV RDI, RDX
 
+  CMP SPRITE_STRUCT.SpriteVelY[RDI], 0
+  JNE @PerformUpdate
+
+  CMP SPRITE_STRUCT.SpriteVelX[RDI], 0
+  JNE @PerformUpdate
+
+@RandomizeVelocities:
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV SPRITE_STRUCT.SpriteVelMaxY[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelY[RDI], RDX
+
+  XOR RDX, RDX
+  DEBUG_FUNCTION_CALL Math_Rand
+  DIV SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  INC RDX
+  MOV SPRITE_STRUCT.SpriteVelX[RDI], RDX
+
+@PerformUpdate:
+
+;
+; TBD - Check If Should Fire
+;
+  
+  MOV RCX, [PlayerFireActivePtr]
+  XOR R9, R9
+  MOV R10, SPRITE_STRUCT.SpriteX[RDI]
+  MOV R11, R10
+  ADD R11, SPRITE_STRUCT.SpriteWidth[RDI]
+  ;
+  ; R10 is X and R11 is X + Width
+  ;
+@WhileCheckPlayerFire:
+  CMP RCX, 0
+  JE @FireCheckDone
+  CMP R10, SPRITE_STRUCT.SpriteX[RCX]
+  JA @WhileCheckPlayerFire_Advance
+  CMP R11, SPRITE_STRUCT.SpriteX[RCX]
+  JB @WhileCheckPlayerFire_Advance
+  MOV R9, 1
+@WhileCheckPlayerFire_Advance:
+  MOV RCX, SPRITE_STRUCT.pNext[RCX]
+  JMP @WhileCheckPlayerFire
+@FireCheckDone:
+  CMP R9, 1
+  JE @MoveIt
+ 
+  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
+  ADD R8, SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], R8
+
+  MOV R8, SPRITE_STRUCT.SpriteY[RDI]
+  ADD R8, SPRITE_STRUCT.SpriteVelY[RDI]
+  MOV SPRITE_STRUCT.SpriteY[RDI], R8
+  JMP @CheckOffScreen 
+
+@MoveIt:
+  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
+  ADD R8, SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], R8
+@CheckOffScreen:
+ CMP SPRITE_STRUCT.SpriteX[RDI], 0
+ JL @FixLessX 
+
+@NextCheck:
+ CMP SPRITE_STRUCT.SpriteY[RDI], 0
+ JL @FixLessY
+
+@CheckOtherSide:
+ MOV R8, SPRITE_STRUCT.SpriteWidth[RDI]
+ ADD R8, SPRITE_STRUCT.SpriteX[RDI]
+ MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+ CMP R8, RDX
+ JAE @FixOffScreenX 
+
+@CheckBottom:
+ MOV R8, SPRITE_STRUCT.SpriteHeight[RDI]
+ ADD R8, SPRITE_STRUCT.SpriteY[RDI]
+ CMP R8, PLAYER_MAX_Y_LOC
+ JAE @FixOffScreenY 
+
+@Done:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@FixLessX:
+  NEG SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], 2
+  JMP @NextCheck
+
+@FixLessY:
+  NEG SPRITE_STRUCT.SpriteVelY[RDI]
+  MOV SPRITE_STRUCT.SpriteY[RDI], 2
+  JMP @CheckOtherSide
+
+@FixOffScreenX:
+  NEG SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SUB R8,  SPRITE_STRUCT.SpriteWidth[RDI]
+  SUB R8, 5 ; Padding
+  MOV SPRITE_STRUCT.SpriteX[RDI], R8
+  JMP @CheckBottom
+
+@FixOffScreenY:
+  NEG SPRITE_STRUCT.SpriteVelY[RDI]
+  MOV R8, PLAYER_MAX_Y_LOC
+  SUB R8, SPRITE_STRUCT.SpriteHeight[RDI]
+  SUB R8, 5 ; Padding
+  MOV SPRITE_STRUCT.SpriteY[RDI], R8
+  JMP @Done
+
+
+
+NESTED_END Invaders_LargeShipMovement, _TEXT$00
 
 ;***************************************************************************************************************************************************************************
 ; Display Graphics Functions
@@ -5308,6 +6194,8 @@ NESTED_ENTRY Invaders_DisplayPlayer, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END Invaders_DisplayPlayer, _TEXT$00
+
+
 
 
 ;*********************************************************
@@ -5528,46 +6416,53 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   CMP RDI, 0
   JNE @GameDisplayLoop
   JMP @DisplayComplete
-
+@PutBackOnScreen:
   ;
   ; Put the sprite back on screen.
   ;
-@PutBackOnScreen:
-  CMP SPRITE_STRUCT.SpriteY[RDI], 0
-  JG @SkipYStart
-  MOV SPRITE_STRUCT.SpriteY[RDI], 1
-@SkipYStart:
-  CMP SPRITE_STRUCT.SpriteX[RDI], 0
-  JG @SkipXStart
-  MOV SPRITE_STRUCT.SpriteX[RDI], 1
-@SkipXStart:
-  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
-  ADD R8, SPRITE_STRUCT.SpriteWidth[RDI]
-  CMP R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  JB @SkipXEnd
-  MOV R8, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  DEC R8
-  SUB R8, SPRITE_STRUCT.SpriteWidth[RDI]
-  MOV SPRITE_STRUCT.SpriteX[RDI], R8
-@SkipXEnd:
-  MOV R8, SPRITE_STRUCT.SpriteY[RDI]
-  ADD R8, SPRITE_STRUCT.SpriteHeight[RDI]
-  CMP R8, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  JB @SkipYEnd
-  MOV R8, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  DEC R8
-  SUB R8, SPRITE_STRUCT.SpriteHeight[RDI]
-  MOV SPRITE_STRUCT.SpriteY[RDI], R8
-@SkipYEnd:
-    
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL SPRITE_STRUCT.pfnSpriteMovementUpdate[RDI]
+      
 @DisplayGameGfx:
   CMP SPRITE_STRUCT.SpriteAlive[RDI], 0
   JNE @DisplaySprite
+
+  CMP SPRITE_STRUCT.PointsTimer[RDI], 0
+  JE @SkipScoreText
   
   MOV SPRITE_STRUCT.DisplayHit[RDI], 0
+
+  MOV R8, SPRITE_STRUCT.PointsGiven[RDI]
+  MOV RDX, OFFSET PointsScoreFormat
+  MOV RCX, OFFSET PointsScoreString
+  DEBUG_FUNCTION_CALL sprintf
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], 2
+  MOV R9, SPRITE_STRUCT.PointsGivenY[RDI]
+  MOV R8, SPRITE_STRUCT.PointsGivenX[RDI]
+  MOV RDX, OFFSET PointsScoreString
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+  DEC SPRITE_STRUCT.PointsGivenY[RDI]
+  DEC SPRITE_STRUCT.PointsTimer[RDI]
+
+@SkipScoreText:
+
+  MOV R9, SPRITE_STRUCT.SpriteY[RDI]
+  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
+
   
   CMP SPRITE_STRUCT.ExplodePointer[RDI], 0
+  JNE @SkipSpriteRemove
+
+  CMP SPRITE_STRUCT.PointsTimer[RDI], 0
   JE @SpriteRemove
+  JMP @CheckNext
+
+@SkipSpriteRemove:
   
   MOV R9, SPRITE_STRUCT.SpriteY[RDI]
   MOV R8, SPRITE_STRUCT.SpriteX[RDI]
@@ -5580,6 +6475,7 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   
  @DisplaySprite:
   
+
   ;
   ; Display Sprite and then update the sprite movement for next round.
   ;
@@ -5609,7 +6505,8 @@ NESTED_ENTRY Invaders_DisplayGameGraphics, _TEXT$00
   ;
   ; Update Velocity for next frame.
   ;
-  MOV RCX, RDI
+  MOV RDX, RDI
+  MOV RCX, RSI
   DEBUG_FUNCTION_CALL SPRITE_STRUCT.pfnSpriteMovementUpdate[RDI]
 
 @CheckNext:  
@@ -5661,7 +6558,7 @@ NESTED_END Invaders_ResetPlayerLeftRight, _TEXT$00
 ;*********************************************************
 ;   Invaders_DisplayGamePanel
 ;
-;        Parameters: None
+;        Parameters: Master Context Level Info
 ;
 ;        Return Value: None
 ;
@@ -5673,6 +6570,7 @@ NESTED_ENTRY Invaders_DisplayGamePanel, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
+  MOV RBX, RDX
   
   MOV R8, [PlayerScore]
   MOV RDX, OFFSET PlayerScoreFormat
@@ -5729,6 +6627,72 @@ NESTED_ENTRY Invaders_DisplayGamePanel, _TEXT$00
   MOV RDX, OFFSET PlayerOutputText
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV R8, LEVEL_INFORMATION.LevelNumber[RBX]
+  MOV RDX, OFFSET PlayerCurLevelText
+  MOV RCX, OFFSET PlayerOutputText
+  DEBUG_FUNCTION_CALL sprintf
+  
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
+  MOV R9, PLAYER_SP_LEVEL_Y
+  MOV R8, PLAYER_SP_LEVEL_X
+  MOV RDX, OFFSET PlayerOutputText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+
+  MOV R8, LEVEL_INFORMATION.WaveNumber[RBX]
+  MOV RDX, OFFSET PlayerCurWaveText
+  MOV RCX, OFFSET PlayerOutputText
+  DEBUG_FUNCTION_CALL sprintf
+  
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
+  MOV R9, PLAYER_SP_WAVE_Y
+  MOV R8, PLAYER_SP_WAVE_X
+  MOV RDX, OFFSET PlayerOutputText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  CMP [LevelWaveTimer], LEVEL_INFINITE
+  JNE @SkipDisplayAlienBoss
+
+  XOR R8, R8
+  MOV RDI, [GameActiveListPtr] 
+
+  MOV RCX, LEVEL_INFORMATION.CategoryLargeShips[RBX]
+  CMP RCX, 0
+  JE @SkipDisplayAlienBoss
+@GetSingleShip:
+  CMP RDI, 0
+  JE @NoLargeShips
+   
+  CMP RCX, SPRITE_STRUCT.SpriteCategory[RDI]
+  JE @FoundShip
+  MOV RDI, SPRITE_STRUCT.pNext[RDI]
+  JMP @GetSingleShip
+
+@FoundShip:
+  MOV R8, SPRITE_STRUCT.HitPoints[RDI]
+@NoLargeShips:
+  
+  MOV RDX, OFFSET AlientHpCounterText
+  MOV RCX, OFFSET PlayerOutputText
+  DEBUG_FUNCTION_CALL sprintf
+  
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
+  MOV R9, PLAYER_SP_ALIEN_HP_Y
+  MOV R8, PLAYER_SP_ALIEN_HP_X
+  MOV RDX, OFFSET PlayerOutputText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+@SkipDisplayAlienBoss:
 
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

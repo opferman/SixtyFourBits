@@ -751,6 +751,7 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
     ; to the image descriptor
     ;    
     MOV R8D,GIF_INTERNAL.NumberOfImages[RSI]
+    INC GIF_INTERNAL.NumberOfImages[RSI]
     XOR RDX, RDX
     MOV RAX, SIZE IMAGE_DATA
     MUL R8
@@ -824,7 +825,7 @@ NESTED_ENTRY Gif_ParseFile, _TEXT$00
 
 @SkipImageData:
 
-   INC GIF_INTERNAL.NumberOfImages[RSI]
+   
 
    MOV RBX, GIF_INTERNAL.StartOfGifPtr[RSI]
    ADD RBX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
@@ -1230,7 +1231,7 @@ NESTED_ENTRY Gif_GetImage32bpp, _TEXT$00
     MUL R12
     LEA R14, GIF_INTERNAL.ImageData[RSI]
     ADD R14, RAX
-
+    
     CMP R12, 0
     JA @SkipBackgroundColor
 
