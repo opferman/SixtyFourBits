@@ -66,7 +66,7 @@ LEVEL_INFORMATION STRUCT
   CategoryLargeShips   dq ?
   NumberPowerUps       dq ?
   LevelWaveTimer       dq ?
-  LevelNumber           dq ?
+  LevelNumber          dq ?
   WaveNumber           dq ?
   PowerUpRarity        dq ?
 LEVEL_INFORMATION ENDS
@@ -89,9 +89,10 @@ SPACE_INVADERS_GAMEPLAY                   EQU <3>
 SPACE_INVADERS_HISCORE                    EQU <4>
 SPACE_INVADERS_STATE_OPTIONS              EQU <5>
 SPACE_INVADERS_STATE_ABOUT                EQU <6>
-SPACE_INVADERS_END_GAME                   EQU <7>
-SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <8>
-SPACE_INVADERS_LEVELS                     EQU <9>
+SPACE_INVADERS_STATE_WINSCREEN            EQU <7>
+SPACE_INVADERS_END_GAME                   EQU <8>
+SPACE_INVADERS_STATE_ENTER_HI_SCORE       EQU <9>
+SPACE_INVADERS_LEVELS                     EQU <10>
 SPACE_INVADERS_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 
@@ -108,6 +109,8 @@ SPRITE_STRUCT  struct
    SpriteMovementDebounce dq ?
    SpriteVelMaxX   dq ?
    SpriteVelMaxY   dq ?
+   SpriteVelTempX  dq ?
+   SpriteVelTempY  dq ?
    SpriteOwnerPtr  dq ?
    SpriteWidth     dq ?
    SpriteHeight    dq ?
@@ -155,7 +158,7 @@ INTRO_X                EQU <300>
 INTRO_FONT_SIZE        EQU <3>
 MAX_GAME_OPTIONS       EQU <3>
 NUMBER_OF_SPRITES      EQU <(SpriteInformationEnd - SpriteInformation) / (6*8)>
-
+LARGE_SHIP_MOVEMENT_DEBOUNCE EQU <20>
 MAX_MENU_SELECTION     EQU <6>
 MENU_MAX_TIMEOUT       EQU <30*50> ; About 22 Seconds
 MOVEMENT_DEBOUNCE      EQU <0>
@@ -493,6 +496,7 @@ ENDM
                        dq  Invaders_HiScoreScreen       ; SPACE_INVADERS_HISCORE
                        dq  Invaders_OptionsScreen       ; SPACE_INVADERS_STATE_OPTIONS
                        dq  Invaders_AboutScreen         ; SPACE_INVADERS_STATE_ABOUT
+                       dq  0                            ; SPACE_INVADERS_STATE_WINSCREEN
                        dq  Invaders_GameOver            ; SPACE_INVADERS_END_GAME
                        dq  Invaders_EnterHiScore        ; SPACE_INVADERS_STATE_ENTER_HI_SCORE
                        dq  Invaders_Levels               ; SPACE_INVADERS_LEVELS
@@ -629,8 +633,8 @@ ENDM
      ;  These are hard coded but they could be scripted.
      ;
     CurrentLevelInformationPtr           dq ? 
-       EasyLevel1              LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 20, 0, 0, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 3, 0, 5, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0>
+       EasyLevel1              LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 20, 0, 0, 1, 1, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0>
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 3, 0, 5, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0>
                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3, Invaders_ResetLevel, Invaders_NextLevel_New, 0, 3, 0, 0, 1, 1, 0, LEVEL_INFINITE, 1, 3, 0>
                                LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,      Invaders_ResetLevel, Invaders_NextLevel, 0, 25, 10, 10, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 2, 1, 5>
                                LEVEL_INFORMATION <?>
@@ -679,6 +683,7 @@ ENDM
 									dq 0
 	
     PressSpaceToContinue            db "<Press Spacebar>", 0
+    PressEnterToContinue            db "<Press Enter>", 0
     MenuText                        dq 400, 300
                                     db "Play Game", 0
                                     dq 350, 350
@@ -711,6 +716,8 @@ ENDM
                                     db "Open Source:", 0
                                     dq 50, 625
                                     db "github.com/opferman/SixtyFourBits", 0									
+                                    dq 300, 675
+                                    db "Version 0.5 beta", 0
                                     dq 0
 									
     HighScoresText                  db "High Scores", 0
@@ -1314,20 +1321,6 @@ NESTED_ENTRY Invaders_SpaceBar, _TEXT$00
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
 
 @NotOnMenu:
-  CMP [SpaceCurrentState], SPACE_INVADERS_END_GAME
-  JNE @NotOnEndGame
-  
-  CMP [HiScoreLocationPtr], 0
-  JE @GoToIntro
-   
-  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
-  MOV RCX, SPACE_INVADERS_STATE_ENTER_HI_SCORE
-  DEBUG_FUNCTION_CALL GameEngine_ChangeState  
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-@NotOnEndGame:
   CMP [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
   JNE @NotHighScore
 
@@ -1411,6 +1404,26 @@ NESTED_ENTRY Invaders_Enter, _TEXT$00
   MOV [SpaceCurrentState], RCX
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
 @CheckOtherState:
+  CMP [SpaceCurrentState], SPACE_INVADERS_END_GAME
+  JNE @NotOnEndGame
+  
+  CMP [HiScoreLocationPtr], 0
+  JE @GoToIntro
+   
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  MOV RCX, SPACE_INVADERS_STATE_ENTER_HI_SCORE
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+@GoToIntro:
+  MOV [SpaceCurrentState], SPACE_INVADERS_STATE_INTRO
+  MOV RCX, SPACE_INVADERS_STATE_INTRO
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+@NotOnEndGame:
   ;ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -2940,6 +2953,10 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOV RDX, OFFSET SpriteBasicListPtr 
   MOV RCX, OFFSET PowerUpInactivePtr
   DEBUG_FUNCTION_CALL Invaders_SetupSpriteImages
+  
+  MOV RDX, 2
+  MOV RCX, OFFSET PowerUpInactivePtr
+  DEBUG_FUNCTION_CALL Invaders_SetupCategories
 
   ;
   ; Setup Large Alien Fire
@@ -2968,6 +2985,7 @@ NESTED_END Invaders_LoadingThread, _TEXT$00
 
 
 
+
 ;*********************************************************
 ;   Invaders_SetupCategories
 ;
@@ -2984,11 +3002,15 @@ NESTED_ENTRY Invaders_SetupCategories, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
 
   MOV R12, QWORD PTR [RCX]
+  MOV R8, RDX
 
 @SetupSpriteCategory:
  
   MOV SPRITE_STRUCT.SpriteCategory[R12], RDX
   DEC RDX
+  JNZ @ContinueSettingUp
+  MOV RDX, R8                   ; Reset Categories
+@ContinueSettingUp:
   MOV R12, SPRITE_STRUCT.pNext[R12]
   CMP R12, 0
   JNE @SetupSpriteCategory
@@ -3798,6 +3820,15 @@ NESTED_ENTRY Invaders_GameOver, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
 
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+  MOV R9, INTRO_Y
+  MOV R8, INTRO_X
+  MOV RDX, OFFSET PressEnterToContinue
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
   MOV [SpaceCurrentState], SPACE_INVADERS_END_GAME
   MOV RAX, SPACE_INVADERS_END_GAME
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -3865,6 +3896,15 @@ NESTED_ENTRY Invaders_EnterHiScore, _TEXT$00
   MOV R9, INITIALS_Y
   MOV R8, INITIALS_X
   MOV RDX, OFFSET InitialsEnter
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+  MOV R9, INTRO_Y
+  MOV R8, INTRO_X
+  MOV RDX, OFFSET PressSpaceToContinue
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
 
@@ -4941,6 +4981,35 @@ NESTED_ENTRY Invaders_NextLevel_New, _TEXT$00
 NESTED_END Invaders_NextLevel_New, _TEXT$00
 
 
+;*********************************************************
+;   Invaders_NextLevel_Win
+;
+;        Parameters: Level Information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Invaders_NextLevel_Win, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  ;
+  ; Go to the winning screen
+  ;
+  MOV [SpaceCurrentState],SPACE_INVADERS_STATE_WINSCREEN
+  MOV RCX, SPACE_INVADERS_STATE_WINSCREEN
+  DEBUG_FUNCTION_CALL GameEngine_ChangeState
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END Invaders_NextLevel_Win, _TEXT$00
+
+
 
 
 ;***************************************************************************************************************************************************************************
@@ -5993,6 +6062,13 @@ NESTED_ENTRY Invaders_LargeShipMovement, _TEXT$00
   ;
   ; R10 is X and R11 is X + Width
   ;
+  CMP SPRITE_STRUCT.SpriteMovementDebounce[RDI], 0
+  JE @WhileCheckPlayerFire
+  DEC SPRITE_STRUCT.SpriteMovementDebounce[RDI]
+  JNZ @DoOnlyX
+  MOV R8, SPRITE_STRUCT.SpriteVelTempX[RDI]
+  MOV SPRITE_STRUCT.SpriteVelX[RDI], R8
+  JMP @DoOnlyX
 @WhileCheckPlayerFire:
   CMP RCX, 0
   JE @FireCheckDone
@@ -6008,16 +6084,27 @@ NESTED_ENTRY Invaders_LargeShipMovement, _TEXT$00
   CMP R9, 1
   JE @MoveIt
  
-  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
-  ADD R8, SPRITE_STRUCT.SpriteVelX[RDI]
-  MOV SPRITE_STRUCT.SpriteX[RDI], R8
-
   MOV R8, SPRITE_STRUCT.SpriteY[RDI]
   ADD R8, SPRITE_STRUCT.SpriteVelY[RDI]
   MOV SPRITE_STRUCT.SpriteY[RDI], R8
+
+@DoOnlyX:
+  MOV R8, SPRITE_STRUCT.SpriteX[RDI]
+  ADD R8, SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteX[RDI], R8
   JMP @CheckOffScreen 
 
 @MoveIt:
+  MOV SPRITE_STRUCT.SpriteMovementDebounce[RDI], LARGE_SHIP_MOVEMENT_DEBOUNCE
+  MOV R8, SPRITE_STRUCT.SpriteVelX[RDI]
+  MOV SPRITE_STRUCT.SpriteVelTempX[RDI], R8
+  MOV R9, SPRITE_STRUCT.SpriteVelMaxX[RDI]
+  CMP SPRITE_STRUCT.SpriteVelX[RDI], 0
+  JL @GoPositive
+  NEG R9
+@GoPositive:
+  NEG SPRITE_STRUCT.SpriteVelTempX[RDI]
+  MOV SPRITE_STRUCT.SpriteVelX[RDI], R9
   MOV R8, SPRITE_STRUCT.SpriteX[RDI]
   ADD R8, SPRITE_STRUCT.SpriteVelX[RDI]
   MOV SPRITE_STRUCT.SpriteX[RDI], R8
