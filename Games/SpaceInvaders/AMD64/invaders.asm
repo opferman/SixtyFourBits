@@ -1753,6 +1753,11 @@ NESTED_ENTRY Invaders_Enter, _TEXT$00
   CMP [SpaceCurrentState], SPACE_INVADERS_END_GAME
   JNE @NotOnEndGame
   
+  ;
+  ;  Let's reset the level here to remove the active list.
+  ;
+  DEBUG_FUNCTION_CALL Invaders_ResetLevel
+
   CMP [HiScoreLocationPtr], 0
   JE @GoToIntro
    
@@ -5340,13 +5345,14 @@ NESTED_ENTRY Invaders_ResetLevel, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV [PowerUpDeBounce], 0
 
   ;
   ; Empty the Active list
   ;
   DEBUG_FUNCTION_CALL Invaders_EmptyActiveList
-  
+
+  MOV [PowerUpDeBounce], 0
+    
   ;
   ; Reset the Player's Sprite
   ;
