@@ -79,7 +79,7 @@ VK_DOWN EQU <028h> ; DOWN ARROW key
 ;0x39 9 key
 ;- 0x3A-40 Undefined
 ;0x41 A key
-;0x42 B key
+VK_B EQU <042h>  ; B key
 VK_C EQU <043h> ; C key
 ;0x44 D key
 VK_E EQU <045h> ; E key
