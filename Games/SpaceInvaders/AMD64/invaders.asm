@@ -214,9 +214,9 @@ TOTAL_ENEMY_LISTS      EQU <8>
 ;
 ; Easy Mode Configuration
 ;
-ALIEN_SHIP_MAX_VEL_X   EQU <4>
-ALIEN_SHIP_MAX_VEL_Y   EQU <4>
-SMALL_SHIP_BASE_VALUE  EQU <15>
+ALIEN_SHIP_MAX_VEL_X      EQU  <4>
+ALIEN_SHIP_MAX_VEL_Y      EQU  <4>
+SMALL_SHIP_BASE_VALUE     EQU  <15>
 ASTROIDS_DAMAGE           EQU   <1>
 ALIEN_SHIP_MAX_FIRE       EQU   <3>
 ALIEN_SHIP_HIT_POINTS     EQU   <2>
@@ -252,10 +252,10 @@ ASTROIDS_MAX_VELOCITY        EQU <7>
 ;
 ; Medium Mode Configuration
 ;
-ALIEN_SHIP_MAX_VEL_X_M   EQU <6>
-ALIEN_SHIP_MAX_VEL_Y_M   EQU <6>
-SMALL_SHIP_BASE_VALUE_M  EQU <15>
-ASTROIDS_DAMAGE_M           EQU   <1>
+ALIEN_SHIP_MAX_VEL_X_M      EQU <6>
+ALIEN_SHIP_MAX_VEL_Y_M      EQU <6>
+SMALL_SHIP_BASE_VALUE_M     EQU <15>
+ASTROIDS_DAMAGE_M           EQU   <2>
 ALIEN_SHIP_MAX_FIRE_M       EQU   <4>
 ALIEN_SHIP_HIT_POINTS_M     EQU   <3>
 ALIEN_SHIP_DAMAGE_M         EQU   <3>
@@ -266,23 +266,23 @@ LARGE_SHIP_MAX_FIRE_M       EQU   <6>
 LARGE_SHIP_HIT_POINTS_M     EQU   <20>
 LARGE_SHIP_DAMAGE_M         EQU   <20>
 ALIEN_FIRE_MAX_VEL_X_M      EQU   <0>
-ALIEN_FIRE_MAX_VEL_Y_M      EQU   <3>
+ALIEN_FIRE_MAX_VEL_Y_M      EQU   <5>
 ALIEN_FIRE_BASE_VALUE_M     EQU   <1>
 ALIEN_FIRE_DAMAGE_M            EQU <1>
 ALIEN_LARGE_FIRE_MAX_VELX_M    EQU <0>
 ALIEN_LARGE_FIRE_MAX_VELY_M    EQU <2>
 ALIEN_LARGE_FIRE_BASE_VALUE_M  EQU <5>
 ALIEN_LARGE_FIRE_DAMAGE_M      EQU <5>
-SPACE_MINES_MAX_VEL_X_M        EQU <3>
-SPACE_MINES_MAX_VEL_Y_M        EQU <3>
+SPACE_MINES_MAX_VEL_X_M        EQU <5>
+SPACE_MINES_MAX_VEL_Y_M        EQU <5>
 SPACE_MINES_BASE_POINTS_M      EQU <5>
 SPACE_MINES_DAMAGE_M           EQU <5>
 LARGE_ASTROID_MAX_VEL_X_M      EQU <3>
 LARGE_ASTROID_MAX_VEL_Y_M      EQU <3>
 LARGE_ASTROID_BASE_VALUE_M     EQU <5>
 LARGE_ASTROID_DAMAGE_M         EQU <5>
-POWER_UP_MAX_VEL_X_M           EQU <5>
-POWER_UP_MAX_VEL_Y_M           EQU <5>
+POWER_UP_MAX_VEL_X_M           EQU <7>
+POWER_UP_MAX_VEL_Y_M           EQU <7>
 POWER_UP_SPECIAL_DAMAGE_M      EQU <01337h>
 ASTROID_BASE_POINTS_M          EQU <10>
 ASTROIDS_MAX_VELOCITY_M        EQU <8>
@@ -305,23 +305,23 @@ LARGE_SHIP_MAX_FIRE_H       EQU   <8>
 LARGE_SHIP_HIT_POINTS_H     EQU   <25>
 LARGE_SHIP_DAMAGE_H         EQU   <20>
 ALIEN_FIRE_MAX_VEL_X_H      EQU   <0>
-ALIEN_FIRE_MAX_VEL_Y_H      EQU   <3>
+ALIEN_FIRE_MAX_VEL_Y_H      EQU   <7>
 ALIEN_FIRE_BASE_VALUE_H     EQU   <1>
 ALIEN_FIRE_DAMAGE_H            EQU <1>
 ALIEN_LARGE_FIRE_MAX_VELX_H    EQU <0>
-ALIEN_LARGE_FIRE_MAX_VELY_H    EQU <4>
+ALIEN_LARGE_FIRE_MAX_VELY_H    EQU <8>
 ALIEN_LARGE_FIRE_BASE_VALUE_H  EQU <5>
 ALIEN_LARGE_FIRE_DAMAGE_H      EQU <5>
-SPACE_MINES_MAX_VEL_X_H        EQU <4>
-SPACE_MINES_MAX_VEL_Y_H        EQU <4>
+SPACE_MINES_MAX_VEL_X_H        EQU <7>
+SPACE_MINES_MAX_VEL_Y_H        EQU <7>
 SPACE_MINES_BASE_POINTS_H      EQU <5>
 SPACE_MINES_DAMAGE_H           EQU <5>
 LARGE_ASTROID_MAX_VEL_X_H      EQU <4>
 LARGE_ASTROID_MAX_VEL_Y_H      EQU <5>
 LARGE_ASTROID_BASE_VALUE_H     EQU <5>
 LARGE_ASTROID_DAMAGE_H         EQU <5>
-POWER_UP_MAX_VEL_X_H           EQU <5>
-POWER_UP_MAX_VEL_Y_H           EQU <5>
+POWER_UP_MAX_VEL_X_H           EQU <10>
+POWER_UP_MAX_VEL_Y_H           EQU <10>
 POWER_UP_SPECIAL_DAMAGE_H      EQU <01337h>
 ASTROID_BASE_POINTS_H          EQU <10>
 ASTROIDS_MAX_VELOCITY_H        EQU <9>
@@ -670,101 +670,100 @@ ENDM
                                                  ;                                                                                                                                                    small ship player radius
                                                  ;                                                                                                                                                    large ship player radius
                                                  ; 
-       EasyLevel1              LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 15, 0, 0, 0, 0, 0,  LEVEL_WAVE_TIMER_ONE, 1, 1, 0,  0, 0,   0, 0, 0,    0,   0,  0,   0>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 0, 5, 0, 0, 2,    LEVEL_WAVE_TIMER_ONE,1, 2, 1,  5, 200, 0, 0, 0,    100,   0,  20,  0>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 0, 0, 1, 1, 2,    LEVEL_INFINITE,      1, 3, 1,  5, 200, 1, 10, 200,  0, 20, 0, 100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10, 10, 5, 0, 0, 4, LEVEL_WAVE_TIMER_ONE*2,2, 1, 5, 5, 200, 0, 0,  0,    50, 0, 50,0>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 5, 5, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE*2, 2, 2, 5, 5, 150, 2, 2,  200,  50, 0, 50,0>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 3, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 3, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       3, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFour,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 4, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 4, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       4, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFive,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 5, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 5, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       5, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSix,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 6, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 6, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       6, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 7, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 7, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       7, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 8, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 8, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       8, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNine,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 9, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 9, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       9, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTen,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 10, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 10, 2, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave3,  Invaders_ResetLevel, Invaders_NextLevel_Win, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       10, 3, 10, 5, 25,0,0,0,20, 0, 100,100>
+       EasyLevel1              LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 15,   0,   0,  0, 0,  0, LEVEL_WAVE_TIMER_ONE,    1, 1,  0, 0,   0,   0,    0,    0,    0,     0,  0,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   0,   5,  0, 0,  2, LEVEL_WAVE_TIMER_ONE,    1, 2,  5, 5, 200,   0,    0,    0,  100,     0,  20,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   0,   0,  1, 1,  2, LEVEL_INFINITE,          1, 3,  5, 5, 200,   1,   10,  200,    0,    20,   0,  100>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,  15,   0,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  2, 1,  5, 5, 200,   1,   10,  200,    0,     0,   0,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   2,   5,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  2, 2,  5, 5, 150,   1,   10,  200,   50,     0,  50,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   2,   1,  1, 2,  4, LEVEL_INFINITE,          2, 3,  5, 5, 150,   1,   10,  200,   50,    20,  50,   70>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,  25,   1,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  3, 1,  5, 5, 150,   3,   10,  180,   50,     0,  50,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   2,   5,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  3, 2,  5, 5, 150,   3,   10,  180,   50,     0,  50,    0>                                            
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   2,   2,  1, 3,  4, LEVEL_INFINITE,          3, 3,  5, 5, 150,   3,   10,  180,   50,    20,  60,   120>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFour,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  25,   1,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  4, 1, 10, 5, 150,   0,    0,    0,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   2,  10,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  4, 2, 10, 5, 150,   3,   10,  150,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   2,   3,  1, 4,  4, LEVEL_INFINITE,          4, 3, 10, 5, 150,   3,   10,  150,   50,    20,  60,   120>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFive,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  30,   0,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  5, 1, 10, 5, 100,   1,   10,  100,   50,     0,  60,     0>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  1,   1,  15,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  5, 2, 10, 5, 100,   5,   10,  150,   50,     0,  60,     0>                                 
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   2,   4,  1, 5,  4, LEVEL_INFINITE,          5, 3, 10, 5, 100,   2,   10,  150,   50,    20,  60,    70>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSix,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  30,   2,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  6, 1, 10, 5, 100,  10,   50,  100,   50,     0,  60,     0>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   3,  20,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  6, 2, 10, 5, 100,   5,   10,  150,   50,     0,  60,     0>                                 
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   3,   5,  1, 6,  4, LEVEL_INFINITE,          6, 3, 10, 5, 100,   2,   10,  150,   50,    20,  60,    70>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  30,   2, 0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  7, 1, 10, 5, 100,   5,    10,  100,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   3,  20, 0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  7, 2, 10, 5, 100,   5,    10,  100,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   4,   6, 1, 7,  4, LEVEL_INFINITE,          7, 3, 10, 5, 100,   5,    10,  100,   50,    20,  60,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   4,   0, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*3,  8, 1, 20,10, 75,    25,   50,   70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   10,   10, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*3,  8, 2, 20,10, 75,    5,   50,   70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   3,    7, 1, 8,  5, LEVEL_INFINITE,          8, 3, 20,10, 75,    5,    50,   70,   20,    20,  50,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNine,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  10,   10, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4,  9, 1, 20,10, 75,    15,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  10,   10, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4,  9, 2, 20,10, 75,    5,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,  10,    8, 1, 9,  5, LEVEL_INFINITE,          9, 3, 20,10, 75,    5,    50,    70,   20,    20,  50,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTen,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  10,   20, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4, 10, 1, 20,10, 75,    15,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  10,   30, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4, 10, 2, 20,10, 75,    5,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave3,  Invaders_ResetLevel, Invaders_NextLevel_Win, Invaders_PowerUp1,  4,  10,    9, 1, 10, 5, LEVEL_INFINITE,         10, 3, 20,10, 75,    5,    50,    70,   20,    20,  50,    70>                                   
 
 
-       MediumLevel1             LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 50, 0, 0, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0, 5, 25,0,0,0,0,0,100,100>
-                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 5, 0, 10, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0, 5, 25,0,0,0,0,0,100,100>
-                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3, Invaders_ResetLevel, Invaders_NextLevel_New, 0, 5, 0, 0, 1, 1, 0, LEVEL_INFINITE, 1, 3, 0, 5, 25,0,0,0,0,0,0,0>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level3,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level3Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level3Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFour,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFourWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFourWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFive,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFiveWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFiveWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSix,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level7,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level7Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level7Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level8,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level8Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level8Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelNine,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelNineWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelNineWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTen,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave3,  Invaders_ResetLevel, Invaders_NextLevel_Win, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
+       MediumLevel1              LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 40,   0,   0,  0, 0,  0, LEVEL_WAVE_TIMER_ONE,    1, 1,  0, 0,   0,   0,    0,    0,    0,     0,  0,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   0,   5,  0, 0,  2, LEVEL_WAVE_TIMER_ONE,    1, 2,  5, 5, 200,   0,    0,    0,  100,     0,  20,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   0,   0,  1, 1,  2, LEVEL_INFINITE,          1, 3,  5, 5, 200,   3,   10,  200,    0,    20,   0,  100>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,  25,   0,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  2, 1,  5, 5, 200,   3,   10,  200,    0,     0,   0,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   2,   10,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  2, 2,  5, 5, 150,   3,   10,  200,   50,     0,  50,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   2,   1,  1, 2,  4, LEVEL_INFINITE,          2, 3,  5, 5, 150,   3,   10,  200,   50,    20,  50,   70>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,  25,   2,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  3, 1,  5, 5, 150,   7,   10,  180,   50,     0,  50,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   2,   10,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  3, 2,  5, 5, 150,   7,   10,  180,   50,     0,  50,    0>                                            
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  5,   2,   2,  1, 3,  4, LEVEL_INFINITE,          3, 3,  5, 5, 150,   7,   10,  180,   50,    20,  60,   120>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFour,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  25,   2,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  4, 1, 10, 5, 150,   3,    0,    0,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,   2,  15,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  4, 2, 10, 5, 150,   4,   10,  150,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  5,   2,   3,  1, 4,  4, LEVEL_INFINITE,          4, 3, 10, 5, 150,   6,   10,  150,   50,    20,  60,   120>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFive,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  30,   1,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  5, 1, 10, 5, 100,   9,   10,  100,   50,     0,  60,     0>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  1,   1,  20,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  5, 2, 10, 5, 100,   9,   10,  150,   50,     0,  60,     0>                                 
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  6,   2,   6,  1, 5,  4, LEVEL_INFINITE,          5, 3, 10, 5, 100,   9,   10,  150,   50,    20,  60,    70>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSix,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  30,   4,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  6, 1, 10, 5, 100,  15,   50,  100,   50,     0,  60,     0>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  6,   3,  20,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  6, 2, 10, 5, 100,   9,   10,  150,   50,     0,  60,     0>                                 
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  6,   3,   5,  1, 6,  4, LEVEL_INFINITE,          6, 3, 10, 5, 100,   9,   10,  150,   50,    20,  60,    70>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  30,  4, 0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  7, 1, 10, 5, 100,   9,    10,  100,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  6,   3,  25, 0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  7, 2, 10, 5, 100,   9,    10,  100,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  6,   4,   8, 1, 7,  4, LEVEL_INFINITE,          7, 3, 10, 5, 100,   9,    10,  100,   50,    20,  60,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  6,   4,   0, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*3,  8, 1, 20,10, 75,    35,   50,   70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  6,   10,   12, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*3,  8, 2, 20,10, 75,    9,   50,   70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  10,   3,    7, 1, 8,  5, LEVEL_INFINITE,          8, 3, 20,10, 75,    9,    50,   70,   20,    20,  50,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNine,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  10,  10,   12, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4,  9, 1, 20,10, 75,    20,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  10,  10,   12, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4,  9, 2, 20,10, 75,    9,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  10,  10,    8, 1, 9,  5, LEVEL_INFINITE,          9, 3, 20,10, 75,    9,    50,    70,   20,    20,  50,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTen,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  10,  10,   25, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4, 10, 1, 20,10, 75,    20,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  10,  10,   34, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4, 10, 2, 20,10, 75,    8,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave3,  Invaders_ResetLevel, Invaders_NextLevel_Win, Invaders_PowerUp1,  10,  10,    9, 1, 10, 5, LEVEL_INFINITE,         10, 3, 20,10, 75,    8,    50,    70,   20,    20,  50,    70>                                   
 
 
-       HardLevel1               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,      Invaders_ResetLevel, Invaders_NextLevel, 0, 200, 0, 0, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 1, 0, 5, 25,0,0,0,0,0,0,0>
-                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2, Invaders_ResetLevel, Invaders_NextLevel, 0, 10, 0, 20, 0, 0, 0, LEVEL_WAVE_TIMER_ONE, 1, 2, 0, 5, 25,0,0,0,0,0,0,0>
-                                LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3, Invaders_ResetLevel, Invaders_NextLevel_New, 0, 10, 0, 0, 1, 1, 0, LEVEL_INFINITE, 1, 3, 0, 5, 25,0,0,0,0,0,0,0>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level3,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level3Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level3Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFour,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFourWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFourWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFive,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFiveWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelFiveWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSix,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level7,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level7Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level7Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level8,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level8Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET Level8Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelNine,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelNineWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelNineWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTen,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_WAVE_TIMER_ONE, 2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave3,  Invaders_ResetLevel, Invaders_NextLevel_Win, Invaders_PowerUp1, 3, 10, 10, 0, 0, 4, LEVEL_INFINITE,       2, 1, 10, 5, 25,0,0,0,20, 0, 100,100>
-
+       HardLevel1              LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOne,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 100,   0,   0,  0, 0,  0, LEVEL_WAVE_TIMER_ONE,    1, 1,  0, 0,   0,   0,    0,    0,    0,     0,  0,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   0,   10,  0, 0,  2, LEVEL_WAVE_TIMER_ONE,    1, 2,  5, 5, 200,   0,    0,    0,  100,     0,  20,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelOneWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   0,   1,  1, 1,  2, LEVEL_INFINITE,          1, 3,  5, 5, 200,   5,   10,  200,    0,    20,   0,  100>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwo,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,  40,   0,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  2, 1,  5, 5, 200,   5,   10,  200,    0,     0,   0,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   2,   10,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  2, 2,  5, 5, 150,   5,   10,  200,   50,     0,  50,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTwoWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   2,   2,  1, 2,  4, LEVEL_INFINITE,          2, 3,  5, 5, 150,   5,   10,  200,   50,    20,  50,   70>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,  40,   1,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  3, 1,  5, 5, 150,   9,   10,  180,   50,     0,  50,    0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   2,   10,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  3, 2,  5, 5, 150,   9,   10,  180,   50,     0,  50,    0>                                            
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level3Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   2,   3,  1, 3,  4, LEVEL_INFINITE,          3, 3,  5, 5, 150,   9,   10,  180,   50,    20,  60,   120>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFour,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  40,   1,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  4, 1, 10, 5, 150,   9,    0,    0,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  3,   5,  15,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  4, 2, 10, 5, 150,   9,   10,  150,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET LevelFourWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  3,   5,   4,  1, 4,  4, LEVEL_INFINITE,          4, 3, 10, 5, 150,   9,   10,  150,   50,    20,  60,   120>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFive,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 10,  50,   0,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  5, 1, 10, 5, 100,   15,   10,  100,   50,     0,  60,     0>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  5,   5,  20,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*2,  5, 2, 10, 5, 100,   20,   10,  150,   50,     0,  60,     0>                                 
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelFiveWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   5,   5,  1, 5,  4, LEVEL_INFINITE,          5, 3, 10, 5, 100,   5,   10,  150,   50,    20,  60,    70>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSix,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 40,  30,   2,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  6, 1, 10, 5, 100,  30,   50,  100,   50,     0,  60,     0>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   3,  25,  0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  6, 2, 10, 5, 100,   10,   10,  150,   50,     0,  60,     0>                                 
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelSixWave3,  Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   3,   6,  1, 6,  4, LEVEL_INFINITE,          6, 3, 10, 5, 100,   10,   10,  150,   50,    20,  60,    70>                                                                    
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1, 40,  30,   2, 0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  7, 1, 10, 5, 100,   10,    10,  100,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   3,  30, 0, 0,  4, LEVEL_WAVE_TIMER_ONE*3,  7, 2, 10, 5, 100,   10,    10,  100,   50,     0,  60,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level3Screen, OFFSET Level7Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   4,   7, 1, 7,  4, LEVEL_INFINITE,          7, 3, 10, 5, 100,   10,    10,  100,   50,    20,  60,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8,         Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   20,   0, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*3,  8, 1, 20,10, 75,    100,   50,   70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave2,    Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,   20,   40, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*3,  8, 2, 20,10, 75,    5,   50,   70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level4Screen, OFFSET Level8Wave3,    Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  4,   3,    8, 1, 8,  5, LEVEL_INFINITE,          8, 3, 20,10, 75,    5,    50,   70,   20,    20,  50,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNine,      Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  20,   10, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4,  9, 1, 20,10, 75,    25,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave2, Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  20,   10, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4,  9, 2, 20,10, 75,    10,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level1Screen, OFFSET LevelNineWave3, Invaders_ResetLevel, Invaders_NextLevel_New, Invaders_PowerUp1,  30, 10,    9, 1, 9,  5, LEVEL_INFINITE,          9, 3, 20,10, 75,    10,    50,    70,   20,    20,  50,    70>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTen,       Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  20,   40, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4, 10, 1, 20,10, 75,    25,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave2,  Invaders_ResetLevel, Invaders_NextLevel,     Invaders_PowerUp1,  4,  20,   50, 0, 0,  5, LEVEL_WAVE_TIMER_ONE*4, 10, 2, 20,10, 75,    10,    50,    70,   20,     0,  50,     0>                                   
+                               LEVEL_INFORMATION <OFFSET Level2Screen, OFFSET LevelTenWave3,  Invaders_ResetLevel, Invaders_NextLevel_Win, Invaders_PowerUp1,  4,  20,   10, 1, 10, 5, LEVEL_INFINITE,         10, 3, 20,10, 75,    10,    50,    70,   20,    20,  50,    70>                                   
 
     ;
     ; Game Text
@@ -813,7 +812,7 @@ ENDM
                                     dq 50, 625
                                     db "github.com/opferman/SixtyFourBits", 0									
                                     dq 300, 675
-                                    db "Version 0.5 beta", 0
+                                    db "Version 0.1 alpha", 0
                                     dq 0
 									
     HighScoresText                  db "High Scores", 0
@@ -5516,17 +5515,48 @@ NESTED_ENTRY Invaders_NextLevel_New, _TEXT$00
   MOV [CurrentLevelInformationPtr], RBX
   MOV RCX, LEVEL_INFORMATION.LevelWaveTimer[RBX]
   MOV [LevelWaveTimer], RCX
-
+  
+  ;
+  ; Every Level Modifications
+  ;
+  INC [PlayerSprite.MaxHP]
+  INC [PlayerLives]
+  
   TEST LEVEL_INFORMATION.LevelNumber[RBX], 1
   JZ @NoUpdates
   ;
   ; Add Level updates
   ;
+  INC [PlayerSprite.SpriteMaxFire]
+  INC [PlayerBombs]
 
 
 @NoUpdates:
   DEBUG_FUNCTION_CALL Invaders_ResetLevel
+  
+  MOV RCX, [AlienFreeLargeShipsPtr]
+  MOV RDX, [AlienFreeSmallShipsPtr]
+  ;
+  ; Assume not empty, can never be.
+  ;
+@LargeShipLoop:
+  ADD SPRITE_STRUCT.MaxHP[RCX], 5
+  INC SPRITE_STRUCT.SpriteMaxFire[RCX]
+  MOV RCX, SPRITE_STRUCT.pNext[RCX]
+  CMP RCX, 0
+  JNE @LargeShipLoop
 
+  TEST LEVEL_INFORMATION.LevelNumber[RBX], 1
+  JZ @NoUpdates2
+
+@SmallShipLoop:
+  INC SPRITE_STRUCT.MaxHP[RDX]
+  INC SPRITE_STRUCT.SpriteMaxFire[RDX]
+  MOV RDX, SPRITE_STRUCT.pNext[RDX]
+  CMP RDX, 0
+  JNE @SmallShipLoop
+  
+@NoUpdates2:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
