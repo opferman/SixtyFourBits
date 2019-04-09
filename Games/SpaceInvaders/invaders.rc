@@ -9,6 +9,6 @@ MENU_GIF     GIFFILE resources\spmenu.gif
 GENERAL_GIF  GIFFILE resources\spgeneral.gif
 LEVEL1_GIF   GIFFILE resources\spacelevelbackground.gif
 LEVEL2_GIF   GIFFILE resources\moonandearth.gif
-LEVEL3_GIF   GIFFILE resources\level3.gif
-LEVEL4_GIF   GIFFILE resources\level4.gif
+//LEVEL3_GIF   GIFFILE resources\level3.gif
+//LEVEL4_GIF   GIFFILE resources\level4.gif
 WINNER_GIF   GIFFILE resources\earth_blowsup.gif
