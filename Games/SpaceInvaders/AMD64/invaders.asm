@@ -9,6 +9,7 @@
 ;
 ;*********************************************************
 
+USE_FILES EQU <1>
 
 ;*********************************************************
 ; Assembly Options
@@ -522,6 +523,19 @@ ENDM
     ;  Graphic Resources 
     ; 
     SpaceCurrentState               dq ?
+ifdef USE_FILES
+    SpaceInvadersLoadingScreenImage db "spaceloadingbackground.gif", 0
+    SpaceInvadersIntroImage         db "spaceinvadersintro.gif", 0
+    SpaceInvadersMenuImage          db "spmenu.gifF", 0
+    SpaceInvadersTitle              db "Space_Invaders_logo.gif", 0
+    SpaceInvaderSprites             db "SpaceInvaderSprites.gif", 0
+    SpaceInvadersGeneral            db "spgeneral.gif", 0
+    SpaceInvadersLevel1             db "spacelevelbackground.gif", 0
+    SpaceInvadersLevel2             db "moonandearth.gif", 0
+   ; SpaceInvadersLevel3             db "LEVEL3_GIF", 0
+   ; SpaceInvadersLevel4             db "LEVEL4_GIF", 0
+    SpaceInvadersWinner             db "earth_blowsup.gif", 0
+else	
     GifResourceType                 db "GIFFILE", 0
     SpaceInvadersLoadingScreenImage db "LOADING_GIF", 0
     SpaceInvadersIntroImage         db "INTRO_GIF", 0
@@ -534,6 +548,7 @@ ENDM
    ; SpaceInvadersLevel3             db "LEVEL3_GIF", 0
    ; SpaceInvadersLevel4             db "LEVEL4_GIF", 0
     SpaceInvadersWinner             db "WINNER_GIF", 0
+endif	
 	GamePlayPage                dq 0
     GamePlayTextOne                 dq 50, 300
                                     db "The year is 2143 and the Earth is", 0
@@ -1308,13 +1323,18 @@ NESTED_ENTRY Invaders_Init, _TEXT$00
   MOV RSI, RCX
 
   MOV [SpaceCurrentState], SPACE_INVADERS_STATE_LOADING
-  
+ifdef USE_FILES
+  MOV RDX, OFFSET LoadingScreen
+  MOV RCX, OFFSET SpaceInvadersLoadingScreenImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else  
   MOV RCX, OFFSET SpaceInvadersLoadingScreenImage
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET LoadingScreen
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
   CMP RAX, 0
   JE @FailureExit
 
@@ -2182,7 +2202,7 @@ NESTED_END Invaders_AllocateMemory, _TEXT$00
 
 
 
-
+ifndef USE_FILES
 ;*********************************************************
 ;   Invaders_LoadGifResource
 ;
@@ -2216,7 +2236,7 @@ NESTED_ENTRY Invaders_LoadGifResource, _TEXT$00
   RET
 
 NESTED_END Invaders_LoadGifResource, _TEXT$00
-
+endif
 
 ;*********************************************************
 ;   Invaders_SetupHiScores
@@ -3097,12 +3117,18 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   ;
   ;  Load GIFs
   ;
+ifdef USE_FILES
+  MOV RDX, OFFSET IntroScreen
+  MOV RCX, OFFSET SpaceInvadersIntroImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else  
   MOV RCX, OFFSET SpaceInvadersIntroImage
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
     
   MOV RDX, OFFSET IntroScreen
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif  
   CMP RAX, 0
   JE @FailureExit
 
@@ -3114,12 +3140,18 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [IntroScreen.IncrementX], XMM0
   MOVSD [IntroScreen.IncrementY], XMM0
 
+ifdef USE_FILES
+  MOV RDX, OFFSET MenuScreen
+  MOV RCX, OFFSET SpaceInvadersMenuImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
   MOV RCX, OFFSET SpaceInvadersMenuImage
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET MenuScreen
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif  
   CMP RAX, 0
   JE @FailureExit
 
@@ -3131,22 +3163,33 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [MenuScreen.IncrementX], XMM0
   MOVSD [MenuScreen.IncrementY], XMM0
 
+ifdef USE_FILES
+  MOV RCX, OFFSET SpaceInvadersTitle
+  MOV RDX, OFFSET SpTitle
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
   MOV RCX, OFFSET SpaceInvadersTitle
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET SpTitle
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif  
   CMP RAX, 0
   JE @FailureExit
 
-
+ifdef USE_FILES
+  MOV RDX, OFFSET SpWinner
+  MOV RCX, OFFSET SpaceInvadersWinner  
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+else
   MOV RCX, OFFSET SpaceInvadersWinner
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET SpWinner
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
   CMP RAX, 0
   JE @FailureExit
 
@@ -3167,12 +3210,18 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpTitle.IncrementX], XMM0
   MOVSD [SpTitle.IncrementY], XMM0
 
+ifdef USE_FILES
+  MOV RCX, OFFSET SpaceInvadersLevel1
+  MOV RDX, OFFSET Level1Screen
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
   MOV RCX, OFFSET SpaceInvadersLevel1
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET Level1Screen
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
   CMP RAX, 0
   JE @FailureExit
 
@@ -3184,13 +3233,18 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [Level1Screen.IncrementX], XMM0
   MOVSD [Level1Screen.IncrementY], XMM0
 
-
+ifdef USE_FILES
+  MOV RDX, OFFSET Level2Screen
+  MOV RCX, OFFSET SpaceInvadersLevel2
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
   MOV RCX, OFFSET SpaceInvadersLevel2
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET Level2Screen
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
   CMP RAX, 0
   JE @FailureExit
 
@@ -3240,13 +3294,18 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
 
 
 
-
+ifdef USE_FILES
+  MOV RCX, OFFSET SpaceInvadersGeneral
+  MOV RDX, OFFSET SpGeneral
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
   MOV RCX, OFFSET SpaceInvadersGeneral
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET SpGeneral
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
   CMP RAX, 0
   JE @FailureExit
 
@@ -3258,12 +3317,18 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   MOVSD [SpGeneral.IncrementX], XMM0
   MOVSD [SpGeneral.IncrementY], XMM0
   
+ifdef USE_FILES
+  MOV RDX, OFFSET SpInvaders
+  MOV RCX, OFFSET SpaceInvaderSprites
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
   MOV RCX, OFFSET SpaceInvaderSprites
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
   MOV RCX, RAX
 
   MOV RDX, OFFSET SpInvaders
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
   CMP RAX, 0
   JE @FailureExit
 
