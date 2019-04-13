@@ -526,7 +526,7 @@ ENDM
 ifdef USE_FILES
     SpaceInvadersLoadingScreenImage db "spaceloadingbackground.gif", 0
     SpaceInvadersIntroImage         db "spaceinvadersintro.gif", 0
-    SpaceInvadersMenuImage          db "spmenu.gifF", 0
+    SpaceInvadersMenuImage          db "spmenu.gif", 0
     SpaceInvadersTitle              db "Space_Invaders_logo.gif", 0
     SpaceInvaderSprites             db "SpaceInvaderSprites.gif", 0
     SpaceInvadersGeneral            db "spgeneral.gif", 0
@@ -3113,7 +3113,7 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   ; Determine Hi Scores
   ;
   DEBUG_FUNCTION_CALL Invaders_SetupHiScores
-  
+  int 3
   ;
   ;  Load GIFs
   ;
@@ -3162,7 +3162,7 @@ endif
   PXOR XMM0, XMM0
   MOVSD [MenuScreen.IncrementX], XMM0
   MOVSD [MenuScreen.IncrementY], XMM0
-
+int 3
 ifdef USE_FILES
   MOV RCX, OFFSET SpaceInvadersTitle
   MOV RDX, OFFSET SpTitle
@@ -3181,7 +3181,7 @@ endif
 ifdef USE_FILES
   MOV RDX, OFFSET SpWinner
   MOV RCX, OFFSET SpaceInvadersWinner  
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
 else
   MOV RCX, OFFSET SpaceInvadersWinner
   DEBUG_FUNCTION_CALL Invaders_LoadGifResource
