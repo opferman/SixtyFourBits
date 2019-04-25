@@ -9,7 +9,7 @@
 ;
 ;*********************************************************
 
-USE_FILES EQU <1>
+; USE_FILES EQU <1>
 
 ;*********************************************************
 ; Assembly Options
@@ -3113,7 +3113,7 @@ NESTED_ENTRY Invaders_LoadingThread, _TEXT$00
   ; Determine Hi Scores
   ;
   DEBUG_FUNCTION_CALL Invaders_SetupHiScores
-  int 3
+
   ;
   ;  Load GIFs
   ;
@@ -3162,7 +3162,7 @@ endif
   PXOR XMM0, XMM0
   MOVSD [MenuScreen.IncrementX], XMM0
   MOVSD [MenuScreen.IncrementY], XMM0
-int 3
+
 ifdef USE_FILES
   MOV RCX, OFFSET SpaceInvadersTitle
   MOV RDX, OFFSET SpTitle

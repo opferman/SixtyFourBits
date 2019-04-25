@@ -1,8 +1,8 @@
 #include <windows.h>
-#define USE_FILES
+// #define USE_FILES
 
-#ifndef USER_FILES
 
+#ifndef USE_FILES
 INTRO_GIF    GIFFILE resources\spaceinvadersintro.gif
 SPRITES_GIF  GIFFILE resources\SpaceInvaderSprites.gif
 LOADING_GIF  GIFFILE resources\spaceloadingbackground.gif
