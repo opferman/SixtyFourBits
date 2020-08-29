@@ -23,6 +23,7 @@ include font_public.inc
 include gif_public.inc
 include gameengine_vars.inc 
 
+;USE_VIRTUAL_ALLOC EQU <1>
 LMEM_ZEROINIT EQU        <40h>
 MAX_FRAMES_PER_IMAGE EQU <3>
 DEBUG_STACK_SIZE EQU     <25>  ; Currently ignored, perhaps will be enabled in the future.
@@ -34,6 +35,9 @@ extern Engine_Private_OverrideDemoFunction:proc
 extern cos:proc
 extern sin:proc
 extern LocalFree:proc
+extern VirtualAlloc:proc
+extern VirtualFree:proc
+
 
 public GameEngine_Init
 public GameEngine_Free
@@ -284,13 +288,22 @@ NESTED_ENTRY GameEngine_LoadGif, _TEXT$00
  ;
   XOR EDX, EDX
   MUL IMAGE_INFORMATION.NumberOfImages[RSI]
-  
+  SHL RAX, 2
   ;
   ; Allocate the Image Buffer
   ;
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, RAX
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
+
   CMP RAX,0
   JE @FailedWithCleanup
   
@@ -377,15 +390,26 @@ NESTED_ENTRY GameEngine_LoadGifMemory, _TEXT$00
  ;
  ; Determine the complete buffer size for all images 
  ;
+  SHL RAX, 2
   XOR EDX, EDX
   MUL IMAGE_INFORMATION.NumberOfImages[RSI]
-  
+  SHL RAX, 2
   ;
   ; Allocate the Image Buffer
   ;
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, RAX
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
+
+
   CMP RAX,0
   JE @FailedWithCleanup
   
@@ -469,9 +493,20 @@ NESTED_ENTRY GameEngine_ConvertImageToSprite, _TEXT$00
   ;
   ; Allocate sprite information if not passed in.
   ;  
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, SIZE SPRITE_BASIC_INFORMATION
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, SIZE SPRITE_BASIC_INFORMATION
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
+
+
+
   CMP RAX, 0
   JE @FailureExit
   MOV SPRITE_CONVERT.SpriteBasicInformtionPtr[R12], RAX
@@ -500,9 +535,19 @@ NESTED_ENTRY GameEngine_ConvertImageToSprite, _TEXT$00
   MOV R8, SPRITE_CONVERT.SpriteNumImages[R12]
   MUL R8
   MOV SPRITE_BASIC_INFORMATION.NumberOfSprites[R14], R8
+
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, RAX
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
+
   CMP RAX, 0
   JE @FailureExit
   
@@ -579,8 +624,18 @@ NESTED_ENTRY GameEngine_ConvertImageToSprite, _TEXT$00
   CMP SPRITE_CONVERT.SpriteBasicAllocated[RSI], 0
   JE @SkipFree
   MOV SPRITE_CONVERT.SpriteBasicAllocated[RSI], 0
+
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, SPRITE_CONVERT.SpriteBasicInformtionPtr[RSI]
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, SPRITE_CONVERT.SpriteBasicInformtionPtr[RSI]
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
+
+
 @SkipFree:
   XOR RAX, RAX
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -689,7 +744,202 @@ NESTED_ENTRY GameEngine_DisplaySprite, _TEXT$00
 
 NESTED_END GameEngine_DisplaySprite, _TEXT$00
 
+;*********************************************************
+;   GameEngine_DisplaySideScrollingGif
+;
+;        Parameters: Master Context, Scrolling Structure
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplaySideScrollingGif, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV R12, [DoubleBuffer]
 
+  ; Start Of First Row
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  SHL RAX, 2
+  MUL SCROLLING_GIF.CurrentY[RDI]
+  ADD R12, RAX
+
+  MOV R11, SCROLLING_GIF.ImageInformation[RDI]
+  MOV R13, IMAGE_INFORMATION.CurrImagePtr[R11]
+  XOR R15, R15
+
+@DrawLines:
+  CMP R15, IMAGE_INFORMATION.ImageHeight[R11]
+  JAE @CompleteDrawingScroll
+    MOV RAX, SCROLLING_GIF.CurrentX[RDI]
+    XOR RBX, RBX
+@KeepPlotting:
+    MOV RCX, RAX
+    SHL RCX, 2
+    MOV R8D, DWORD PTR [R13]
+    MOV [R12 + RCX], R8D
+    ADD R13, 4
+    INC RBX
+    INC RAX
+    CMP RBX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+    JE @DonePlotting
+    CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+    JNE @KeepPlotting
+    XOR RAX, RAX
+    JMP @KeepPlotting
+    
+@DonePlotting:
+    ;
+    ; Advance to next horizontal line
+    ;
+    MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+    SHL RAX, 2 
+    ADD R12, RAX
+    ;;  ADD R13, RAX   ; Assume image width == screen width, no need to increment.
+    INC R15
+    JMP  @DrawLines 
+@CompleteDrawingScroll:  
+  MOV RAX, SCROLLING_GIF.XIncrement[RDI]
+  ADD SCROLLING_GIF.CurrentX[RDI], RAX
+;  MOV RAX, SCROLLING_GIF.YIncrement[RDI]
+;  ADD SCROLLING_GIF.CurrentY[RDI], RAX
+  MOV RAX, SCROLLING_GIF.CurrentX[RDI]
+  CMP RAX, 0
+  JL @ResetToFarSide
+
+  CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI] 
+  JA @ResetToStart
+  JMP @CompleteScroll
+
+@ResetToFarSide:
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  DEC RAX
+  MOV SCROLLING_GIF.CurrentX[RDI], RAX
+  JMP @CompleteScroll
+
+@ResetToStart:
+  MOV SCROLLING_GIF.CurrentX[RDI], 0
+@CompleteScroll:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GameEngine_DisplaySideScrollingGif, _TEXT$00
+
+
+;*********************************************************
+;   GameEngine_DisplaySideScrollingSprite
+;
+;        Parameters: Master Context, Scrolling Structure
+;
+;        Return Value: TRUE is visible, FALSE if not.
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplaySideScrollingSprite, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  CMP SCROLLING_GIF.CurrentX[RDI], RAX
+  JGE @NotVisible
+
+  MOV R11, SCROLLING_GIF.ImageInformation[RDI]
+  MOV RAX, IMAGE_INFORMATION.ImageWidth[R11]
+  ADD RAX, SCROLLING_GIF.CurrentX[RDI]
+  CMP RAX, 0
+  JL @NotVisible
+
+
+  MOV R12, [DoubleBuffer]
+
+  ; Start Of First Row
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  SHL RAX, 2
+  MUL SCROLLING_GIF.CurrentY[RDI]
+  ADD R12, RAX
+
+  MOV R13, IMAGE_INFORMATION.CurrImagePtr[R11]
+  XOR R15, R15
+  MOV R9D, DWORD PTR [R13]  ; Transparent Color.
+
+@DrawLines:
+  CMP R15, IMAGE_INFORMATION.ImageHeight[R11]
+  JAE @CompleteDrawingScroll
+    MOV RAX, SCROLLING_GIF.CurrentX[RDI]
+    CMP RAX, 0
+    JGE @SkipAdjustment
+    NEG RAX
+    MOV RBX, RAX
+    SHL RAX,2
+    ADD R13, RAX
+    XOR RAX, RAX
+    JMP @KeepPlotting
+@SkipAdjustment:
+    XOR RBX, RBX
+@KeepPlotting:
+    MOV RCX, RAX
+    SHL RCX, 2
+    MOV R8D, DWORD PTR [R13]
+    CMP R8D, R9D
+    JE @SkipColorIsTransparent
+    MOV [R12 + RCX], R8D
+@SkipColorIsTransparent:
+    ADD R13, 4
+    INC RBX
+    INC RAX
+    CMP RBX, IMAGE_INFORMATION.ImageWidth[R11]
+    JE @DonePlottingFullPlot
+    CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+    JE @DonePlotting
+    JMP @KeepPlotting
+
+@DonePlotting:    
+    ;
+    ; Need to advance R13
+    ;
+    MOV RAX, IMAGE_INFORMATION.ImageWidth[R11]
+    SHL RAX, 2
+    SHL RBX, 2
+    SUB RAX, RBX
+    ADD R13, RAX
+
+@DonePlottingFullPlot:
+    ;
+    ; Advance to next horizontal line
+    ;
+    MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+    SHL RAX, 2 
+    ADD R12, RAX
+
+    
+    INC R15
+    JMP  @DrawLines 
+@CompleteDrawingScroll:  
+  MOV RAX, SCROLLING_GIF.XIncrement[RDI]
+  ADD SCROLLING_GIF.CurrentX[RDI], RAX
+  MOV EAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+@NotVisible:
+  XOR EAX, EAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GameEngine_DisplaySideScrollingSprite, _TEXT$00
 
 ;*********************************************************
 ;   GameEngine_DisplaySpriteNoLoop

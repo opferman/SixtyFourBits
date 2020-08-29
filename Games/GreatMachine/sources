@@ -1,0 +1,37 @@
+TARGETNAME=GreatMachinex64
+TARGETPATH=obj
+TARGETTYPE=PROGRAM
+UMTYPE=windows
+UMENTRY=winmain
+
+
+USE_MSVCRT = 1
+
+MSC_WARNING_LEVEL = $(MSC_WARNING_LEVEL) -WX
+
+C_DEFINES = $(CFASTFLAGS) $(C_DEFINES) -DWIN64 
+
+UMTYPE = windows
+INCLUDES=$(INCLUDES);..\..\public\inc;..\..\public\inc\amd64;..\..\private\inc;..\..\private\inc\amd64;..\..\demoscenes\inc\amd64;..\..\DemoScenes\inc\
+
+AMD64_SOURCES = entry.asm greatmachine.asm greatmachine.rc
+SOURCES=
+
+TARGETLIBS = $(TARGETLIBS) \
+             $(SDK_LIB_PATH)\user32.lib \
+             $(SDK_LIB_PATH)\kernel32.lib \
+             $(SDK_LIB_PATH)\ddraw.lib \
+             $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\Fire\$O\Firex64.lib \
+             $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
+             $(OBJ_PATH)\..\..\Framework\gif\$O\gifx64.lib \
+             $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
+             $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Init\$O\Initx64.lib \
+             $(OBJ_PATH)\..\..\Framework\GameEngine\$O\GameEnginex64.lib \
+             $(OBJ_PATH)\..\..\Framework\Soft3D\$O\Soft3Dx64.lib \
+             $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib \
+             $(OBJ_PATH)\..\..\Framework\primatives\$O\primativesx64.lib
+

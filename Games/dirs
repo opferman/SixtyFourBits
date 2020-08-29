@@ -1,1 +1,2 @@
-dirs=SpaceInvaders
+dirs=SpaceInvaders \
+GreatMachine

@@ -59,3 +59,12 @@ GAME_ENGINE_INIT struct
    GameLoadFunction dq ?
 GAME_ENGINE_INIT ends
 
+SCROLLING_GIF struct
+   CurrentX         dq ?
+   CurrentY         dq ?
+   XIncrement       dq ?
+   YIncrement       dq ?
+   ImageInformation dq ?
+SCROLLING_GIF ends
+
+

@@ -11,7 +11,7 @@
 ;*********************************************************
 ; Assembly Options
 ;*********************************************************
-
+;USE_VIRTUAL_ALLOC EQU <1>
 
 ;*********************************************************
 ; Included Files
@@ -30,6 +30,8 @@ extern CreateFileMappingA:proc
 extern MapViewOfFile:proc
 extern LocalAlloc:proc
 extern LocalFree:proc
+extern VirtualAlloc:proc
+extern VirtualFree:proc
 extern UnmapViewOfFile:proc
 extern memcpy:proc
 
@@ -265,10 +267,19 @@ NESTED_ENTRY Gif_Open, _TEXT$00
 DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				; Gif File Name
   
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, SIZE GIF_INTERNAL
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
-  
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, SIZE GIF_INTERNAL
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
+    
+    
   CMP RAX, 0
   JE @FailureExit
   ;
@@ -302,8 +313,18 @@ DEBUG_RSP_CHECK_MACRO
 @FailureExit:
   CMP RAX, 0
   JE @DoNotDeAllocate
+
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, RAX
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
+ 
+  
   XOR RAX, RAX  
 @DoNotDeAllocate:
 @SuccessExit:
@@ -331,9 +352,17 @@ NESTED_ENTRY Gif_InitMemory, _TEXT$00
 DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				; Gif File Name
   
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, SIZE GIF_INTERNAL
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, SIZE GIF_INTERNAL
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
   
   CMP RAX, 0
   JE @FailureExit
@@ -375,8 +404,16 @@ DEBUG_RSP_CHECK_MACRO
 @FailureExit:
   CMP RAX, 0
   JE @DoNotDeAllocate
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, RAX
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
+
   XOR RAX, RAX  
 @DoNotDeAllocate:
 @SuccessExit:
@@ -402,9 +439,17 @@ NESTED_ENTRY Gif_CloseMemory, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX				
- 
+
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
+
     
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -431,8 +476,16 @@ NESTED_ENTRY Gif_Close, _TEXT$00
   
   DEBUG_FUNCTION_CALL Gif_CloseFile
   
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
+  
     
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -1469,10 +1522,18 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   MOV R12, R8                                                                   ; R12 = Stride
   MOV R14, IMAGE_DATA.ImageDescriptorPtr[RDI]                                   ; R14 = IMAGE_DESCRIPTOR
 
-  
+
+ifndef USE_VIRTUAL_ALLOC  
   MOV RDX, SIZE DECODE_STRING_TABLE
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, SIZE DECODE_STRING_TABLE
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
 
   CMP RAX, 0
   JE @Failed
@@ -1531,9 +1592,19 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   JMP @NextRasterBlockSize
 @FinishedRasterBlocks:
 
+  
+ifndef USE_VIRTUAL_ALLOC  
   MOV EDX, DECODE_STRING_TABLE.RasterDataSize[RAX]
   MOV RCX, LMEM_ZEROINIT
   DEBUG_FUNCTION_CALL LocalAlloc
+else
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV EDX, DECODE_STRING_TABLE.RasterDataSize[RAX]
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+endif
+
   CMP RAX, 0
   JE @DeallocateStringTableDecode
 
@@ -1568,19 +1639,43 @@ NESTED_ENTRY Gif_Decode, _TEXT$00
   
 @CopyComplete:
   MOV R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV EAX, DECODE_STRING_TABLE.RasterDataSize[R8]
+  ADD RAX, DECODE_STRING_TABLE.RasterDataBufferPtr[R8]
+  CMP RAX, R15
+  JAE @PassesTheTest
+  INT 3   ; Overflow.
+@PassesTheTest:
+  MOV R8, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV RDX, RDI
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Gif_DecodePackedBlock
 
 @DeallocateRasterdataBuffer:
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  MOV RCX, DECODE_STRING_TABLE.RasterDataBufferPtr[RCX]
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
+
+
 
 @DeallocateStringTableDecode:
 @DeallocateStringDecode:
+ifndef USE_VIRTUAL_ALLOC
   MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
   DEBUG_FUNCTION_CALL LocalFree
+else
+  MOV R8, 08000h  ; MEM_RELEASE
+  XOR RDX, RDX
+  MOV RCX, STD_FUNCTION_LV_STACK.LocalVars.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL VirtualFree
+endif
 
 @Failed:
   RESTORE_ALL_STD_REGS STD_FUNCTION_LV_STACK

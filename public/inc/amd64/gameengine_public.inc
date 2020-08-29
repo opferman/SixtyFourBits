@@ -18,3 +18,5 @@ extern GameEngine_ChangeState:proc
 extern GameEngine_DisplaySprite:proc
 extern GameEngine_LoadGifMemory:proc
 extern GameEngine_DisplaySpriteNoLoop:proc
+extern GameEngine_DisplaySideScrollingGif:proc
+extern GameEngine_DisplaySideScrollingSprite:proc
