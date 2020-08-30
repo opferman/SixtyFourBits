@@ -58,11 +58,11 @@ LMEM_ZEROINIT EQU <40h>
 ;*********************************************************
 
 LEVEL_INFORMATION STRUCT 
-  LevelScreen          dq ?
-  LevelText            dq ?   
+  LevelNumberGraphic   dq ?   
+  LevelStartDelay      dq ?
   pfnLevelReset        dq ?
   pfnNextLevel         dq ?
-  LevelWaveTimer       dq ?
+  LevelTimer           dq ?
   LevelNumber          dq ?
 LEVEL_INFORMATION ENDS
 
@@ -161,6 +161,11 @@ HI_SCORE_TITLE_SIZE    EQU <5>
 LEVEL_INTRO_TIMER_SIZE EQU <30*5>  
 NUMBER_OF_TREE_SCROLLING EQU <12>
 TREE_GENERATE_TICK     EQU <75>
+LEVEL_START_DELAY      EQU <200>
+LEVEL_NAME_Y           EQU <768/2 - 30>
+LEVEL_NAME_X           EQU <50>
+LEVEL_NUMBER_Y         EQU <768/2 - 30>
+LEVEL_NUMBER_X         EQU <510>
 
 ;
 ; Game Over Constants
@@ -314,6 +319,11 @@ ifdef USE_FILES
     Tree3Image                      db "tree3.gif", 0
     Tree4Image                      db "tree4.gif", 0
     PlayerStartCarImage             db "startercar.gif", 0
+    LevelNameImage                  db "levelname.gif",0
+    LevelOneImage                   db "one.gif",0      
+    LevelTwoImage                   db "two.gif",0      
+    LevelThreeImage                 db "three.gif",0    
+    LevelFourImage                  db "four.gif",0     
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -329,9 +339,14 @@ else
     Tree3Image                      db "TREE3_GIF", 0
     Tree4Image                      db "TREE4_GIF", 0
     PlayerStartCarImage             db "PLAYER_START_GIF", 0
+    LevelNameImage                  db "LEVELNAME_GIF", 0     
+    LevelOneImage                   db "LEVEL_ONE_GIF", 0     
+    LevelTwoImage                   db "LEVEL_TWO_GIF", 0     
+    LevelThreeImage                 db "LEVEL_THREE_GIF", 0   
+    LevelFourImage                  db "LEVEL_FOUR_GIF", 0    
 endif	
 
-
+    
     GamePlayPage                    dq 0
     GamePlayTextOne                 dq 50, 300
                                     db "Doc Green has traveled into the", 0
@@ -383,6 +398,17 @@ endif
                                     dq 50, 400
                                     db "Those are the only controls.", 0
                                     dq 0
+
+    ;
+    ; Level Support
+    ;
+    LevelInformation    LEVEL_INFORMATION  <?>
+    LevelNameGraphic    IMAGE_INFORMATION  <?>
+    LevelOneGraphic     IMAGE_INFORMATION  <?>
+    LevelTwoGraphic     IMAGE_INFORMATION  <?>
+    LevelThreeGraphic   IMAGE_INFORMATION  <?>
+    LevelFourGraphic    IMAGE_INFORMATION  <?>
+
     ;
     ;  Player Support Structures
     ;
@@ -1964,6 +1990,11 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_LoadAndCreatePlayerSprite
 
   ;
+  ; Load the Level Name Graphics
+  ;
+  DEBUG_FUNCTION_CALL GreatMachine_LoadLevelNameGraphics
+
+  ;
   ;  Load GIFs
   ;
 ifdef USE_FILES
@@ -2284,6 +2315,207 @@ endif
 NESTED_END GreatMachine_LoadingThread, _TEXT$00
 
 
+;*********************************************************
+;   GreatMachine_LoadLevelNameGraphics
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadLevelNameGraphics, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+ifdef USE_FILES
+  MOV RDX, OFFSET LevelNameGraphic
+  MOV RCX, OFFSET LevelNameImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
+  MOV RCX, OFFSET LevelNameImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET LevelNameGraphic
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [LevelNameGraphic.StartX], 0
+  MOV [LevelNameGraphic.StartY], 0
+  MOV [LevelNameGraphic.InflateCountDown], 0
+  MOV [LevelNameGraphic.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [LevelNameGraphic.IncrementX], XMM0
+  MOVSD [LevelNameGraphic.IncrementY], XMM0
+
+ifdef USE_FILES
+  MOV RDX, OFFSET LevelOneGraphic
+  MOV RCX, OFFSET LevelOneImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
+  MOV RCX, OFFSET LevelOneImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET LevelOneGraphic
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [LevelOneGraphic.StartX], 0
+  MOV [LevelOneGraphic.StartY], 0
+  MOV [LevelOneGraphic.InflateCountDown], 0
+  MOV [LevelOneGraphic.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [LevelOneGraphic.IncrementX], XMM0
+  MOVSD [LevelOneGraphic.IncrementY], XMM0
+
+ifdef USE_FILES
+  MOV RDX, OFFSET LevelTwoGraphic
+  MOV RCX, OFFSET LevelTwoImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
+  MOV RCX, OFFSET LevelTwoImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET LevelTwoGraphic
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [LevelTwoGraphic.StartX], 0
+  MOV [LevelTwoGraphic.StartY], 0
+  MOV [LevelTwoGraphic.InflateCountDown], 0
+  MOV [LevelTwoGraphic.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [LevelTwoGraphic.IncrementX], XMM0
+  MOVSD [LevelTwoGraphic.IncrementY], XMM0
+
+
+ifdef USE_FILES
+  MOV RDX, OFFSET LevelThreeGraphic
+  MOV RCX, OFFSET LevelThreeImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
+  MOV RCX, OFFSET LevelThreeImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET LevelThreeGraphic
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [LevelThreeGraphic.StartX], 0
+  MOV [LevelThreeGraphic.StartY], 0
+  MOV [LevelThreeGraphic.InflateCountDown], 0
+  MOV [LevelThreeGraphic.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [LevelThreeGraphic.IncrementX], XMM0
+  MOVSD [LevelThreeGraphic.IncrementY], XMM0
+
+ifdef USE_FILES
+  MOV RDX, OFFSET LevelFourGraphic
+  MOV RCX, OFFSET LevelFourImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
+  MOV RCX, OFFSET LevelFourImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+
+  MOV RDX, OFFSET LevelFourGraphic
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [LevelFourGraphic.StartX], 0
+  MOV [LevelFourGraphic.StartY], 0
+  MOV [LevelFourGraphic.InflateCountDown], 0
+  MOV [LevelFourGraphic.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [LevelFourGraphic.IncrementX], XMM0
+  MOVSD [LevelFourGraphic.IncrementY], XMM0
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadLevelNameGraphics, _TEXT$00
+
+
+       
+;*********************************************************
+;   GreatMachine_LoadGraphicsImage
+;
+;        Parameters: Pointer to Image (Resource or File depending on USE_FILES define), Graphics Pointer
+;
+;        Return Value: TRUE or FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadGraphicsImage, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+        
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+  MOV RDX, RDI
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV IMAGE_INFORMATION.StartX[RDI], 0
+  MOV IMAGE_INFORMATION.StartY[RDI], 0
+  MOV IMAGE_INFORMATION.InflateCountDown[RDI], 0
+  MOV IMAGE_INFORMATION.InflateCountDownMax[RDI], 0
+  PXOR XMM0, XMM0
+  MOVSD IMAGE_INFORMATION.IncrementX[RDI], XMM0
+  MOVSD IMAGE_INFORMATION.IncrementY[RDI], XMM0        
+
+  MOV RAX, 1
+@FailureExit:       
+                       
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadGraphicsImage, _TEXT$00         
+          
+          
+        
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2507,8 +2739,12 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-
   
+  MOV [LevelInformation.LevelStartDelay], LEVEL_START_DELAY
+  MOV [LevelInformation.LevelNumber], 1
+  MOV RAX, OFFSET LevelOneGraphic
+  MOV [LevelInformation.LevelNumberGraphic], RAX
+
   ;
   ; Reset Player
   ; 
@@ -3384,13 +3620,35 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
   MOV [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
-
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_AnimateBackground
+
+  CMP [LevelInformation.LevelStartDelay], 0
+  JE @LevelPlay
+
+  MOV R9, LEVEL_NAME_Y
+  MOV R8, LEVEL_NAME_X
+  MOV RDX, OFFSET LevelNameGraphic
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  MOV R9, LEVEL_NUMBER_Y
+  MOV R8, LEVEL_NUMBER_X
+  MOV RDX, [LevelInformation.LevelNumberGraphic]
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  DEC [LevelInformation.LevelStartDelay]
+  JMP @LevelDelay
+
+
+@LevelPlay:
+
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
 
+@LevelDelay:
   MOV RAX, [GreatMachineCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -3763,7 +4021,8 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-
+  
+  MOV [LevelInformation.LevelStartDelay], LEVEL_START_DELAY
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

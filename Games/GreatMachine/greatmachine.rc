@@ -16,4 +16,9 @@ TREE2_GIF         GIFFILE resources\tree2.gif
 TREE3_GIF         GIFFILE resources\tree3.gif
 TREE4_GIF         GIFFILE resources\tree4.gif
 PLAYER_START_GIF  GIFFILE resources\startercar.gif
+LEVELNAME_GIF     GIFFILE resources\levelname.gif
+LEVEL_ONE_GIF     GIFFILE resources\one.gif
+LEVEL_TWO_GIF     GIFFILE resources\two.gif
+LEVEL_THREE_GIF   GIFFILE resources\three.gif
+LEVEL_FOUR_GIF    GIFFILE resources\four.gif
 #endif
