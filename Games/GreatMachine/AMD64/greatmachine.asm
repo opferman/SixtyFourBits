@@ -166,6 +166,7 @@ LEVEL_NAME_Y           EQU <768/2 - 30>
 LEVEL_NAME_X           EQU <50>
 LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
+NUMBER_OF_GENERIC_CARS  EQU <1>
 
 ;
 ; Game Over Constants
@@ -324,6 +325,7 @@ ifdef USE_FILES
     LevelTwoImage                   db "two.gif",0      
     LevelThreeImage                 db "three.gif",0    
     LevelFourImage                  db "four.gif",0     
+    GenericCarImage                 db "GenericCarxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -343,7 +345,8 @@ else
     LevelOneImage                   db "LEVEL_ONE_GIF", 0     
     LevelTwoImage                   db "LEVEL_TWO_GIF", 0     
     LevelThreeImage                 db "LEVEL_THREE_GIF", 0   
-    LevelFourImage                  db "LEVEL_FOUR_GIF", 0    
+    LevelFourImage                  db "LEVEL_FOUR_GIF", 0   
+    GenericCarImage                 db "GENERIC_CARxxx", 0    ; Change the X's to numbers 
 endif	
 
     
@@ -430,11 +433,6 @@ endif
     ApplicationDataEnv        db "APPDATA",0
 
 
-    ; 
-    ; Active List - All active enemies are on this list.                      
-    ;
-    GameActiveListPtr               dq ?
-    
     ;
     ; Inactive Lists - Change the constant "TOTAL_ENEMY_LISTS" if additional are added or removed.
     ;
@@ -569,7 +567,44 @@ endif
     MenuScreen         IMAGE_INFORMATION  <?>
     TitleGraphic       IMAGE_INFORMATION  <?>
     GeneralGraphic     IMAGE_INFORMATION  <?>
+;
+; Car Graphics
+;
+   GenericCarListPtr   dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       
 
+
+   GenericCarImageList IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+
+;
+;  Tree Graphics
+; 
     Tree1Graphic       IMAGE_INFORMATION  <?>
     Tree2Graphic       IMAGE_INFORMATION  <?>
     Tree3Graphic       IMAGE_INFORMATION  <?>
@@ -1607,47 +1642,6 @@ NESTED_END GreatMachine_CreateHiScores, _TEXT$00
 
 
 
-;*********************************************************
-;   GreatMachine_SetupPrototypes
-;
-;        Parameters: None
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_SetupPrototypes, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_SetupPrototypes, _TEXT$00
-
-
-;*********************************************************
-;   GreatMachine_SetupPrototypesMedium
-;
-;        Parameters: None
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_SetupPrototypesMedium, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_SetupPrototypesMedium, _TEXT$00
 
 
 ;*********************************************************
@@ -1738,33 +1732,13 @@ NESTED_END GreatMachine_InitializeTrees, _TEXT$00
 
 
 
-;*********************************************************
-;   GreatMachine_SetupPrototypesHard
-;
-;        Parameters: None
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_SetupPrototypesHard, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_SetupPrototypesHard, _TEXT$00
-
 
 ;*********************************************************
 ;   GreatMachine_LoadAndCreatePlayerSprite
 ;
 ;        Parameters: None
 ;
-;        Return Value: None
+;        Return Value: TRUE/FALSE
 ;
 ;
 ;*********************************************************  
@@ -1774,52 +1748,29 @@ NESTED_ENTRY GreatMachine_LoadAndCreatePlayerSprite, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
-ifdef USE_FILES
-  MOV RDX, OFFSET Tree1Graphic
-  MOV RCX, OFFSET PlayerStartCarImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET PlayerStartCarImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
   MOV RDX, OFFSET PlayerFirstCarGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
+  MOV RCX, OFFSET PlayerStartCarImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [PlayerFirstCarGraphic.StartX], 0
-  MOV [PlayerFirstCarGraphic.StartY], 0
-  MOV [PlayerFirstCarGraphic.InflateCountDown], 0
-  MOV [PlayerFirstCarGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [PlayerFirstCarGraphic.IncrementX], XMM0
-  MOVSD [PlayerFirstCarGraphic.IncrementY], XMM0
-
   LEA RCX, [PlayerFirstCarConvert]
-
   LEA RDX, [PlayerFirstCarGraphic]
   MOV SPRITE_CONVERT.ImageInformationPtr[RCX], RDX
-
   LEA RDX, [PlayerSpriteBasicInformation]
   MOV SPRITE_CONVERT.SpriteBasicInformtionPtr[RCX], RDX
-
   MOV SPRITE_CONVERT.SpriteImageStart[RCX], 0
   MOV SPRITE_CONVERT.SpriteNumImages[RCX], 2
-
   MOV SPRITE_CONVERT.SpriteX[RCX], 0
   MOV SPRITE_CONVERT.SpriteY[RCX], 0
-  
   MOV R8, [PlayerFirstCarGraphic.ImageWidth]
   MOV SPRITE_CONVERT.SpriteX2[RCX], R8
   MOV R8, [PlayerFirstCarGraphic.ImageHeight]
   MOV SPRITE_CONVERT.SpriteY2[RCX], R8
-
   DEBUG_FUNCTION_CALL GameEngine_ConvertImageToSprite
-
   LEA RAX, [PlayerSpriteBasicInformation]
   MOV [CurrentPlayerSprite], RAX
+
 @FailureExit:  
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -1830,40 +1781,7 @@ NESTED_END GreatMachine_LoadAndCreatePlayerSprite, _TEXT$00
 
 
 
-;*********************************************************
-;   GreatMachine_AllocateSpriteList
-;
-;        Parameters: Inactive List Offset, Number of Sprites
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_AllocateSpriteList, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
 
-  ;
-  ; Set the current memory pointer and verify we are not out of memory.
-  ;
-  MOV [CurrentMemoryPtr], RAX
-  MOV RDX, [LargeMemoryAllocationEnd]
-  CMP [CurrentMemoryPtr], RDX
-  JAE @OutOfMemory
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-@OutOfMemory:
-  INT 3
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-
-NESTED_END GreatMachine_AllocateSpriteList, _TEXT$00
 
 ;*********************************************************
 ;   GreatMachine_SetupMemoryAllocations
@@ -1950,319 +1868,43 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   ; Load the player sprites
   ;
   DEBUG_FUNCTION_CALL GreatMachine_LoadAndCreatePlayerSprite
+  CMP RAX, 0
+  JE @FailureExit
 
   ;
   ; Load the Level Name Graphics
   ;
   DEBUG_FUNCTION_CALL GreatMachine_LoadLevelNameGraphics
-
-  ;
-  ;  Load GIFs
-  ;
-ifdef USE_FILES
-  MOV RDX, OFFSET Tree1Graphic
-  MOV RCX, OFFSET Tree1Image
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET Tree1Image
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET Tree1Graphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [Tree1Graphic.StartX], 0
-  MOV [Tree1Graphic.StartY], 0
-  MOV [Tree1Graphic.InflateCountDown], 0
-  MOV [Tree1Graphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [Tree1Graphic.IncrementX], XMM0
-  MOVSD [Tree1Graphic.IncrementY], XMM0
-
   ;
-  ;  Load GIFs
+  ; Load the Tree Graphics and Initialize Trees
   ;
-ifdef USE_FILES
-  MOV RDX, OFFSET Tree2Graphic
-  MOV RCX, OFFSET Tree2Image
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET Tree2Image
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-  MOV RDX, OFFSET Tree2Graphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
-  CMP RAX, 0
-  JE @FailureExit;
-
-  MOV [Tree2Graphic.StartX], 0
-  MOV [Tree2Graphic.StartY], 0
-  MOV [Tree2Graphic.InflateCountDown], 0
-  MOV [Tree2Graphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [Tree2Graphic.IncrementX], XMM0
-  MOVSD [Tree2Graphic.IncrementY], XMM0
-
-
-  ;
-  ;  Load GIFs
-  ;
-ifdef USE_FILES
-  MOV RDX, OFFSET Tree3Graphic
-  MOV RCX, OFFSET Tree3Image
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET Tree3Image
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET Tree3Graphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
+  DEBUG_FUNCTION_CALL GreatMachine_LoadTreeGraphics
   CMP RAX, 0
   JE @FailureExit
-
-  MOV [Tree4Graphic.StartX], 0
-  MOV [Tree4Graphic.StartY], 0
-  MOV [Tree4Graphic.InflateCountDown], 0
-  MOV [Tree4Graphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [Tree4Graphic.IncrementX], XMM0
-  MOVSD [Tree4Graphic.IncrementY], XMM0
-
-ifdef USE_FILES
-  MOV RDX, OFFSET Tree4Graphic
-  MOV RCX, OFFSET Tree4Image
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET Tree4Image
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET Tree4Graphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
-  CMP RAX, 0
-  JE @FailureExit
-
-  MOV [Tree4Graphic.StartX], 0
-  MOV [Tree4Graphic.StartY], 0
-  MOV [Tree4Graphic.InflateCountDown], 0
-  MOV [Tree4Graphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [Tree4Graphic.IncrementX], XMM0
-  MOVSD [Tree4Graphic.IncrementY], XMM0
-
-
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_InitializeTrees
-
-
-ifdef USE_FILES
-  MOV RDX, OFFSET RoadGraphic
-  MOV RCX, OFFSET RoadImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET RoadImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET RoadGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [RoadGraphic.StartX], 0
-  MOV [RoadGraphic.StartY], 0
-  MOV [RoadGraphic.InflateCountDown], 0
-  MOV [RoadGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [RoadGraphic.IncrementX], XMM0
-  MOVSD [RoadGraphic.IncrementY], XMM0
-
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  SUB RAX, [RoadGraphic.ImageHeight]
-
-  MOV [RoadScroll.CurrentX], 0
-  MOV [RoadScroll.CurrentY], RAX
-  MOV [RoadScroll.XIncrement], ROAD_SCROLL_X_INC
-  MOV [RoadScroll.YIncrement], ROAD_SCROLL_Y_INC
-  LEA RAX, [RoadGraphic]
-  MOV [RoadScroll.ImageInformation], RAX
-
-
-ifdef USE_FILES
-  MOV RDX, OFFSET MountainGraphic
-  MOV RCX, OFFSET MountainImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET MountainImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET MountainGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
+  ;
+  ; Load the Background Graphics
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_LoadBackgroundGraphics
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [MountainGraphic.StartX], 0
-  MOV [MountainGraphic.StartY], 0
-  MOV [MountainGraphic.InflateCountDown], 0
-  MOV [MountainGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [MountainGraphic.IncrementX], XMM0
-  MOVSD [MountainGraphic.IncrementY], XMM0
-
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  SUB RAX, [MountainGraphic.ImageHeight]
-  SUB RAX, [RoadGraphic.ImageHeight]
-
-  MOV [MountainScroll.CurrentX], 0
-  MOV [MountainScroll.CurrentY], RAX
-  MOV [MountainScroll.XIncrement], MOUNTAIN_SCROLL_X_INC
-  MOV [MountainScroll.YIncrement], MOUNTAIN_SCROLL_Y_INC
-  LEA RAX, [MountainGraphic]
-  MOV [MountainScroll.ImageInformation], RAX
-
-
-ifdef USE_FILES
-  MOV RDX, OFFSET SkyGraphic
-  MOV RCX, OFFSET SkyImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET SkyImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET SkyGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
+  ;
+  ; Load the General Background Graphics for Screens (Menu, Credits, etc.)
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGeneralScreenGraphics
   CMP RAX, 0
-  JE @FailureExit
-
-  MOV [SkyGraphic.StartX], 0
-  MOV [SkyGraphic.StartY], 0
-  MOV [SkyGraphic.InflateCountDown], 0
-  MOV [SkyGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [SkyGraphic.IncrementX], XMM0
-  MOVSD [SkyGraphic.IncrementY], XMM0
-
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
-  SUB RAX, [SkyGraphic.ImageHeight]
-  SUB RAX, [MountainGraphic.ImageHeight]
-  SUB RAX, [RoadGraphic.ImageHeight]
-  MOV [SkyScroll.CurrentX], 0
-  MOV [SkyScroll.CurrentY], RAX
-  MOV [SkyScroll.XIncrement], SKY_SCROLL_X_INC
-  MOV [SkyScroll.YIncrement], SKY_SCROLL_Y_INC
-  LEA RAX, [SkyGraphic]
-  MOV [SkyScroll.ImageInformation], RAX
-
-ifdef USE_FILES
-  MOV RDX, OFFSET IntroScreen
-  MOV RCX, OFFSET IntroImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else  
-  MOV RCX, OFFSET IntroImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-    
-  MOV RDX, OFFSET IntroScreen
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
-  CMP RAX, 0
-  JE @FailureExit
-
-  MOV [IntroScreen.StartX], 0
-  MOV [IntroScreen.StartY], 0
-  MOV [IntroScreen.InflateCountDown], 0
-  MOV [IntroScreen.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [IntroScreen.IncrementX], XMM0
-  MOVSD [IntroScreen.IncrementY], XMM0
-
-ifdef USE_FILES
-  MOV RDX, OFFSET MenuScreen
-  MOV RCX, OFFSET MenuImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET MenuImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET MenuScreen
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
-  CMP RAX, 0
-  JE @FailureExit
-
-  MOV [MenuScreen.StartX], 0
-  MOV [MenuScreen.StartY], 0
-  MOV [MenuScreen.InflateCountDown], 0
-  MOV [MenuScreen.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [MenuScreen.IncrementX], XMM0
-  MOVSD [MenuScreen.IncrementY], XMM0
-
-ifdef USE_FILES
-  MOV RDX, OFFSET TitleGraphic
-  MOV RCX, OFFSET GreatMachineTitle
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET GreatMachineTitle
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET TitleGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif  
-  CMP RAX, 0
-  JE @FailureExit
-
-  MOV [TitleGraphic.StartX], 0
-  MOV [TitleGraphic.StartY], 0
-  MOV [TitleGraphic.InflateCountDown], 0
-  MOV [TitleGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [TitleGraphic.IncrementX], XMM0
-  MOVSD [TitleGraphic.IncrementY], XMM0
-
-
-
-
-ifdef USE_FILES
-  MOV RDX, OFFSET GeneralGraphic
-  MOV RCX, OFFSET GeneralImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET GeneralImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET GeneralGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
-  CMP RAX, 0
-  JE @FailureExit
-
-  MOV [GeneralGraphic.StartX], 0
-  MOV [GeneralGraphic.StartY], 0
-  MOV [GeneralGraphic.InflateCountDown], 0
-  MOV [GeneralGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [GeneralGraphic.IncrementX], XMM0
-  MOVSD [GeneralGraphic.IncrementY], XMM0
- 
-  DEBUG_FUNCTION_CALL GreatMachine_LoadSprites
-  DEBUG_FUNCTION_CALL GreatMachine_SetupPrototypes
+  JE @FailureExit  
 
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -2275,6 +1917,185 @@ endif
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END GreatMachine_LoadingThread, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_LoadTreeGraphics
+;
+;        Parameters: None
+;
+;        Return Value: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadTreeGraphics, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDX, OFFSET Tree1Graphic
+  MOV RCX, OFFSET Tree1Image
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET Tree2Graphic
+  MOV RCX, OFFSET Tree2Image
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET Tree3Graphic
+  MOV RCX, OFFSET Tree3Image
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET Tree4Graphic
+  MOV RCX, OFFSET Tree4Image
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadTreeGraphics, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_LoadGeneralScreenGraphics
+;
+;        Parameters: None
+;
+;        Return Value: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadGeneralScreenGraphics, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDX, OFFSET GeneralGraphic
+  MOV RCX, OFFSET GeneralImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET TitleGraphic
+  MOV RCX, OFFSET GreatMachineTitle
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET MenuScreen
+  MOV RCX, OFFSET MenuImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET IntroScreen
+  MOV RCX, OFFSET IntroImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadGeneralScreenGraphics, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_LoadBackgroundGraphics
+;
+;        Parameters: Master Structure
+;
+;        Return Value: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadBackgroundGraphics, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  MOV RDX, OFFSET RoadGraphic
+  MOV RCX, OFFSET RoadImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  ;
+  ; Setup Scrolling Structure for Road
+  ;
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  SUB RAX, [RoadGraphic.ImageHeight]
+
+  MOV [RoadScroll.CurrentX], 0
+  MOV [RoadScroll.CurrentY], RAX
+  MOV [RoadScroll.XIncrement], ROAD_SCROLL_X_INC
+  MOV [RoadScroll.YIncrement], ROAD_SCROLL_Y_INC
+  LEA RAX, [RoadGraphic]
+  MOV [RoadScroll.ImageInformation], RAX
+
+  MOV RDX, OFFSET MountainGraphic
+  MOV RCX, OFFSET MountainImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  ;
+  ; Setup Scrolling Structure for Mountain
+  ;
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  SUB RAX, [MountainGraphic.ImageHeight]
+  SUB RAX, [RoadGraphic.ImageHeight]
+
+  MOV [MountainScroll.CurrentX], 0
+  MOV [MountainScroll.CurrentY], RAX
+  MOV [MountainScroll.XIncrement], MOUNTAIN_SCROLL_X_INC
+  MOV [MountainScroll.YIncrement], MOUNTAIN_SCROLL_Y_INC
+  LEA RAX, [MountainGraphic]
+  MOV [MountainScroll.ImageInformation], RAX
+
+  MOV RDX, OFFSET SkyGraphic
+  MOV RCX, OFFSET SkyImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  ;
+  ; Setup Scrolling Structure for Sky
+  ;
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  SUB RAX, [SkyGraphic.ImageHeight]
+  SUB RAX, [MountainGraphic.ImageHeight]
+  SUB RAX, [RoadGraphic.ImageHeight]
+  MOV [SkyScroll.CurrentX], 0
+  MOV [SkyScroll.CurrentY], RAX
+  MOV [SkyScroll.XIncrement], SKY_SCROLL_X_INC
+  MOV [SkyScroll.YIncrement], SKY_SCROLL_Y_INC
+  LEA RAX, [SkyGraphic]
+  MOV [SkyScroll.ImageInformation], RAX
+
+
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadBackgroundGraphics, _TEXT$00
+
 
 
 ;*********************************************************
@@ -2292,121 +2113,36 @@ NESTED_ENTRY GreatMachine_LoadLevelNameGraphics, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
 
-ifdef USE_FILES
   MOV RDX, OFFSET LevelNameGraphic
   MOV RCX, OFFSET LevelNameImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET LevelNameImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET LevelNameGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [LevelNameGraphic.StartX], 0
-  MOV [LevelNameGraphic.StartY], 0
-  MOV [LevelNameGraphic.InflateCountDown], 0
-  MOV [LevelNameGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [LevelNameGraphic.IncrementX], XMM0
-  MOVSD [LevelNameGraphic.IncrementY], XMM0
-
-ifdef USE_FILES
   MOV RDX, OFFSET LevelOneGraphic
   MOV RCX, OFFSET LevelOneImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET LevelOneImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET LevelOneGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [LevelOneGraphic.StartX], 0
-  MOV [LevelOneGraphic.StartY], 0
-  MOV [LevelOneGraphic.InflateCountDown], 0
-  MOV [LevelOneGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [LevelOneGraphic.IncrementX], XMM0
-  MOVSD [LevelOneGraphic.IncrementY], XMM0
-
-ifdef USE_FILES
   MOV RDX, OFFSET LevelTwoGraphic
   MOV RCX, OFFSET LevelTwoImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET LevelTwoImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET LevelTwoGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [LevelTwoGraphic.StartX], 0
-  MOV [LevelTwoGraphic.StartY], 0
-  MOV [LevelTwoGraphic.InflateCountDown], 0
-  MOV [LevelTwoGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [LevelTwoGraphic.IncrementX], XMM0
-  MOVSD [LevelTwoGraphic.IncrementY], XMM0
-
-
-ifdef USE_FILES
   MOV RDX, OFFSET LevelThreeGraphic
   MOV RCX, OFFSET LevelThreeImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET LevelThreeImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET LevelThreeGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [LevelThreeGraphic.StartX], 0
-  MOV [LevelThreeGraphic.StartY], 0
-  MOV [LevelThreeGraphic.InflateCountDown], 0
-  MOV [LevelThreeGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [LevelThreeGraphic.IncrementX], XMM0
-  MOVSD [LevelThreeGraphic.IncrementY], XMM0
-
-ifdef USE_FILES
   MOV RDX, OFFSET LevelFourGraphic
   MOV RCX, OFFSET LevelFourImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET LevelFourImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET LevelFourGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
 
-  MOV [LevelFourGraphic.StartX], 0
-  MOV [LevelFourGraphic.StartY], 0
-  MOV [LevelFourGraphic.InflateCountDown], 0
-  MOV [LevelFourGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [LevelFourGraphic.IncrementX], XMM0
-  MOVSD [LevelFourGraphic.IncrementY], XMM0
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -2462,30 +2198,6 @@ endif
 NESTED_END GreatMachine_LoadGraphicsImage, _TEXT$00         
           
     
-
-
-;*********************************************************
-;   GreatMachine_LoadSprites
-;
-;        Parameters: None
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_LoadSprites, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_LoadSprites, _TEXT$00
-
 
 
 
@@ -3261,12 +2973,12 @@ NESTED_ENTRY GreatMachine_MenuScreen, _TEXT$00
   INC [MenuIntroTimer]
   MOV RAX, [MenuIntroTimer]
   CMP RAX, MENU_MAX_TIMEOUT
-  JB @KeepOnSpaceInvadersMenu
+  JB @KeepOnMenu
 
   MOV [MenuIntroTimer], 0
   MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_INTRO
   
-@KeepOnSpaceInvadersMenu:
+@KeepOnMenu:
   MOV RAX, [GreatMachineCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
