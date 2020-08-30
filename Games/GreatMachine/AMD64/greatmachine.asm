@@ -16,7 +16,7 @@
 ; Assembly Options
 ;*********************************************************
 
-; USE_FILES EQU <1>
+
 
 ;*********************************************************
 ; Included Files
@@ -53,25 +53,8 @@ extern VirtualFree:proc
 
 LMEM_ZEROINIT EQU <40h>
 
-;*********************************************************
-; Structures
-;*********************************************************
 
-LEVEL_INFORMATION STRUCT 
-  LevelNumberGraphic     dq ?   
-  LevelStartDelay        dq ?
-  LevelStartDelayRefresh dq ?
-  pfnLevelReset          dq ?
-  pfnNextLevel           dq ?
-  NumberOfConcurrentCars dq ?
-  CarsCanBeMultipleLanes dq ?
-  TimerAfterCarsLeave    dq ?
-  TimerAfterCarsLeaveRefresh    dq ?
-  TimerBetweenConcurrent dq ?
-  TimerBetweenConcurrentRefresh dq ?
-  LevelTimer             dq ?
-  LevelNumber            dq ?
-LEVEL_INFORMATION ENDS
+
 
 
 ;*********************************************************
@@ -82,7 +65,9 @@ public GreatMachine_Demo
 public GreatMachine_Free
 
 
-
+;*********************************************************
+; Structures, Equates, Constants
+;*********************************************************
 
 ;
 ; The Great Machine State Machine
@@ -119,7 +104,8 @@ SPECIAL_SPRITE_STRUCT struct
    SpriteType      dq ?
    SpritePoints    dq ?
    ScrollingPtr    dq ?
-   ListPtr         dq ?
+   ListNextPtr     dq ?
+   ListBeforePtr   dq ?
 SPECIAL_SPRITE_STRUCT ends
 
 
@@ -158,6 +144,51 @@ SPRITE_STRUCT  struct
    pfnAddedBackToList    dq ?
 SPRITE_STRUCT  ends 
 
+LEVEL_INFORMATION STRUCT 
+  LevelNumber                     dq ?
+  LevelTimer                      dq ?
+  LevelTimerRefresh               dq ?
+  LevelNumberGraphic              dq ?   
+  LevelStartDelay                 dq ?
+  LevelStartDelayRefresh          dq ?
+
+  ;
+  ; Game Piece Configurations
+  ;
+
+  ; Cars
+  NumberOfConcurrentCars          dq ?
+  CarsCanBeMultipleLanes          dq ?
+  TimerAfterCarsLeave             dq ?
+  TimerAfterCarsLeaveRefresh      dq ?
+  TimerBetweenConcurrent          dq ?
+  TimerBetweenConcurrentRefresh   dq ?
+
+  ; Pedestrians
+  PedestriansCanBeInStreet        dq ?
+  PesdestrianTimer                dq ?
+  PesdestrianTimerRefresh         dq ?
+  
+  ; Toxic Waste Barrels
+  LevelCompleteBarrelCount        dq ?
+  CurrentLevelBarrelCount         dq ?
+  BarrelGenerateTimer             dq ?
+  CanHaveBadBarrels               dq ?
+  BarrelGenerateTimerRefresh      dq ?
+
+  ; Car Parts
+  LevelCompleteCarPartCount       dq ?
+  CurrentCarPartCount             dq ?
+  CarPartGenerateTimer            dq ?
+  CarPartGenerateTimerRefresh     dq ?
+
+  ;
+  ; Function Pointers
+  ;
+  pfnLevelReset                   dq ?
+  pfnNextLevel                    dq ?
+LEVEL_INFORMATION ENDS
+
 ;
 ; Constants for Game 
 ;
@@ -167,11 +198,12 @@ TITLE_Y                EQU <10>
 INTRO_Y                EQU <768 - 80>
 INTRO_X                EQU <300>
 INTRO_FONT_SIZE        EQU <3>
+CREDITS_FONT_SIZE      EQU <2>
 MAX_GAME_OPTIONS       EQU <3>
 MAX_MENU_SELECTION     EQU <7>
 MENU_MAX_TIMEOUT       EQU <30*50> ; About 22 Seconds
-LEVEL_TIMER_ONE              EQU <2000>
-LEVEL_INFINITE               EQU <-1>
+LEVEL_TIMER_ONE        EQU <2000>
+LEVEL_INFINITE         EQU <-1>
 LARGE_GAME_ALLOCATION  EQU <1024*1024*20> ; 20 MB
 HI_SCORE_MODE_Y        EQU <325>
 HI_SCORE_MODE_X        EQU <350>
@@ -187,13 +219,13 @@ HI_SCORE_TITLE_SIZE    EQU <5>
 LEVEL_INTRO_TIMER_SIZE EQU <30*5>  
 NUMBER_OF_TREE_SCROLLING EQU <12>
 TREE_GENERATE_TICK     EQU <75>
-LEVEL_START_DELAY      EQU <200>
 LEVEL_NAME_Y           EQU <768/2 - 30>
 LEVEL_NAME_X           EQU <50>
 LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
 NUMBER_OF_GENERIC_CARS  EQU <1>
 NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
+
 ;
 ; Game Over Constants
 ;
@@ -427,15 +459,75 @@ endif
                                     db "Those are the only controls.", 0
                                     dq 0
 
-    ;
-    ; Level Support
-    ;
-    LevelInformationPtr  dq ?
+  ;
+  ; Level Support
+  ;
+  LevelInformationPtr  dq ?
 
-    LevelInformationEasy LEVEL_INFORMATION  <?>
-                         LEVEL_INFORMATION  <?>
-                         LEVEL_INFORMATION  <?>
-                         LEVEL_INFORMATION  <?>
+ ;
+ ;
+ ;  Description for the LEVEL_INFORMATION structure seen below.
+ ;
+ ;
+ 
+; Level Number                                                 LevelNumber                                               
+ ; Level Timer in milliseconds                                  LevelTimer                                
+ ; Level Timer Refresh (Constant) in Milliseconds               LevelTimerRefresh                         
+ ; Level Number Graphic                                   LevelNumberGraphic                              
+ ; Level One Start Delay in Ticks (Ticks are # of screen updates)            LevelStartDelay              
+ ; Level One Start Delay Refresh (Constant)                                  LevelStartDelayRefresh       
+ ; Number of concurrent cars on the level                                    NumberOfConcurrentCars       
+ ; Can have cars in multiple lanes at the same time                          CarsCanBeMultipleLanes       
+ ; In Ticks, how long before a new car can be generated                  TimerAfterCarsLeave              
+ ; Refresh the tick rate for car generation (constant)                   TimerAfterCarsLeaveRefresh       
+ ; Timer between concurrent car generation (if any) in ticks             TimerBetweenConcurrent           
+ ; Timer between concurrent car generation (if any) in ticks (constant)  TimerBetweenConcurrentRefresh    
+ ; If pedestrians can be in the street.                                  PedestriansCanBeInStreet         
+ ; Tick count between generating pedestrians                             PesdestrianTimer                 
+ ; refresh the tick count generating pedestrians (constant)              PesdestrianTimerRefresh          
+ ; Number of barrels to complete level (constant)                        LevelCompleteBarrelCount         
+ ; current barrel count                                                  CurrentLevelBarrelCount          
+ ; tick count between generating barrels                                 BarrelGenerateTimer              
+ ;  Can have barrels that are bad and loose points                       CanHaveBadBarrels                
+ ; tick count for barrel generation refresh (Constant)                   BarrelGenerateTimerRefresh       
+ ; Number of car parts you need to complete level  (Constant)            LevelCompleteCarPartCount        
+ ;  Current number of car parts                                          CurrentCarPartCount              
+ ; Car part generator timer in ticks                                     CarPartGenerateTimer             
+ ; Car part geneerator timer refresh in ticks (Constant)                 CarPartGenerateTimerRefresh      
+ ; Function pointer to reset this level.                                 pfnLevelReset                    
+ ; Function pointer to go to the next levell                             pfnNextLevel                     
+
+LevelInformationEasy LEVEL_INFORMATION      <1,\
+1000 * 60 * 5,\
+1000 * 60 * 5,\
+OFFSET LevelOneGraphic,\
+200,\ 
+200,\ 
+1,\   
+0,\   
+100,\ 
+100,\ 
+0,\   
+0,\   
+0,\   
+50,\  
+50,\  
+10,\  
+0,\   
+500,\ 
+0,\   
+500,\ 
+5,\   
+0,\   
+1000,\
+1000,\
+GreatMachine_ResetLevel,\
+GreatMachine_NextLevel>                                                              
+
+
+LEVEL_INFORMATION  <?>
+LEVEL_INFORMATION  <?>
+LEVEL_INFORMATION  <?>
 
     LevelInformationMedium LEVEL_INFORMATION  <?>
                            LEVEL_INFORMATION  <?>
@@ -508,31 +600,106 @@ endif
                                     db "Quit", 0
                                     dq 0
 
-    AboutText                       dq 370, 325
-                                    db "Programming:", 0
-                                    dq 350, 350
-                                    db "Toby Opferman",0
-                                    dq 165, 400
-                                    db "x86 64-Bit Assembly Language", 0
-                                    dq 400, 450
-                                    db "Graphics:", 0
-                                    dq 350, 475
-                                    db "See Credits", 0
-                                    dq 410, 525
-                                    db "Sprites:", 0
-                                    dq 350, 550
-                                    db "See Credits", 0
-                                    dq 350, 600
-                                    db "Open Source:", 0
+    AboutText                       dq 50, 275
+                                    db "This game is a submission for the", 0
+                                    dq 50, 300
+                                    db "OLC CODEJAM 2020 where the theme",0
+                                    dq 50, 325
+                                    db "was `The Great Machine'.", 0
+                                    dq 50, 375
+                                    db "Written in 100% x64 x86 Assembly", 0
+                                    dq 50, 400
+                                    db "language by Toby Opferman.", 0
+                                    dq 50, 450
+                                    db "See Credits for included game", 0
+                                    dq 50, 475
+                                    db "assets acknowledgements.", 0
+                                    dq 50, 525
+                                    db "This game is open source as part", 0
+                                    dq 50, 550
+                                    db "of the SixtyFourBits Demo and Game", 0
+                                    dq 50, 575
+                                    db "framework written by Toby Opferman.", 0
                                     dq 50, 625
-                                    db "github.com/opferman/SixtyFourBits", 0									
-                                    dq 300, 675
-                                    db "Version 0.1 alpha", 0
+                                    db "Sources can be found at:", 0									
+                                    dq 50, 650
+                                    db "github.com/opferman/SixtyFourBits", 0
+                                    dq 50, 675
+                                    db "`Games\GreatMachine\AMD64'", 0
                                     dq 0
 
-    CreditText                      dq 370, 325
-                                    db "Graphics:", 0
-                                    dq 350, 350
+    CreditsPage                     dq 0
+
+    CreditsText1                    dq 50, 275
+                                    db "Loading Screen Animation", 0
+                                    dq 50, 325
+                                    db "AUTHOR: Abigail Morgan",0
+                                    dq 25, 350
+                                    db "www.lowgif.com/3dcb655cbee4ecd7.html", 0
+                                    dq 50, 400
+                                    db "Intro and Menu Images", 0
+                                    dq 50, 425
+                                    db "AUTHORS: ", 0
+                                    dq 50, 450
+                                    db "Oto Godfrey and Justin Morton", 0
+                                    dq 50, 475
+                                    db "This work is free and may be used", 0
+                                    dq 50, 500
+                                    db "by anyone for any purpose with", 0
+                                    dq 50, 525
+                                    db "attribution and link to License.", 0
+                                    dq 50, 575
+                                    db "Source: Wikipedia (Images Resized", 0
+                                    dq 50, 600
+                                    db "        and reduced colors)", 0
+                                    dq 50, 625
+                                    db "License:", 0									
+                                    dq 5, 650
+                                    db "creativecommons.org/licenses/by-sa", 0
+                                    dq 25, 675
+                                    db "/4.0/legalcode", 0
+                                    dq 0
+
+    CreditsText2                    dq 50, 275
+                                    db "Menu (About) Background", 0
+                                    dq 50, 325
+                                    db "Crediting isn't required.",0
+                                    dq 25, 350
+                                    db "wallpapersafari.com/w/yURNIV", 0
+                                    dq 50, 400
+                                    db "Nature Parallax Background", 0
+                                    dq 50, 425
+                                    db "AUTHOR: Liz Molnar", 0
+                                    dq 50, 450
+                                    db "Allowed usage with credit.", 0
+                                    dq 5, 475
+                                    db "raventale.itch.io/parallax-background", 0
+                                    dq 0
+
+    CreditsText3                    dq 50, 275
+                                    db "Trees", 0
+                                    dq 50, 325
+                                    db "Purchased from Super Game Asset",0
+                                    dq 25, 350
+                                    db "for use in 1 project.", 0
+                                    dq 50, 400
+                                    db "DeLorean Assets", 0
+                                    dq 50, 450
+                                    db "AUTHOR: Michael Poke Yoshi", 0
+                                    dq 50, 475
+                                    db "Free with credit", 0
+                                    dq 5, 500
+                                    db "www.deviantart.com/mike-dragon", 0
+                                    dq 8, 525
+                                    db "/art/DeLorean-Sprites-Sheet-158604207", 0
+                                    dq 0
+
+    CreditsText4                    dq 50, 275
+                                    db "Cars and all other sprites", 0
+                                    dq 50, 325
+                                    db "Purchased PRO membership Eezy.",0
+                                    dq 50, 350
+                                    db "No credit is required.", 0
                                     dq 0
                                     									
     HighScoresText                  db "High Scores", 0
@@ -547,9 +714,6 @@ endif
     HiScoreFormatString             db "%s - %I64u", 0
     HiScoreString                   db "                                      ",0
     
-    LevelIntroTimer                dq LEVEL_INTRO_TIMER_SIZE
-    LevelTimer                     dq ?
-    LevelWaveTimer                 dq LEVEL_TIMER_ONE
     HiScoreLocationPtr             dq ?
 
     ;
@@ -672,6 +836,13 @@ endif
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
+;
+; Active Animation Lists
+;
+        TopSideWalkPtr    dq ?
+        LaneZeroPtr       dq ?
+        LaneOnePtr        dq ?
+        BottomSideWalkPtr dq ?
 
 ;
 ;  Tree Graphics
@@ -988,15 +1159,16 @@ NESTED_ENTRY GreatMachine_SpaceBar, _TEXT$00
   
   INC [GamePlayPage]
   
-@TryNextItem:    
+@TryNextItem:   
+  CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_CREDITS
+  JE @CreditsPage
+   
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_OPTIONS
   JE @GameOptions
 
   CMP [GreatMachineCurrentState], GREAT_MACHINE_HISCORE
   JE @GoToMenu
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_ABOUT
-  JE @GoToMenu
-  CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_CREDITS
   JE @GoToMenu
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_INTRO
   JNE @CheckOtherState
@@ -1072,7 +1244,12 @@ NESTED_ENTRY GreatMachine_SpaceBar, _TEXT$00
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-  
+@CreditsPage:
+  INC [CreditsPage]
+  MOV RAX, GREAT_MACHINE_STATE_CREDITS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
 NESTED_END GreatMachine_SpaceBar, _TEXT$00
 
 
@@ -1147,7 +1324,7 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 @NotOnEndGame:
-  ;ADD [SpritePointer], SIZE SPRITE_BASIC_INFORMATION
+  
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -2279,7 +2456,9 @@ endif
   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.ScrollingPtr[R13], R14
-  MOV SPECIAL_SPRITE_STRUCT.ListPtr[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], SPRITE_TYPE_CAR
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R13], 0
 
   ADD R12, 8
   ADD R13, SIZE SPECIAL_SPRITE_STRUCT
@@ -2408,6 +2587,7 @@ NESTED_END GreatMachine_LoadGraphicsImage, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_ResetGame
 ;                This will reset the game for level 1.
+;
 ;        Parameters: Master Context
 ;
 ;        Return Value: None
@@ -2420,13 +2600,51 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
+
+  ;
+  ; Setup Game Level information
+  ;
+  CMP [GameModeSelect], 1
+  JAE @MediumOrHard
+  MOV RAX, OFFSET LevelInformationEasy  
+  JMP @GameModeSelectionComplete
+@MediumOrHard:
+  CMP [GameModeSelect], 1
+  JA @HardMode  
+  MOV RAX, OFFSET LevelInformationMedium
+  JMP @GameModeSelectionComplete
+@HardMode:  
+  MOV RAX, OFFSET LevelInformationHard
   
-  MOV RAX, OFFSET LevelInformationEasy
+  ;
+  ; Refresh Game Level Data
+  ;
+@GameModeSelectionComplete:
   MOV [LevelInformationPtr], RAX
-  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], LEVEL_START_DELAY
-  MOV LEVEL_INFORMATION.LevelNumber[RAX], 1
-  MOV RCX, OFFSET LevelOneGraphic
-  MOV LEVEL_INFORMATION.LevelNumberGraphic[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.LevelStartDelayRefresh[RAX]
+  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.LevelTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.LevelTimer[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.TimerAfterCarsLeaveRefresh[RAX]
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RAX], 0
+
+  MOV RCX, LEVEL_INFORMATION.TimerBetweenConcurrentRefresh[RAX]
+  MOV LEVEL_INFORMATION.TimerBetweenConcurrent[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.PesdestrianTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.PesdestrianTimer[RAX], RCX
+
+  MOV LEVEL_INFORMATION.CurrentLevelBarrelCount[RAX], 0
+
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimer[RAX], RCX
+
+  MOV LEVEL_INFORMATION.CurrentCarPartCount[RAX], 0
+
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimer[RAX], RCX
 
   ;
   ; Reset Player
@@ -2693,8 +2911,30 @@ NESTED_ENTRY GreatMachine_Credits, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
+
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_CREDITS
+  MOV R12, OFFSET CreditsText1
+  CMP [CreditsPage], 0
+  JE @DisplayCreditsPage
+  MOV R12, OFFSET CreditsText2
+  CMP [CreditsPage], 1
+  JE @DisplayCreditsPage
+  MOV R12, OFFSET CreditsText3
+  CMP [CreditsPage], 2
+  JE @DisplayCreditsPage
+  MOV R12, OFFSET CreditsText4
+  CMP [CreditsPage], 3
+  JE @DisplayCreditsPage
   
+  MOV [CreditsPage], 0
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_MENU
+  JMP @GoToMenu
+
+
+@DisplayCreditsPage:
+
   MOV RDX, OFFSET GeneralGraphic
+  MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
 
   MOV R9, TITLE_Y
@@ -2703,24 +2943,26 @@ NESTED_ENTRY GreatMachine_Credits, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
 
-
-
   MOV R8, 20
-  MOV RDX, OFFSET CreditText
+  MOV RDX, R12
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayScrollText
 
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
   MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
-  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], CREDITS_FONT_SIZE
   MOV R9, INTRO_Y + 40
   MOV R8, INTRO_X
   MOV RDX, OFFSET PressSpaceToContinue
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
+  JMP @CompleteDisplayingPage
 
-  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_CREDITS
-  MOV RAX, GREAT_MACHINE_STATE_CREDITS
+
+@CompleteDisplayingPage:
+@GoToMenu:  
+@ScreenDrawComplete:
+  MOV RAX, [GreatMachineCurrentState] 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -3312,12 +3554,91 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   DEC LEVEL_INFORMATION.LevelStartDelay[RAX]
   JMP @LevelDelay
 
-
 @LevelPlay:
 
+  ;**************************************************************
+  ; Level Action - Section One - New Game Pieces
+  ;**************************************************************
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_DispatchGamePieces 
 
+  ;**************************************************************
+  ; Level Action - Section Two - Detection
+  ;**************************************************************
+
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_CollisionPlayer
+
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+
+  ;**************************************************************
+  ; Level Action - Section Three - Display Graphics and Sprites
+  ;**************************************************************
+  MOV R12D, [CurrentPlayerRoadLane]
+  MOV EAX, [NextPlayerRoadLane]
+  CMP R12, RAX
+  JE @NotBetweenLanes
+  MOV R12, 3                    ; Signal we are between lanes.
+@NotBetweenLanes:
+  ;
+  ; Top Sidewalk First
+  ;
+
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+
+  ;
+  ; Lane 0
+  ;
+  CMP R12, 0
+  JNE @SkipPlayerUpdateForLane0
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
+@SkipPlayerUpdateForLane0:
+
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+
+  ;
+  ; Character transition between lanes
+  ;
+  CMP R12, 3
+  JNE @SkipPlayerUpdateForBetweenLanes
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
+@SkipPlayerUpdateForBetweenLanes:
+
+  ;
+  ; Lane 1
+  ;
+  CMP R12, 1
+  JNE @SkipPlayerUpdateForLane1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
+@SkipPlayerUpdateForLane1:
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+
+  ;
+  ; Bottom Sidewalk
+  ;
+
+  ;MOV RDX, RBX
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+
+
 
 @LevelDelay:
   MOV RAX, [GreatMachineCurrentState]
@@ -3694,7 +4015,8 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
 
   MOV RAX, [LevelInformationPtr]
-  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], LEVEL_START_DELAY
+  MOV RCX, LEVEL_INFORMATION.LevelStartDelayRefresh[RAX]
+  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], RCX
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
