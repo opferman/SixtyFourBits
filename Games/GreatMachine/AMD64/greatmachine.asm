@@ -764,9 +764,6 @@ endif
   MOV RCX, VK_SPACE
   DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
 
-  MOV RDX, GreatMachine_NetPress
-  MOV RCX, VK_N
-  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
 
 ;
 ; TBD: Add keys and sequences for cheat codes.
@@ -835,41 +832,6 @@ NESTED_END GreatMachine_Free, _TEXT$00
 ;***************************************************************************************************************************************************************************
 ; Key Functions
 ;***************************************************************************************************************************************************************************
-
-
-
-
-
-
-;*********************************************************
-;   GreatMachine_NetPress
-;
-;        Parameters: Master Context
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_NetPress, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  CMP [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
-  JB @GameNotActive
-  CMP [PlayerSprite.SpriteAlive], 0
-  JE @PlayerIsDead
-
-@GameNotActive:
-@PlayerIsDead:
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_NetPress, _TEXT$00
-
-
-
 
 ;*********************************************************
 ;   GreatMachine_SpacePress
@@ -2499,152 +2461,7 @@ endif
 
 NESTED_END GreatMachine_LoadGraphicsImage, _TEXT$00         
           
-          
-        
-         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;*********************************************************
-;   GreatMachine_SetupCategories
-;
-;        Parameters: Offset Inactive List Ptr, Starting Category
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_SetupCategories, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  MOV R12, QWORD PTR [RCX]
-  MOV R8, RDX
-
-@SetupSpriteCategory:
- 
-  MOV SPRITE_STRUCT.SpriteCategory[R12], RDX
-  DEC RDX
-  JNZ @ContinueSettingUp
-  MOV RDX, R8                   ; Reset Categories
-@ContinueSettingUp:
-  MOV R12, SPRITE_STRUCT.pNext[R12]
-  CMP R12, 0
-  JNE @SetupSpriteCategory
-
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_SetupCategories, _TEXT$00
-
-
-;*********************************************************
-;   GreatMachine_SetupSpriteImages
-;
-;        Parameters: Offset Inactive List Ptr, List of Sprites to distribute, List of Exploisions to distribute, Number of Sprites in distribute list.
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_SetupSpriteImages, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_SetupSpriteImages, _TEXT$00
-
-
-
-
-;*********************************************************
-;   GreatMachine_DuplicateBasicSprite
-;
-;        Parameters: Basic Sprite Information
-;
-;        Return Value: New Basic Sprite Information
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_DuplicateBasicSprite, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RSI, RCX
- 
-  MOV RDX, SIZEOF SPRITE_BASIC_INFORMATION
-  MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL GreatMachine_AllocateMemory 
-  CMP RAX, 0
-  JZ @Failure
-
-  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteOffsets[RSI]           
-  MOV SPRITE_BASIC_INFORMATION.SpriteOffsets[RAX], RDX           
-
-  MOV RDX, SPRITE_BASIC_INFORMATION.NumberOfSprites[RSI]
-  MOV SPRITE_BASIC_INFORMATION.NumberOfSprites[RAX], RDX         
-  
-  MOV SPRITE_BASIC_INFORMATION.CurrentSprite[RAX], 0           
-
-  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteFrameNum[RSI]          
-  MOV SPRITE_BASIC_INFORMATION.SpriteFrameNum[RAX], RDX          
-
-  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteMaxFrames[RSI]         
-  MOV SPRITE_BASIC_INFORMATION.SpriteMaxFrames[RAX], RDX         
-
-  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteWidth[RSI]             
-  MOV SPRITE_BASIC_INFORMATION.SpriteWidth[RAX], RDX             
-
-  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteHeight[RSI]          
-  MOV SPRITE_BASIC_INFORMATION.SpriteHeight[RAX], RDX          
-
-  MOV EDX, SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RSI]
-  MOV SPRITE_BASIC_INFORMATION.SpriteTransparentColor[RAX], EDX
-
-;
-; No reason to re-allocate the sprite memory itself, the context is enough
-;
-  
-  MOV RDX, SPRITE_BASIC_INFORMATION.SpriteListPtr[RSI]   
-
-  MOV SPRITE_BASIC_INFORMATION.SpriteListPtr[RAX], RDX
-  MOV SPRITE_BASIC_INFORMATION.CurrSpritePtr[RAX], RDX
-
-@Failure:
-@Success:
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_DuplicateBasicSprite, _TEXT$00
-
-
-
+    
 
 
 ;*********************************************************
@@ -2676,52 +2493,6 @@ NESTED_END GreatMachine_LoadSprites, _TEXT$00
 ; Game Reset Functions
 ;***************************************************************************************************************************************************************************
 
-
-
-;*********************************************************
-;   GreatMachine_EmptyActiveList
-;
-;        Parameters: Master Context
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_EmptyActiveList, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  
-
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_EmptyActiveList, _TEXT$00
-
-
-;*********************************************************
-;   GreatMachine_ResetActiveInactiveSprites
-;
-;        Parameters: Inactive List Pointer, Prototype
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_ResetActiveInactiveSprites, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-
-  
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_ResetActiveInactiveSprites, _TEXT$00
 
 
 
@@ -2772,21 +2543,6 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
 NESTED_END GreatMachine_ResetGame, _TEXT$00
 
 
-
-;*********************************************************
-;   GreatMachine_ResetSpriteBasicInformation
-;
-;        Parameters: Resource Name
-;
-;        Return Value: Memory
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_ResetSpriteBasicInformation, _TEXT$00
-.ENDPROLOG
-  
-  RET
-NESTED_END GreatMachine_ResetSpriteBasicInformation, _TEXT$00
 
 
 ;***************************************************************************************************************************************************************************
@@ -4104,54 +3860,6 @@ NESTED_END GreatMachine_NextLevel_Win, _TEXT$00
 ;***************************************************************************************************************************************************************************
 
 
-;*********************************************************
-;   GreatMachine_DispatchGamePieces
-;
-;
-;        Parameters: Master context, level information
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-
-
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_DispatchGamePieces, _TEXT$00
-
-
-
-
-
-;*********************************************************
-;   GreatMachine_RemoveFromLinkedList
-;
-;        Parameters: Sprite Inactive List, Sprite
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_RemoveFromLinkedList, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_RemoveFromLinkedList, _TEXT$00
-
 
 
 ;***************************************************************************************************************************************************************************
@@ -4159,24 +3867,7 @@ NESTED_END GreatMachine_RemoveFromLinkedList, _TEXT$00
 ;***************************************************************************************************************************************************************************
 
 
-;*********************************************************
-;   GreatMachine_CollisionPlayerFire
-;
-;        Parameters: Master Context
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_CollisionPlayerFire, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG
 
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END GreatMachine_CollisionPlayerFire, _TEXT$00
 
 
 
@@ -4209,42 +3900,6 @@ NESTED_END GreatMachine_CollisionPlayer, _TEXT$00
 
 
 
-;*********************************************************
-;   GreatMachine_DefaultAddToList
-;
-;        Parameters: Sprite Structure
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_DefaultAddToList, _TEXT$00
-.ENDPROLOG 
-  RET
-  
-NESTED_END GreatMachine_DefaultAddToList, _TEXT$00
-
-
-
-
-;*********************************************************
-;   GreatMachine_DefaultMovement
-;
-;    This is the most basic movement that simply updates
-;    the location based on velocity and lets other game code
-;    rebalance if it was offscreen.
-;
-;        Parameters: Master Context, Sprite
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_DefaultMovement, _TEXT$00
-.ENDPROLOG 
-  RET
-
-NESTED_END GreatMachine_DefaultMovement, _TEXT$00
 
 
 
@@ -4342,70 +3997,6 @@ NESTED_END GreatMachine_DisplayPlayer, _TEXT$00
 
 
 
-
-;*********************************************************
-;   GreatMachine_DisplayPlayerFire
-;
-;        Parameters: Master Context
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_DisplayPlayerFire, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_DisplayPlayerFire, _TEXT$00
-
-
-
-
-;*********************************************************
-;   GreatMachine_DisplayGameGraphics
-;
-;        Parameters: Master Context
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_DisplayGameGraphics, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_DisplayGameGraphics, _TEXT$00
-
-
-
-;*********************************************************
-;   GreatMachine_ResetPlayerLeftRight
-;
-;        Parameters: None
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_ResetPlayerLeftRight, _TEXT$00
-.ENDPROLOG 
-
-  RET
-
-NESTED_END GreatMachine_ResetPlayerLeftRight, _TEXT$00
 
 
 
