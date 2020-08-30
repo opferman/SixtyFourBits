@@ -91,6 +91,7 @@ GREAT_MACHINE_STATE_WINSCREEN            EQU <7>
 GREAT_MACHINE_END_GAME                   EQU <8>
 GREAT_MACHINE_STATE_ENTER_HI_SCORE       EQU <9>
 GREAT_MACHINE_LEVELS                     EQU <10>
+GREAT_MACHINE_STATE_CREDITS              EQU <11>
 GREAT_MACHINE_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 
@@ -112,10 +113,6 @@ SPRITE_STRUCT  struct
    SpriteOwnerPtr  dq ?
    SpriteWidth     dq ?
    SpriteHeight    dq ?
-   SpriteFire      dq ?
-   SpriteMaxFire   dq ?
-   SpriteFireDebounce dq ?
-   SPriteFireDebounceSetting dq ?
    SpritePlayerRadius dq ?
    DisplayHit      dq ?
    HitPoints       dq ?   ; Amount of damage needed to be destroyed
@@ -145,7 +142,7 @@ INTRO_Y                EQU <768 - 80>
 INTRO_X                EQU <300>
 INTRO_FONT_SIZE        EQU <3>
 MAX_GAME_OPTIONS       EQU <3>
-MAX_MENU_SELECTION     EQU <6>
+MAX_MENU_SELECTION     EQU <7>
 MENU_MAX_TIMEOUT       EQU <30*50> ; About 22 Seconds
 LEVEL_TIMER_ONE              EQU <2000>
 LEVEL_INFINITE               EQU <-1>
@@ -176,6 +173,9 @@ WINNER_X     EQU <225>
 WINNER_Y     EQU <300>
 WINNER_SIZE  EQU <10>
 
+;
+; High Scores Constants
+;
 HS_GAME_OVER_X    EQU <100>
 HS_GAME_OVER_Y    EQU <300>
 HS_GAME_OVER_SIZE EQU <10>
@@ -192,14 +192,31 @@ PLAYER_SCORE_FONT_SIZE EQU <INTRO_FONT_SIZE>
 PLAYER_SCORE_X         EQU <500>
 PLAYER_SCORE_Y         EQU <10>
 
+;
+; Parallax Scrolling Constants
+;
 ROAD_SCROLL_X_INC EQU <-5>
 ROAD_SCROLL_Y_INC EQU <0>
-
 MOUNTAIN_SCROLL_X_INC EQU <-2>
 MOUNTAIN_SCROLL_Y_INC EQU <0>
-
 SKY_SCROLL_X_INC EQU <-1>
 SKY_SCROLL_Y_INC EQU <0>
+
+;
+; Player Defaults
+;
+ PLAYER_CAR_LENGTH      EQU <390>  ; Hard coding the sprite length.
+ PLAYER_START_X         EQU <(1024/2) - (390/2)>  ; Hardcode to middle of screen
+ PLAYER_START_Y         EQU <550>
+ PLAYER_LANE_1          EQU <PLAYER_START_Y>
+ PLAYER_LANE_0          EQU <PLAYER_START_Y - 100>
+ PLAYER_START_MAX_VEL_X EQU <6>
+ PLAYER_START_MAX_VEL_Y EQU <20>
+ PLAYER_X_DIM       EQU <390>
+ PLAYER_Y_DIM       EQU <111>
+ PLAYER_START_HP    EQU <10>
+ PLAYER_DAMAGE      EQU <1>
+ PLAYER_START_LIVES EQU <3>
 
 
 ;*********************************************************
@@ -276,7 +293,8 @@ ENDM
                               dq  GreatMachine_Winner              ; GREAT_MACHINE_STATE_WINSCREEN
                               dq  GreatMachine_GameOver            ; GREAT_MACHINE_END_GAME
                               dq  GreatMachine_EnterHiScore        ; GREAT_MACHINE_STATE_ENTER_HI_SCORE
-                              dq  GreatMachine_Levels               ; GREAT_MACHINE_LEVELS
+                              dq  GreatMachine_Levels              ; GREAT_MACHINE_LEVELS
+                              dq  GreatMachine_Credits             ; GREAT_MACHINE_CREDITS
     CurrentTreeTick           dq  0
     ;
     ;  Graphic Resources 
@@ -288,7 +306,6 @@ ifdef USE_FILES
     MenuImage                       db "menu.gif", 0
     GreatMachineTitle               db "GreatMachine_logo.gif", 0
     GeneralImage                    db "general.gif", 0
-    WinnerImage                     db "greatmachinefinish.gif", 0
     RoadImage                       db "road.gif", 0
     MountainImage                   db "mountains.gif", 0
     SkyImage                        db "sky.gif", 0
@@ -296,6 +313,7 @@ ifdef USE_FILES
     Tree2Image                      db "tree2.gif", 0
     Tree3Image                      db "tree3.gif", 0
     Tree4Image                      db "tree4.gif", 0
+    PlayerStartCarImage             db "startercar.gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -303,7 +321,6 @@ else
     MenuImage                       db "MENU_GIF", 0
     GreatMachineTitle               db "LOGO_GIF", 0
     GeneralImage                    db "GENERAL_GIF", 0
-    WinnerImage                     db "WINNER_GIF", 0
     RoadImage                       db "ROAD_GIF", 0
     MountainImage                   db "MOUNTAINS_GIF", 0
     SkyImage                        db "SKY_GIF", 0
@@ -311,71 +328,72 @@ else
     Tree2Image                      db "TREE2_GIF", 0
     Tree3Image                      db "TREE3_GIF", 0
     Tree4Image                      db "TREE4_GIF", 0
+    PlayerStartCarImage             db "PLAYER_START_GIF", 0
 endif	
+
+
     GamePlayPage                    dq 0
     GamePlayTextOne                 dq 50, 300
-                                    db "Doc Green has created his greatest", 0
+                                    db "Doc Green has traveled into the", 0
                                     dq 50, 350
-                                    db "machine invention, a Time Machine.",0
+                                    db "future and is now stuck there.  His",0
                                     dq 50, 400
-                                    db "However, in traveling to the future", 0
+                                    db "Great Machine has broken down and", 0
                                     dq 50, 450
-                                    db "he ran out of fuel and skate boarders",0  
+                                    db "he needs to rebuild it.  He also",0  
                                     dq 50, 500
-                                    db "have stolen the part that powers his",0
+                                    db "needs to collect enough radioactive",0
                                     dq 50, 550
-                                    db "machine, the Spiral Capacitor!", 0
+                                    db "radioactive fueld to get back home", 0 
+                                    dq 50, 600
+                                    db "which is radioactive waste.", 0
                                     dq 0
 
     GamePlayTextTwo                 dq 50, 300
-                                    db "Doc Green must collect enough fuel", 0
+                                    db "Drive along the roads collecting", 0
                                     dq 50, 350
-                                    db "to make it back home and recover",0
+                                    db "parts to build the Great Machine",0
                                     dq 50, 400
-                                    db "the stolen Spiral Capacitor from", 0
+                                    db "and collecting toxic waste that", 0
                                     dq 50, 450
-                                    db "the skate boarders!  Also, Doc",0  
+                                    db "has been left in the road. Avoid", 0   
+                                    dq 50, 500
+                                    db "other cars and taking on damage.", 0 
                                     dq 50, 550
-                                    db "flew back from Pre-historic times", 0
+                                    db "Each level has a time limit and", 0 
+                                    dq 50, 600
+                                    db "each level there is a minimum", 0
                                     dq 0
 
 
     GamePlayTextThree               dq 50, 300
-                                    db "and some small pterodactyls ", 0
+                                    db "number of toxic waste barrels you", 0
                                     dq 50, 350
-                                    db "followed through.  Capture as many",0
+                                    db "need to collect. Collect enough",0
                                     dq 50, 400
-                                    db "as you can using your net.  It only", 0
+                                    db "fuel and all the parts to build", 0
                                     dq 50, 450
-                                    db "shoots straight up.",0  
+                                    db "the Great Machine to get home!",0  
                                     dq 0
 
     GamePlayTextFour                dq 50, 300
-                                    db "Use the arrow keys to move your  ", 0
+                                    db "Use the arrow keys to move your", 0
                                     dq 50, 350
-                                    db "ship.  Spacebar will fire your",0
+                                    db "Great Machine around the road.",0
                                     dq 50, 400
-                                    db "missile.  If you get BOMBS, use ", 0
-                                    dq 50, 450
-                                    db "the `B` key to deploy.  Every ",0  
-                                    dq 50, 500
-                                    db "ship has a certain number of Hit",0
-                                    dq 50, 550
-                                    db "Points and everything inflicts a", 0
-                                    dq 50, 600
-                                    db "certain amount of damage.", 0
-                                    dq 50, 650
-                                    db "GOOD LUCK!", 0									
+                                    db "Those are the only controls.", 0
                                     dq 0
     ;
     ;  Player Support Structures
     ;
-    PlayerSprite                    SPRITE_STRUCT <?>
-    PlayerFireActivePtr             dq ?
-    PlayerBombsActivePtr            dq ?
-    PlayerFireInActivePtr           dq ?
+    CurrentPlayerSprite             dq ?
+    PlayerFirstCarGraphic           IMAGE_INFORMATION  <?>
+    PlayerFirstCarConvert           SPRITE_CONVERT     <?>         
+    PlayerSprite                    SPRITE_STRUCT      <?>
+    PlayerSpriteBasicInformation    SPRITE_BASIC_INFORMATION <?>
     DeBounceMovement                dq 0                        
-
+    NextPlayerRoadLane              dd ?
+    CurrentPlayerRoadLane           dd ?
     ;
     ; Hi Score File Name
     ;
@@ -417,9 +435,11 @@ endif
                                     db "Hi-Scores", 0
                                     dq 420, 450
 				    db "Options",0
-				    dq 440, 500
+				    dq 420, 500
+                                    db "Credits", 0
+                                    dq 440, 550
                                     db "About", 0
-                                    dq 445, 550
+                                    dq 445, 600
                                     db "Quit", 0
                                     dq 0
 
@@ -432,11 +452,11 @@ endif
                                     dq 400, 450
                                     db "Graphics:", 0
                                     dq 350, 475
-                                    db "The Internet", 0
+                                    db "See Credits", 0
                                     dq 410, 525
                                     db "Sprites:", 0
                                     dq 350, 550
-                                    db "bugpixel.com", 0
+                                    db "See Credits", 0
                                     dq 350, 600
                                     db "Open Source:", 0
                                     dq 50, 625
@@ -444,7 +464,12 @@ endif
                                     dq 300, 675
                                     db "Version 0.1 alpha", 0
                                     dq 0
-									
+
+    CreditText                      dq 370, 325
+                                    db "Graphics:", 0
+                                    dq 350, 350
+                                    dq 0
+                                    									
     HighScoresText                  db "High Scores", 0
     EasyModeText                    db "Easy Mode",0
     MediumModeText                  db "Medium Mode", 0
@@ -470,6 +495,7 @@ endif
                                     dq GREAT_MACHINE_GAMEPLAY
                                     dq GREAT_MACHINE_HISCORE
 			            dq GREAT_MACHINE_STATE_OPTIONS
+                                    dq GREAT_MACHINE_STATE_CREDITS
                                     dq GREAT_MACHINE_STATE_ABOUT
                                     dq GREAT_MACHINE_FAILURE_STATE  ; Quit
     MenuIntroTimer                  dq 0
@@ -506,7 +532,6 @@ endif
     CurrentMemoryPtr         dq ?
     SpriteConvert      SPRITE_CONVERT     <?>
     GameEngInit        GAME_ENGINE_INIT   <?>
-    WinnerGraphic      IMAGE_INFORMATION  <?>
     RoadGraphic        IMAGE_INFORMATION  <?>
     RoadScroll         SCROLLING_GIF      <?>
     MountainGraphic    IMAGE_INFORMATION  <?>
@@ -876,6 +901,8 @@ NESTED_ENTRY GreatMachine_SpaceBar, _TEXT$00
   JE @GoToMenu
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_ABOUT
   JE @GoToMenu
+  CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_CREDITS
+  JE @GoToMenu
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_INTRO
   JNE @CheckOtherState
 
@@ -1077,6 +1104,15 @@ NESTED_ENTRY GreatMachine_LeftArrowPress, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
+  ;DEC [DeBounceMovement]       ; TBD if we want to implement debounce
+  ;CMP [DeBounceMovement], 0
+  ;JGE @SkipUpate
+  ;MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
+
+  MOV RAX, [PlayerSprite.SpriteVelMaxX]
+  NEG RAX
+  MOV [PlayerSprite.SpriteVelX], RAX
+@SkipAdjustment:
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1108,6 +1144,15 @@ NESTED_ENTRY GreatMachine_RightArrowPress, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
+  ;DEC [DeBounceMovement]       ; TBD if we want to implement debounce
+  ;CMP [DeBounceMovement], 0
+  ;JGE @SkipUpate
+  ;MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
+
+  MOV RAX, [PlayerSprite.SpriteVelMaxX]
+  MOV [PlayerSprite.SpriteVelX], RAX
+
+@SkipAdjustment:
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1133,7 +1178,8 @@ NESTED_ENTRY GreatMachine_LeftArrow, _TEXT$00
   JB @GameNotActive
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
-
+  MOV [PlayerSprite.SpriteVelX], 0
+  ; MOV [DeBounceMovement], 0
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1163,6 +1209,8 @@ NESTED_ENTRY GreatMachine_RightArrow, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
+  MOV [PlayerSprite.SpriteVelX], 0
+; MOV [DeBounceMovement], 0
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1196,6 +1244,8 @@ NESTED_ENTRY GreatMachine_DownArrowPress, _TEXT$00
   JB @GameNotActive
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
+  
+  MOV [NextPlayerRoadLane], 1  
 
 @GameNotActive:
 @PlayerIsDead:
@@ -1237,6 +1287,8 @@ NESTED_ENTRY GreatMachine_UpArrowPress, _TEXT$00
   JB @GameNotActive
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
+
+  MOV [NextPlayerRoadLane], 0
 
 @GameNotActive:
 @PlayerIsDead:
@@ -1719,7 +1771,72 @@ NESTED_ENTRY GreatMachine_SetupPrototypesHard, _TEXT$00
 NESTED_END GreatMachine_SetupPrototypesHard, _TEXT$00
 
 
+;*********************************************************
+;   GreatMachine_LoadAndCreatePlayerSprite
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadAndCreatePlayerSprite, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
 
+ifdef USE_FILES
+  MOV RDX, OFFSET Tree1Graphic
+  MOV RCX, OFFSET PlayerStartCarImage
+  DEBUG_FUNCTION_CALL GameEngine_LoadGif
+else  
+  MOV RCX, OFFSET PlayerStartCarImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
+  MOV RCX, RAX
+    
+  MOV RDX, OFFSET PlayerFirstCarGraphic
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+endif  
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [PlayerFirstCarGraphic.StartX], 0
+  MOV [PlayerFirstCarGraphic.StartY], 0
+  MOV [PlayerFirstCarGraphic.InflateCountDown], 0
+  MOV [PlayerFirstCarGraphic.InflateCountDownMax], 0
+  PXOR XMM0, XMM0
+  MOVSD [PlayerFirstCarGraphic.IncrementX], XMM0
+  MOVSD [PlayerFirstCarGraphic.IncrementY], XMM0
+
+  LEA RCX, [PlayerFirstCarConvert]
+
+  LEA RDX, [PlayerFirstCarGraphic]
+  MOV SPRITE_CONVERT.ImageInformationPtr[RCX], RDX
+
+  LEA RDX, [PlayerSpriteBasicInformation]
+  MOV SPRITE_CONVERT.SpriteBasicInformtionPtr[RCX], RDX
+
+  MOV SPRITE_CONVERT.SpriteImageStart[RCX], 0
+  MOV SPRITE_CONVERT.SpriteNumImages[RCX], 2
+
+  MOV SPRITE_CONVERT.SpriteX[RCX], 0
+  MOV SPRITE_CONVERT.SpriteY[RCX], 0
+  
+  MOV R8, [PlayerFirstCarGraphic.ImageWidth]
+  MOV SPRITE_CONVERT.SpriteX2[RCX], R8
+  MOV R8, [PlayerFirstCarGraphic.ImageHeight]
+  MOV SPRITE_CONVERT.SpriteY2[RCX], R8
+
+  DEBUG_FUNCTION_CALL GameEngine_ConvertImageToSprite
+
+  LEA RAX, [PlayerSpriteBasicInformation]
+  MOV [CurrentPlayerSprite], RAX
+@FailureExit:  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_LoadAndCreatePlayerSprite, _TEXT$00
 
 
 
@@ -1840,6 +1957,11 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   ; Determine Hi Scores
   ;
   DEBUG_FUNCTION_CALL GreatMachine_SetupHiScores
+
+  ;    
+  ; Load the player sprites
+  ;
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAndCreatePlayerSprite
 
   ;
   ;  Load GIFs
@@ -2111,30 +2233,6 @@ else
 endif  
   CMP RAX, 0
   JE @FailureExit
-
-ifdef USE_FILES
-  MOV RDX, OFFSET WinnerGraphic
-  MOV RCX, OFFSET WinnerImage
-  DEBUG_FUNCTION_CALL GameEngine_LoadGif
-else
-  MOV RCX, OFFSET WinnerImage
-  DEBUG_FUNCTION_CALL GreatMachine_LoadGifResource
-  MOV RCX, RAX
-
-  MOV RDX, OFFSET WinnerGraphic
-  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
-endif
-  CMP RAX, 0
-  JE @FailureExit
-
-  MOV [WinnerGraphic.StartX], 0
-  MOV [WinnerGraphic.StartY], 0
-  MOV [WinnerGraphic.InflateCountDown], 0
-  MOV [WinnerGraphic.InflateCountDownMax], 0
-  PXOR XMM0, XMM0
-  MOVSD [WinnerGraphic.IncrementX], XMM0
-  MOVSD [WinnerGraphic.IncrementY], XMM0
-
 
   MOV [TitleGraphic.StartX], 0
   MOV [TitleGraphic.StartY], 0
@@ -2411,6 +2509,27 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
 
   
+  ;
+  ; Reset Player
+  ; 
+  MOV [PlayerSprite.ImagePointer], 0
+  MOV [PlayerSprite.ExplodePointer], 0
+  MOV [PlayerSprite.SpriteAlive], 1
+  MOV [PlayerSprite.SpriteX], PLAYER_START_X
+  MOV [PlayerSprite.SpriteY], PLAYER_START_Y
+  MOV [PlayerSprite.SpriteVelX], 0
+  MOV [PlayerSprite.SpriteVelY], 0
+  MOV [PlayerSprite.SpriteVelMaxX], PLAYER_START_MAX_VEL_X
+  MOV [PlayerSprite.SpriteVelMaxY], PLAYER_START_MAX_VEL_Y
+  MOV [PlayerSprite.SpriteWidth], PLAYER_X_DIM
+  MOV [PlayerSprite.SpriteHeight], PLAYER_Y_DIM
+  MOV [PlayerSprite.HitPoints], PLAYER_START_HP
+  MOV [PlayerSprite.MaxHp], PLAYER_START_HP
+  MOV [PlayerSprite.Damage], PLAYER_DAMAGE
+  MOV [PlayerLives], PLAYER_START_LIVES     
+  MOV [NextPlayerRoadLane], 1
+  MOV [CurrentPlayerRoadLane], 1
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -2654,6 +2773,58 @@ NESTED_ENTRY GreatMachine_IntroScreen, _TEXT$00
 NESTED_END GreatMachine_IntroScreen, _TEXT$00
 
 
+
+;*********************************************************
+;   GreatMachine_Credits
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: State
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Credits, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV RDX, OFFSET GeneralGraphic
+  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+
+  MOV R9, TITLE_Y
+  MOV R8, TITLE_X
+  MOV RDX, OFFSET TitleGraphic
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+
+
+  MOV R8, 20
+  MOV RDX, OFFSET CreditText
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayScrollText
+
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], INTRO_FONT_SIZE
+  MOV R9, INTRO_Y + 40
+  MOV R8, INTRO_X
+  MOV RDX, OFFSET PressSpaceToContinue
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_CREDITS
+  MOV RAX, GREAT_MACHINE_STATE_CREDITS
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_Credits, _TEXT$00
+
+
+
 ;*********************************************************
 ;   GreatMachine_AboutScreen
 ;
@@ -2780,8 +2951,8 @@ NESTED_ENTRY GreatMachine_Winner, _TEXT$00
   MOV RDI, RDX
 
 
-  MOV RDX, OFFSET WinnerGraphic
-  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+;  MOV RDX, OFFSET WinnerGraphic
+;  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
   
   MOV R9, TITLE_Y
   MOV R8, TITLE_X
@@ -3216,6 +3387,9 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_AnimateBackground
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
 
   MOV RAX, [GreatMachineCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -3836,12 +4010,76 @@ NESTED_ENTRY GreatMachine_DisplayPlayer, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  CMP [PlayerSprite.SpriteAlive], 0
+  JE @SpriteIsDead
 
+  CMP [PlayerSprite.SpriteVelX], 0
+  JE @SkipUpdateOfX
+  MOV RAX, [PlayerSprite.SpriteVelX]
+  ADD [PlayerSprite.SpriteX], RAX
+  CMP [PlayerSprite.SpriteX], 0
+  JGE @TestOtherEnd
+  MOV [PlayerSprite.SpriteX], 0
+  JMP @DoneUpdatingX
+@TestOtherEnd:
+  MOV RAX, [PlayerSprite.SpriteX]
+  ADD RAX, PLAYER_CAR_LENGTH
+  CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  JB @DoneUpdatingX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  DEC RAX
+  SUB RAX, PLAYER_CAR_LENGTH
+  MOV [PlayerSprite.SpriteX], RAX
+@DoneUpdatingX:
+@SkipUpdateOfX:
+  MOV EAX, [NextPlayerRoadLane]
+  CMP [CurrentPlayerRoadLane], EAX
+  JE @SkipPlayerMovementToNewLane
+  CMP EAX, 1
+  JE @MoveDown
+  MOV RAX, [PlayerSprite.SpriteVelMaxY]
+  NEG RAX
+  ADD [PlayerSprite.SpriteY], RAX
+  CMP [PlayerSprite.SpriteY], PLAYER_LANE_0
+  JA @DoneUpdatingMovement
+  MOV [CurrentPlayerRoadLane], 0
+  MOV [PlayerSprite.SpriteY], PLAYER_LANE_0
+  JMP @DoneUpdatingMovement
+@MoveDown:
+  MOV RAX, [PlayerSprite.SpriteVelMaxY]
+  ADD [PlayerSprite.SpriteY], RAX
+  CMP [PlayerSprite.SpriteY], PLAYER_LANE_1
+  JB @DoneUpdatingMovement
+  MOV [CurrentPlayerRoadLane], 1
+  MOV [PlayerSprite.SpriteY], PLAYER_LANE_1
+  JMP @DoneUpdatingMovement
+@SkipPlayerMovementToNewLane:
+  ;
+  ; Unfortunately, we need to do this quick fix up rather than add more complicated
+  ; code to deal with someone pressing both up and down at the same time and getting the
+  ; car stuck in the middle of the road.
+  ;
+  MOV [PlayerSprite.SpriteY], PLAYER_LANE_0
+  CMP [CurrentPlayerRoadLane], 0
+  JE @DoneUpdatingMovement
+  MOV [PlayerSprite.SpriteY], PLAYER_LANE_1
+@DoneUpdatingMovement:
 
+  MOV R9, [PlayerSprite.SpriteY]
+  MOV R8, [PlayerSprite.SpriteX]
+  MOV RDX, [CurrentPlayerSprite]
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySprite  
+
+@SpriteIsDead:
+  XOR RAX, RAX
+@ExitDisplayPlayer:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END GreatMachine_DisplayPlayer, _TEXT$00
+
 
 
 

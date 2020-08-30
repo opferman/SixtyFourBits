@@ -8,7 +8,6 @@ LOADING_GIF       GIFFILE resources\loadingbackground.gif
 LOGO_GIF          GIFFILE resources\GreatMachine_logo.gif
 MENU_GIF          GIFFILE resources\menu.gif
 GENERAL_GIF       GIFFILE resources\general.gif
-WINNER_GIF        GIFFILE resources\greatmachinefinish.gif
 ROAD_GIF          GIFFILE resources\road.gif
 MOUNTAINS_GIF     GIFFILE resources\mountains.gif
 SKY_GIF           GIFFILE resources\sky.gif
@@ -16,5 +15,5 @@ TREE1_GIF         GIFFILE resources\tree1.gif
 TREE2_GIF         GIFFILE resources\tree2.gif
 TREE3_GIF         GIFFILE resources\tree3.gif
 TREE4_GIF         GIFFILE resources\tree4.gif
-
+PLAYER_START_GIF  GIFFILE resources\startercar.gif
 #endif
