@@ -58,12 +58,19 @@ LMEM_ZEROINIT EQU <40h>
 ;*********************************************************
 
 LEVEL_INFORMATION STRUCT 
-  LevelNumberGraphic   dq ?   
-  LevelStartDelay      dq ?
-  pfnLevelReset        dq ?
-  pfnNextLevel         dq ?
-  LevelTimer           dq ?
-  LevelNumber          dq ?
+  LevelNumberGraphic     dq ?   
+  LevelStartDelay        dq ?
+  LevelStartDelayRefresh dq ?
+  pfnLevelReset          dq ?
+  pfnNextLevel           dq ?
+  NumberOfConcurrentCars dq ?
+  CarsCanBeMultipleLanes dq ?
+  TimerAfterCarsLeave    dq ?
+  TimerAfterCarsLeaveRefresh    dq ?
+  TimerBetweenConcurrent dq ?
+  TimerBetweenConcurrentRefresh dq ?
+  LevelTimer             dq ?
+  LevelNumber            dq ?
 LEVEL_INFORMATION ENDS
 
 
@@ -95,6 +102,25 @@ GREAT_MACHINE_STATE_CREDITS              EQU <11>
 GREAT_MACHINE_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 
+SPRITE_TYPE_CAR        EQU <1>
+SPRITE_TYPE_TOXIC      EQU <2>
+SPRITE_TYPE_PART       EQU <3>
+SPRITE_TYPE_PEDESTRIAN EQU <4>
+
+NUMBER_OF_CAR_GIFS     EQU <1>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
+NUMBER_OF_CARS         EQU <1>
+
+SPECIAL_SPRITE_STRUCT struct
+   SpriteIsActive  dq ?
+   SpriteVelX      dq ?
+   SpriteMaxVelX   dq ?
+   SpriteX         dq ?
+   SpriteY         dq ?
+   SpriteType      dq ?
+   SpritePoints    dq ?
+   ScrollingPtr    dq ?
+   ListPtr         dq ?
+SPECIAL_SPRITE_STRUCT ends
 
 
 SPRITE_STRUCT  struct
@@ -167,7 +193,7 @@ LEVEL_NAME_X           EQU <50>
 LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
 NUMBER_OF_GENERIC_CARS  EQU <1>
-
+NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
 ;
 ; Game Over Constants
 ;
@@ -346,10 +372,9 @@ else
     LevelTwoImage                   db "LEVEL_TWO_GIF", 0     
     LevelThreeImage                 db "LEVEL_THREE_GIF", 0   
     LevelFourImage                  db "LEVEL_FOUR_GIF", 0   
-    GenericCarImage                 db "GENERIC_CARxxx", 0    ; Change the X's to numbers 
+    GenericCarImage                 db "GENERIC_CARxxx_GIF", 0    ; Change the X's to numbers 
 endif	
-
-    
+ 
     GamePlayPage                    dq 0
     GamePlayTextOne                 dq 50, 300
                                     db "Doc Green has traveled into the", 0
@@ -405,12 +430,28 @@ endif
     ;
     ; Level Support
     ;
-    LevelInformation    LEVEL_INFORMATION  <?>
-    LevelNameGraphic    IMAGE_INFORMATION  <?>
-    LevelOneGraphic     IMAGE_INFORMATION  <?>
-    LevelTwoGraphic     IMAGE_INFORMATION  <?>
-    LevelThreeGraphic   IMAGE_INFORMATION  <?>
-    LevelFourGraphic    IMAGE_INFORMATION  <?>
+    LevelInformationPtr  dq ?
+
+    LevelInformationEasy LEVEL_INFORMATION  <?>
+                         LEVEL_INFORMATION  <?>
+                         LEVEL_INFORMATION  <?>
+                         LEVEL_INFORMATION  <?>
+
+    LevelInformationMedium LEVEL_INFORMATION  <?>
+                           LEVEL_INFORMATION  <?>
+                           LEVEL_INFORMATION  <?>
+                           LEVEL_INFORMATION  <?>
+
+    LevelInformationHard   LEVEL_INFORMATION  <?>
+                           LEVEL_INFORMATION  <?>
+                           LEVEL_INFORMATION  <?>
+                           LEVEL_INFORMATION  <?>
+
+    LevelNameGraphic     IMAGE_INFORMATION  <?>
+    LevelOneGraphic      IMAGE_INFORMATION  <?>
+    LevelTwoGraphic      IMAGE_INFORMATION  <?>
+    LevelThreeGraphic    IMAGE_INFORMATION  <?>
+    LevelFourGraphic     IMAGE_INFORMATION  <?>
 
     ;
     ;  Player Support Structures
@@ -567,6 +608,8 @@ endif
     MenuScreen         IMAGE_INFORMATION  <?>
     TitleGraphic       IMAGE_INFORMATION  <?>
     GeneralGraphic     IMAGE_INFORMATION  <?>
+
+
 ;
 ; Car Graphics
 ;
@@ -584,8 +627,36 @@ endif
                        dq ?
                        dq ?
                        dq ?
-                       
 
+   GenericCarSpriteList      SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+
+   GenericCarScrollList      SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>                       
+                             SCROLLING_GIF      <?>                       
+                             SCROLLING_GIF      <?>                       
 
    GenericCarImageList IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
@@ -753,6 +824,7 @@ endif
   MOV GAME_ENGINE_INIT.GameLoadCxt[RDX], RSI
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_Init
+  CMP RAX, 0
   JE @FailureExit
 
   MOV RDX, GreatMachine_SpaceBar
@@ -1906,6 +1978,14 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   CMP RAX, 0
   JE @FailureExit  
 
+  ;
+  ; Load the Generic Car Graphics
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_LoadCarGraphics
+  CMP RAX, 0
+  JE @FailureExit 
+
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -2098,12 +2178,129 @@ NESTED_END GreatMachine_LoadBackgroundGraphics, _TEXT$00
 
 
 
+
+;*********************************************************
+;   GreatMachine_LoadCarGraphics
+;
+;        Parameters: Master Structure
+;
+;        Return Value: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadCarGraphics, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  XOR RBX, RBX
+  MOV R15, OFFSET GenericCarImageList
+  MOV R14, OFFSET GenericCarScrollList
+  MOV R13, OFFSET GenericCarSpriteList
+  MOV R12, OFFSET GenericCarListPtr
+@LoadCarGraphics:
+  CMP RBX, NUMBER_OF_CAR_GIFS   ; This way you can disable the cars by setting the equates to 0
+  JE @CarsComplete
+  INC RBX
+
+ifdef USE_FILES
+  MOV RCX, OFFSET GenericCarImage
+  ADD RCX, 10
+  MOV DL, BL
+  CMP DL, 10
+  JB @Perform1sConversion
+  MOV DL, '0'
+  ADD DL, BL
+  JMP @AddDotGifNull
+  MOV BYTE PTR [RCX], '1'
+  INC RCX
+  SUB DL, 10
+@Perform1sConversion:
+  ADD DL, '0'
+  MOV BYTE PTR [RCX], DL
+  INC RCX
+@AddDotGifNull:
+  MOV BYTE PTR [RCX], '.'
+  INC RCX
+  MOV BYTE PTR [RCX], 'g'
+  INC RCX
+  MOV BYTE PTR [RCX], 'i'
+  INC RCX
+  MOV BYTE PTR [RCX], 'f'
+  INC RCX
+  MOV BYTE PTR [RCX], 0
+else
+  MOV RCX, OFFSET GenericCarImage
+  ADD RCX, 11
+  MOV DL, BL
+  CMP DL, 10
+  JB @Perform1sConversion
+  MOV DL, '0'
+  ADD DL, BL
+  JMP @AddDotGifNull
+  MOV BYTE PTR [RCX], '1'
+  INC RCX
+  SUB DL, 10
+@Perform1sConversion:
+  ADD DL, '0'
+  MOV BYTE PTR [RCX], DL
+  INC RCX
+@AddDotGifNull:
+  MOV BYTE PTR [RCX], '_'
+  INC RCX
+  MOV BYTE PTR [RCX], 'G'
+  INC RCX
+  MOV BYTE PTR [RCX], 'I'
+  INC RCX
+  MOV BYTE PTR [RCX], 'F'
+  INC RCX
+  MOV BYTE PTR [RCX], 0
+endif
+
+  MOV RDX, R15                          ; Car Image List Entry
+  MOV RCX, OFFSET GenericCarImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV SCROLLING_GIF.CurrentX[R14], 0
+  MOV SCROLLING_GIF.CurrentY[R14], 0
+  MOV SCROLLING_GIF.XIncrement[R14], ROAD_SCROLL_X_INC
+  MOV SCROLLING_GIF.YIncrement[R14], ROAD_SCROLL_Y_INC
+  MOV SCROLLING_GIF.ImageInformation[R14], R15
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteVelX[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteMaxVelX[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteX[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteY[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.ScrollingPtr[R13], R14
+  MOV SPECIAL_SPRITE_STRUCT.ListPtr[R13], 0
+
+  ADD R12, 8
+  ADD R13, SIZE SPECIAL_SPRITE_STRUCT
+  ADD R14, SIZE SCROLLING_GIF
+  ADD R15, SIZE IMAGE_INFORMATION
+  JMP @LoadCarGraphics
+@CarsComplete:
+  MOV EAX, 1
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadCarGraphics, _TEXT$00
+
 ;*********************************************************
 ;   GreatMachine_LoadLevelNameGraphics
 ;
 ;        Parameters: None
 ;
-;        Return Value: None
+;        Return Value: TRUE/FALSE
 ;
 ;
 ;*********************************************************  
@@ -2222,11 +2419,14 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
   
-  MOV [LevelInformation.LevelStartDelay], LEVEL_START_DELAY
-  MOV [LevelInformation.LevelNumber], 1
-  MOV RAX, OFFSET LevelOneGraphic
-  MOV [LevelInformation.LevelNumberGraphic], RAX
+  MOV RAX, OFFSET LevelInformationEasy
+  MOV [LevelInformationPtr], RAX
+  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], LEVEL_START_DELAY
+  MOV LEVEL_INFORMATION.LevelNumber[RAX], 1
+  MOV RCX, OFFSET LevelOneGraphic
+  MOV LEVEL_INFORMATION.LevelNumberGraphic[RAX], RCX
 
   ;
   ; Reset Player
@@ -3091,7 +3291,8 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_AnimateBackground
 
-  CMP [LevelInformation.LevelStartDelay], 0
+  MOV RAX, [LevelInformationPtr]
+  CMP LEVEL_INFORMATION.LevelStartDelay[RAX], 0
   JE @LevelPlay
 
   MOV R9, LEVEL_NAME_Y
@@ -3102,11 +3303,13 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
 
   MOV R9, LEVEL_NUMBER_Y
   MOV R8, LEVEL_NUMBER_X
-  MOV RDX, [LevelInformation.LevelNumberGraphic]
+  MOV RAX, [LevelInformationPtr]
+  MOV RDX, LEVEL_INFORMATION.LevelNumberGraphic[RAX]
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
 
-  DEC [LevelInformation.LevelStartDelay]
+  MOV RAX, [LevelInformationPtr]
+  DEC LEVEL_INFORMATION.LevelStartDelay[RAX]
   JMP @LevelDelay
 
 
@@ -3489,8 +3692,9 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  
-  MOV [LevelInformation.LevelStartDelay], LEVEL_START_DELAY
+
+  MOV RAX, [LevelInformationPtr]
+  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], LEVEL_START_DELAY
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

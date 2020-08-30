@@ -21,4 +21,5 @@ LEVEL_ONE_GIF     GIFFILE resources\one.gif
 LEVEL_TWO_GIF     GIFFILE resources\two.gif
 LEVEL_THREE_GIF   GIFFILE resources\three.gif
 LEVEL_FOUR_GIF    GIFFILE resources\four.gif
+GENERIC_CAR1_GIF  GIFFILE resources\GenericCar1.gif
 #endif
