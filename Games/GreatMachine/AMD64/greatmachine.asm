@@ -95,17 +95,23 @@ SPRITE_TYPE_PEDESTRIAN EQU <4>
 NUMBER_OF_CAR_GIFS     EQU <1>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
 NUMBER_OF_CARS         EQU <1>
 
+
 SPECIAL_SPRITE_STRUCT struct
-   SpriteIsActive  dq ?
-   SpriteVelX      dq ?
-   SpriteMaxVelX   dq ?
-   SpriteX         dq ?
-   SpriteY         dq ?
-   SpriteType      dq ?
-   SpritePoints    dq ?
-   ScrollingPtr    dq ?
-   ListNextPtr     dq ?
-   ListBeforePtr   dq ?
+   SpriteIsActive   dq ?
+   SpriteListPtr    dq ?  ; Pointer to the listhead in case we are first and need to update it.
+   SpriteVelX       dq ?
+   SpriteMaxVelX    dq ?
+   SpriteX          dq ?
+   SpriteY          dq ?
+   SpriteType       dq ?
+   SpritePoints     dq ?
+   SpriteBias            dq ?
+   SpriteBiasMask        dq ?
+   SpriteDeBounce        dq ?
+   SpriteDeBounceRefresh dq ?
+   ScrollingPtr     dq ?
+   ListNextPtr      dq ?
+   ListBeforePtr    dq ?
 SPECIAL_SPRITE_STRUCT ends
 
 
@@ -158,11 +164,16 @@ LEVEL_INFORMATION STRUCT
 
   ; Cars
   NumberOfConcurrentCars          dq ?
+  CurrrentNumberOfCars            dq ?
   CarsCanBeMultipleLanes          dq ?
   TimerAfterCarsLeave             dq ?
   TimerAfterCarsLeaveRefresh      dq ?
   TimerBetweenConcurrent          dq ?
   TimerBetweenConcurrentRefresh   dq ?
+  MinAddedVelocity                dq ?
+  MaxAddedVelocity                dq ?
+  VelocityCanBeDynamic            dq ?
+  CarCanChangeLanes               dq ?
 
   ; Pedestrians
   PedestriansCanBeInStreet        dq ?
@@ -476,12 +487,17 @@ endif
  ; Level Number Graphic                                   LevelNumberGraphic                              
  ; Level One Start Delay in Ticks (Ticks are # of screen updates)            LevelStartDelay              
  ; Level One Start Delay Refresh (Constant)                                  LevelStartDelayRefresh       
- ; Number of concurrent cars on the level                                    NumberOfConcurrentCars       
+ ; Number of concurrent cars on the level (Constant)                         NumberOfConcurrentCars       
+ ; Current Number of Cars on the Level                                       CurrrentNumberOfCars
  ; Can have cars in multiple lanes at the same time                          CarsCanBeMultipleLanes       
  ; In Ticks, how long before a new car can be generated                  TimerAfterCarsLeave              
  ; Refresh the tick rate for car generation (constant)                   TimerAfterCarsLeaveRefresh       
  ; Timer between concurrent car generation (if any) in ticks             TimerBetweenConcurrent           
- ; Timer between concurrent car generation (if any) in ticks (constant)  TimerBetweenConcurrentRefresh    
+ ; Timer between concurrent car generation (if any) in ticks (constant)  TimerBetweenConcurrentRefresh  
+ ; The minimum velocity a car can have                                   MinAddedVelocity               
+ ; The maximum velocity a car can have                                   MaxAddedVelocity                
+ ; The velocity can change during game play                              VelocityCanBeDynamic            
+ ; The car can change lanes during game play                             CarCanChangeLanes                 
  ; If pedestrians can be in the street.                                  PedestriansCanBeInStreet         
  ; Tick count between generating pedestrians                             PesdestrianTimer                 
  ; refresh the tick count generating pedestrians (constant)              PesdestrianTimerRefresh          
@@ -507,8 +523,13 @@ OFFSET LevelOneGraphic,\
 0,\   
 100,\ 
 100,\ 
-0,\   
-0,\   
+1,\   
+0,\
+0,\
+1,\
+3,\   
+0,\
+0,\
 0,\   
 50,\  
 50,\  
@@ -544,6 +565,15 @@ LEVEL_INFORMATION  <?>
     LevelTwoGraphic      IMAGE_INFORMATION  <?>
     LevelThreeGraphic    IMAGE_INFORMATION  <?>
     LevelFourGraphic     IMAGE_INFORMATION  <?>
+
+;
+; Active Animation Lists
+;
+        TopSideWalkPtr    dq 0
+        LaneZeroPtr       dq 0
+        LaneOnePtr        dq 0
+        BottomSideWalkPtr dq 0
+
 
     ;
     ;  Player Support Structures
@@ -836,13 +866,6 @@ LEVEL_INFORMATION  <?>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
-;
-; Active Animation Lists
-;
-        TopSideWalkPtr    dq ?
-        LaneZeroPtr       dq ?
-        LaneOnePtr        dq ?
-        BottomSideWalkPtr dq ?
 
 ;
 ;  Tree Graphics
@@ -2667,6 +2690,11 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   MOV [NextPlayerRoadLane], 1
   MOV [CurrentPlayerRoadLane], 1
 
+  ;
+  ; Reset all game lists
+  ;
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyAllLists
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -3537,7 +3565,7 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   CMP LEVEL_INFORMATION.LevelStartDelay[RAX], 0
   JE @LevelPlay
 
-  MOV R9, LEVEL_NAME_Y
+  MOV R9, LEVEL_NAME_Y 
   MOV R8, LEVEL_NAME_X
   MOV RDX, OFFSET LevelNameGraphic
   MOV RCX, RSI
@@ -3556,45 +3584,59 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
 
 @LevelPlay:
 
-  ;**************************************************************
-  ; Level Action - Section One - New Game Pieces
-  ;**************************************************************
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_DispatchGamePieces 
-
-  ;**************************************************************
-  ; Level Action - Section Two - Detection
-  ;**************************************************************
-
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_CollisionPlayer
-
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
-
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
-
-  ;**************************************************************
-  ; Level Action - Section Three - Display Graphics and Sprites
-  ;**************************************************************
   MOV R12D, [CurrentPlayerRoadLane]
   MOV EAX, [NextPlayerRoadLane]
   CMP R12, RAX
   JE @NotBetweenLanes
   MOV R12, 3                    ; Signal we are between lanes.
 @NotBetweenLanes:
+
+  ;**************************************************************
+  ; Level Action - Section One - New Game Pieces
+  ;**************************************************************
+
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DispatchGamePieces 
+
+  ;**************************************************************
+  ; Level Action - Section Two - Detection
+  ;**************************************************************
+  XOR R8, R8
+  CMP R12, 3
+  JE @NotInALane
+  MOV R8, [LaneZeroPtr] 
+  CMP R12, 0
+  JE @InLaneZero
+  MOV R8, [LaneOnePtr]
+@InLaneZero:
+@NotInALane:
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_CollisionPlayer
+
+  MOV R8, [LaneZeroPtr]
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+
+  MOV R8, [LaneOnePtr]
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+
+  ;**************************************************************
+  ; Level Action - Section Three - Display Graphics and Sprites
+  ;**************************************************************
+
   ;
   ; Top Sidewalk First
   ;
 
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+   MOV R8, [TopSideWalkPtr]
+   MOV RDX, RBX
+   MOV RCX, RSI
+   DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
   ;
   ; Lane 0
@@ -3605,9 +3647,10 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
 @SkipPlayerUpdateForLane0:
 
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+  MOV R8, [LaneZeroPtr]
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
   ;
   ; Character transition between lanes
@@ -3626,17 +3669,19 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
 @SkipPlayerUpdateForLane1:
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+
+  MOV R8, [LaneOnePtr]
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
   ;
   ; Bottom Sidewalk
   ;
-
-  ;MOV RDX, RBX
-  ;MOV RCX, RSI
-  ;DEBUG_FUNCTION_CALL GreatMachine_DisplayzLevelSprites
+  MOV R8, [BottomSideWalkPtr]
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
 
 
@@ -4018,6 +4063,11 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   MOV RCX, LEVEL_INFORMATION.LevelStartDelayRefresh[RAX]
   MOV LEVEL_INFORMATION.LevelStartDelay[RAX], RCX
 
+  ;
+  ; Reset all game lists
+  ;
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyAllLists
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -4046,26 +4096,6 @@ NESTED_ENTRY GreatMachine_NextLevel, _TEXT$00
 
 NESTED_END GreatMachine_NextLevel, _TEXT$00
 
-;*********************************************************
-;   GreatMachine_NextLevel_New
-;
-;        Parameters: Level Information
-;
-;        Return Value: None
-;
-;
-;*********************************************************  
-NESTED_ENTRY GreatMachine_NextLevel_New, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-
-NESTED_END GreatMachine_NextLevel_New, _TEXT$00
 
 
 ;*********************************************************
@@ -4091,6 +4121,118 @@ NESTED_ENTRY GreatMachine_NextLevel_Win, _TEXT$00
 NESTED_END GreatMachine_NextLevel_Win, _TEXT$00
 
 
+;*********************************************************
+;   GreatMachine_EmptyAllLists
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_EmptyAllLists, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RCX, [TopSideWalkPtr]
+  MOV [TopSideWalkPtr], 0
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyList
+
+  MOV RCX, [LaneZeroPtr]
+  MOV [LaneZeroPtr], 0
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyList
+
+  MOV RCX, [LaneOnePtr]
+  MOV [LaneOnePtr], 0
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyList
+
+  MOV RCX, [BottomSideWalkPtr]
+  MOV [BottomSideWalkPtr], 0
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyList
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_EmptyAllLists, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_EmptyList
+;
+;        Parameters: List
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_EmptyList, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+@EmptyListLoop:
+  CMP RCX, 0
+  JE @ListIsEmpty
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RCX], 0
+  MOV RDX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RCX]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RCX], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], 0
+  MOV RCX, RDX
+  JMP @EmptyListLoop
+
+@ListIsEmpty:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_EmptyList, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_RemoveFromList
+;
+;        Parameters: List Entry
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_RemoveFromList, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RCX], 0
+  MOV RDX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RCX]
+  MOV R8, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RCX], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], 0
+  CMP RDX, 0
+  JE @SkipUpdatingRdx
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RDX], R8
+@SkipUpdatingRdx:
+  CMP R8, 0
+  JNE @UpdateBeforeList
+
+  MOV R8, SPECIAL_SPRITE_STRUCT.SpriteListPtr[RCX]
+  MOV [R8], RDX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RCX], 0
+  JMP @ListEntryRemoved
+  
+@UpdateBeforeList:
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R8], RDX
+
+@ListEntryRemoved:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_RemoveFromList, _TEXT$00
+
 
 
 ;***************************************************************************************************************************************************************************
@@ -4098,6 +4240,200 @@ NESTED_END GreatMachine_NextLevel_Win, _TEXT$00
 ;***************************************************************************************************************************************************************************
 
 
+;*********************************************************
+;   GreatMachine_DispatchGamePieces
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_GenerateGameCars
+
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_DispatchGamePieces, _TEXT$00
+
+SPECIAL_SPRITE_STRUCT struct
+   SpriteIsActive   dq ?
+   SpriteListPtr    dq ?  ; Pointer to the listhead in case we are first and need to update it.
+   SpriteVelX       dq ?
+   SpriteMaxVelX    dq ?
+   SpriteX          dq ?
+   SpriteY          dq ?
+   SpriteType       dq ?
+   SpritePoints     dq ?
+   SpriteBias            dq ?
+   SpriteBiasMask        dq ?
+   SpriteDeBounce        dq ?
+   SpriteDeBounceRefresh dq ?
+   ScrollingPtr     dq ?
+   ListNextPtr      dq ?
+   ListBeforePtr    dq ?
+SPECIAL_SPRITE_STRUCT ends
+
+LEVEL_INFORMATION STRUCT 
+  LevelNumber                     dq ?
+  LevelTimer                      dq ?
+  LevelTimerRefresh               dq ?
+  LevelNumberGraphic              dq ?   
+  LevelStartDelay                 dq ?
+  LevelStartDelayRefresh          dq ?
+
+  ;
+  ; Game Piece Configurations
+  ;
+
+  ; Cars
+  NumberOfConcurrentCars          dq ?
+  CurrrentNumberOfCars            dq ?
+  CarsCanBeMultipleLanes          dq ?
+  TimerAfterCarsLeave             dq ?
+  TimerAfterCarsLeaveRefresh      dq ?
+  TimerBetweenConcurrent          dq ?
+  TimerBetweenConcurrentRefresh   dq ?
+  MinAddedVelocity                dq ?
+  MaxAddedVelocity                dq ?
+  VelocityCanBeDynamic            dq ?
+  CarCanChangeLanes               dq ?
+
+  ; Pedestrians
+  PedestriansCanBeInStreet        dq ?
+  PesdestrianTimer                dq ?
+  PesdestrianTimerRefresh         dq ?
+  
+  ; Toxic Waste Barrels
+  LevelCompleteBarrelCount        dq ?
+  CurrentLevelBarrelCount         dq ?
+  BarrelGenerateTimer             dq ?
+  CanHaveBadBarrels               dq ?
+  BarrelGenerateTimerRefresh      dq ?
+
+  ; Car Parts
+  LevelCompleteCarPartCount       dq ?
+  CurrentCarPartCount             dq ?
+  CarPartGenerateTimer            dq ?
+  CarPartGenerateTimerRefresh     dq ?
+
+  ;
+  ; Function Pointers
+  ;
+  pfnLevelReset                   dq ?
+  pfnNextLevel                    dq ?
+LEVEL_INFORMATION ENDS
+
+
+;*********************************************************
+;   GreatMachine_GenerateGameCars
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+;  MOV RSI, RCX
+;  MOV RDI, RDX 
+
+  MOV RSI, [LevelInformationPtr]
+  CMP LEVEL_INFORMATION.TimerAfterCarsLeave[RSI], 0
+  JNE @StillTicking
+
+  MOV RBX, [GenericCarListPtr]
+  XOR RDI, RDI
+@CheckCars:
+  MOV R9, LEVEL_INFORMATION.NumberOfConcurrentCars[RSI]
+  CMP LEVEL_INFORMATION.CurrrentNumberOfCars[RSI], R9
+  JEA @AlreadyMaximumCapacityForCars
+
+  CMP RDI, NUMBER_OF_CARS
+  JE @NoMoreCarsToCheck
+  
+  CMP SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RBX], 0
+  JNE @UpdateDebounce
+
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX], 0
+  JNE @SpriteIsAlreadyActive
+  
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND RAX, SPECIAL_SPRITE_STRUCT.SpriteBiasMask[RBX]
+  CMP RAX, SPECIAL_SPRITE_STRUCT.SpriteBias[RBX]
+  JA @SpriteSkipped
+
+  ;
+  ; Now this sprite will become active and put on one of the list.
+  ;
+
+  DEBUG_FUNCTION_CALL Math_Rand
+
+  MOV R15, OFFSET LaneZeroPtr
+  MOV R14, PLAYER_LANE_0
+  TEST EAX, 1
+  JE @LaneZeroItIs
+  MOV R15, OFFSET LaneOnePtr
+  MOV R14, PLAYER_LANE_1
+@LaneZeroItIs:
+  INC LEVEL_INFORMATION.CurrrentNumberOfCars[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX], 1
+
+  MOV R10, LEVEL_INFORMATION.MinAddedVelocity[RSI]
+  DEC R10
+  MOV R11, LEVEL_INFORMATION.MaxAddedVelocity[RSI]
+  SUB R11, R10
+  MOV R12, R11
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  DIV R12
+  ADD RDX, LEVEL_INFORMATION.MinAddedVelocity[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
+  MOV , RDX
+
+   SpriteX          dq ?
+   SpriteY          dq ?
+
+  MinAddedVelocity                dq ?
+  MaxAddedVelocity                dq ?
+  
+
+@SpriteIsAlreadyActive:
+@SpriteSkipped:
+  INC RDI
+  ADD RBX, SIZE SPECIAL_SPRITE_STRUCT
+  JMP @CheckCars
+@UpdateDebounce:
+  INC RDI
+  DEC SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RBX]
+  ADD RBX, SIZE SPECIAL_SPRITE_STRUCT
+  JMP @CheckCars
+  
+@StillTicking:
+  DEC LEVEL_INFORMATION.TimerAfterCarsLeave[R8] 
+@NoMoreCarsToCheck:  
+@AlreadyMaximumCapacityForCars:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_GenerateGameCars, _TEXT$00
 
 
 ;***************************************************************************************************************************************************************************
@@ -4108,7 +4444,25 @@ NESTED_END GreatMachine_NextLevel_Win, _TEXT$00
 
 
 
+;*********************************************************
+;   GreatMachine_CollisionNPC
+;
+;        Parameters: Master Context, Level information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
 
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_CollisionNPC, _TEXT$00
 
 ;*********************************************************
 ;   GreatMachine_CollisionPlayer
@@ -4145,6 +4499,28 @@ NESTED_END GreatMachine_CollisionPlayer, _TEXT$00
 ;***************************************************************************************************************************************************************************
 ; Display Graphics Functions
 ;***************************************************************************************************************************************************************************
+
+
+
+;*********************************************************
+;   GreatMachine_DisplayLevelSprites
+;
+;        Parameters: Master Context, Double Buffer, Sprite Linked List
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_DisplayLevelSprites, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_DisplayLevelSprites, _TEXT$00
 
 
 
@@ -4231,7 +4607,6 @@ NESTED_ENTRY GreatMachine_DisplayPlayer, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END GreatMachine_DisplayPlayer, _TEXT$00
-
 
 
 
