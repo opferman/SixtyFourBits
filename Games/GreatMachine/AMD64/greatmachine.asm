@@ -4257,9 +4257,9 @@ NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
   MOV RSI, RCX
   MOV RDI, RDX
 
-  MOV RDX, RDI
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL GreatMachine_GenerateGameCars
+  ;MOV RDX, RDI
+  ;MOV RCX, RSI
+  ;DEBUG_FUNCTION_CALL GreatMachine_GenerateGameCars
 
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -4268,73 +4268,7 @@ NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
 
 NESTED_END GreatMachine_DispatchGamePieces, _TEXT$00
 
-SPECIAL_SPRITE_STRUCT struct
-   SpriteIsActive   dq ?
-   SpriteListPtr    dq ?  ; Pointer to the listhead in case we are first and need to update it.
-   SpriteVelX       dq ?
-   SpriteMaxVelX    dq ?
-   SpriteX          dq ?
-   SpriteY          dq ?
-   SpriteType       dq ?
-   SpritePoints     dq ?
-   SpriteBias            dq ?
-   SpriteBiasMask        dq ?
-   SpriteDeBounce        dq ?
-   SpriteDeBounceRefresh dq ?
-   ScrollingPtr     dq ?
-   ListNextPtr      dq ?
-   ListBeforePtr    dq ?
-SPECIAL_SPRITE_STRUCT ends
 
-LEVEL_INFORMATION STRUCT 
-  LevelNumber                     dq ?
-  LevelTimer                      dq ?
-  LevelTimerRefresh               dq ?
-  LevelNumberGraphic              dq ?   
-  LevelStartDelay                 dq ?
-  LevelStartDelayRefresh          dq ?
-
-  ;
-  ; Game Piece Configurations
-  ;
-
-  ; Cars
-  NumberOfConcurrentCars          dq ?
-  CurrrentNumberOfCars            dq ?
-  CarsCanBeMultipleLanes          dq ?
-  TimerAfterCarsLeave             dq ?
-  TimerAfterCarsLeaveRefresh      dq ?
-  TimerBetweenConcurrent          dq ?
-  TimerBetweenConcurrentRefresh   dq ?
-  MinAddedVelocity                dq ?
-  MaxAddedVelocity                dq ?
-  VelocityCanBeDynamic            dq ?
-  CarCanChangeLanes               dq ?
-
-  ; Pedestrians
-  PedestriansCanBeInStreet        dq ?
-  PesdestrianTimer                dq ?
-  PesdestrianTimerRefresh         dq ?
-  
-  ; Toxic Waste Barrels
-  LevelCompleteBarrelCount        dq ?
-  CurrentLevelBarrelCount         dq ?
-  BarrelGenerateTimer             dq ?
-  CanHaveBadBarrels               dq ?
-  BarrelGenerateTimerRefresh      dq ?
-
-  ; Car Parts
-  LevelCompleteCarPartCount       dq ?
-  CurrentCarPartCount             dq ?
-  CarPartGenerateTimer            dq ?
-  CarPartGenerateTimerRefresh     dq ?
-
-  ;
-  ; Function Pointers
-  ;
-  pfnLevelReset                   dq ?
-  pfnNextLevel                    dq ?
-LEVEL_INFORMATION ENDS
 
 
 ;*********************************************************
@@ -4363,7 +4297,7 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
 @CheckCars:
   MOV R9, LEVEL_INFORMATION.NumberOfConcurrentCars[RSI]
   CMP LEVEL_INFORMATION.CurrrentNumberOfCars[RSI], R9
-  JEA @AlreadyMaximumCapacityForCars
+  JAE @AlreadyMaximumCapacityForCars
 
   CMP RDI, NUMBER_OF_CARS
   JE @NoMoreCarsToCheck
@@ -4405,13 +4339,11 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
   DIV R12
   ADD RDX, LEVEL_INFORMATION.MinAddedVelocity[RSI]
   MOV RCX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
-  MOV , RDX
-
-   SpriteX          dq ?
-   SpriteY          dq ?
-
-  MinAddedVelocity                dq ?
-  MaxAddedVelocity                dq ?
+;
+;
+; TBD - Add
+;
+;
   
 
 @SpriteIsAlreadyActive:
