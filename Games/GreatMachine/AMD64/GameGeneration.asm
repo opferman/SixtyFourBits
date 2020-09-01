@@ -118,24 +118,41 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
   XOR RDX, RDX
   DIV R12
   ADD RDX, LEVEL_INFORMATION.MinAddedVelocity[RSI]
-  MOV RBX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
   
-  MOV SCROLLING_GIF.CurrentY[RBX], R14
-  MOV SCROLLING_GIF.XIncrement[RBX], RDX       
-  MOV SCROLLING_GIF.YIncrement[RBX], 0
-  MOV RCX, SCROLLING_GIF.ImageInformation [RBX]
+  MOV SCROLLING_GIF.CurrentY[RAX], R14
+  MOV SCROLLING_GIF.XIncrement[RAX], RDX       
+  MOV SCROLLING_GIF.YIncrement[RAX], 0
+  MOV RCX, SCROLLING_GIF.ImageInformation [RAX]
 
   MOV RCX, IMAGE_INFORMATION.ImageWidth[RCX]
   NEG RCX
   INC RCX
-  MOV SCROLLING_GIF.CurrentX[RBX], RCX    
- 
+  MOV SCROLLING_GIF.CurrentX[RAX], RCX    
+
+  CMP R15, 0
+  JE @AddSelfToList
+
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], RBX
+  MOV RCX, QWORD PTR [R15]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], RCX
+  MOV QWORD PTR [R15], RBX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
 
 @SpriteIsAlreadyActive:
 @SpriteSkipped:
   INC RDI
   ADD RBX, SIZE SPECIAL_SPRITE_STRUCT
   JMP @CheckCars
+
+@AddSelfToList:
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
+  MOV QWORD PTR [R15], RBX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
+  JMP @CheckCars
+
 @UpdateDebounce:
   INC RDI
   DEC SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RBX]
@@ -143,7 +160,7 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
   JMP @CheckCars
   
 @StillTicking:
-  DEC LEVEL_INFORMATION.TimerAfterCarsLeave[R8] 
+  DEC LEVEL_INFORMATION.TimerAfterCarsLeave[RSI]
 @NoMoreCarsToCheck:  
 @AlreadyMaximumCapacityForCars:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

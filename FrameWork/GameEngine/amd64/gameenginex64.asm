@@ -928,6 +928,39 @@ NESTED_ENTRY GameEngine_DisplaySideScrollingSprite, _TEXT$00
 @CompleteDrawingScroll:  
   MOV RAX, SCROLLING_GIF.XIncrement[RDI]
   ADD SCROLLING_GIF.CurrentX[RDI], RAX
+
+  MOV R11, SCROLLING_GIF.ImageInformation[RDI]
+
+  ;
+  ; Check if frame should be advanced
+  ;
+  INC IMAGE_INFORMATION.ImageFrameNum[R11]
+  MOV RCX, IMAGE_INFORMATION.ImageMaxFrames[R11]
+  SUB RCX, 1                    ; We are doing this in 0-based index.
+  CMP IMAGE_INFORMATION.ImageFrameNum[R11], RCX
+  JB @NoFrameUpdate
+  
+  ;
+  ;  General Frame Update
+  ;
+  MOV IMAGE_INFORMATION.ImageFrameNum[R11], 0
+  MOV RCX, IMAGE_INFORMATION.ImgOffsets[R11]
+  ADD IMAGE_INFORMATION.CurrImagePtr[R11], RCX
+
+  ;
+  ; Check for Frame Wraparound
+  ;
+  INC IMAGE_INFORMATION.CurrentImage[R11]
+  MOV RCX, IMAGE_INFORMATION.NumberOfImages[R11]
+  CMP IMAGE_INFORMATION.CurrentImage[R11], RCX
+  JB @NoFrameReset
+
+  MOV IMAGE_INFORMATION.CurrentImage[R11], 0   
+  MOV RCX, IMAGE_INFORMATION.ImageListPtr[R11]
+  MOV IMAGE_INFORMATION.CurrImagePtr[R11], RCX
+@NoFrameReset:
+@NoFrameUpdate:
+
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

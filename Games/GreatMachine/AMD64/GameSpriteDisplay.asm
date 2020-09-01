@@ -30,8 +30,77 @@ NESTED_ENTRY GreatMachine_DisplayLevelSprites, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
+  MOV RBX, RCX
+  MOV RSI, R8
 
+@DrawAllScrollingSprites:
+  CMP RSI, 0
+  JE @NothingToDraw
 
+  MOV RDX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RSI]
+  MOV RCX, RBX
+  DEBUG_FUNCTION_CALL GameEngine_DisplaySideScrollingSprite
+  CMP RAX, 0
+  JE @DeactivateSprite
+  
+  MOV RSI, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  JMP @DrawAllScrollingSprites
+@DeactivateSprite:
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI], 0
+  CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  JE @NothingInFront
+  ; Fix up next on list to point to before.
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX], RCX
+
+@NothingInFront:
+  CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  JE @OnHeadOfList
+  
+  ;
+  ; Fix up before pointer and advance to next on the list.
+  ;
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RAX], RCX
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], 0
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RSI], RAX
+  MOV RSI, RCX
+
+  MOV RCX, [LevelInformationPtr]
+  
+  MOV RAX, LEVEL_INFORMATION.TimerAfterCarsLeaveRefresh[RCX]
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RCX], RAX
+  DEC LEVEL_INFORMATION.CurrrentNumberOfCars[RCX]
+
+  JMP @DrawAllScrollingSprites
+
+@OnHeadOfList:
+  MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI]
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV QWORD PTR [RCX], RAX
+
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], 0
+  MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RSI], RCX
+  MOV RSI, RAX
+
+  MOV RCX, [LevelInformationPtr]
+  
+  MOV RAX, LEVEL_INFORMATION.TimerAfterCarsLeaveRefresh[RCX]
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RCX], RAX
+  DEC LEVEL_INFORMATION.CurrrentNumberOfCars[RCX]
+
+  JMP @DrawAllScrollingSprites
+@NothingToDraw:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET

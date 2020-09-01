@@ -92,8 +92,8 @@ SPRITE_TYPE_TOXIC      EQU <2>
 SPRITE_TYPE_PART       EQU <3>
 SPRITE_TYPE_PEDESTRIAN EQU <4>
 
-NUMBER_OF_CAR_GIFS     EQU <1>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
-NUMBER_OF_CARS         EQU <1>
+NUMBER_OF_CAR_GIFS     EQU <7>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
+NUMBER_OF_CARS         EQU <7>
 
 
 SPECIAL_SPRITE_STRUCT struct
@@ -234,7 +234,7 @@ LEVEL_NAME_Y           EQU <768/2 - 30>
 LEVEL_NAME_X           EQU <50>
 LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
-NUMBER_OF_GENERIC_CARS  EQU <1>
+NUMBER_OF_GENERIC_CARS  EQU <7>
 NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
 
 ;
@@ -270,88 +270,28 @@ PLAYER_SCORE_Y         EQU <10>
 ;
 ; Parallax Scrolling Constants
 ;
-ROAD_SCROLL_X_INC EQU <-5>
-ROAD_SCROLL_Y_INC EQU <0>
+ROAD_SCROLL_X_INC     EQU <-5>
+ROAD_SCROLL_Y_INC     EQU <0>
 MOUNTAIN_SCROLL_X_INC EQU <-2>
 MOUNTAIN_SCROLL_Y_INC EQU <0>
-SKY_SCROLL_X_INC EQU <-1>
-SKY_SCROLL_Y_INC EQU <0>
+SKY_SCROLL_X_INC      EQU <-1>
+SKY_SCROLL_Y_INC      EQU <0>
 
 ;
 ; Player Defaults
 ;
- PLAYER_CAR_LENGTH      EQU <390>  ; Hard coding the sprite length.
- PLAYER_START_X         EQU <(1024/2) - (390/2)>  ; Hardcode to middle of screen
+ PLAYER_CAR_LENGTH      EQU <240>  ; Hard coding the sprite length.
+ PLAYER_START_X         EQU <(1024/2) - (240/2)>  ; Hardcode to middle of screen
  PLAYER_START_Y         EQU <550>
  PLAYER_LANE_1          EQU <PLAYER_START_Y>
  PLAYER_LANE_0          EQU <PLAYER_START_Y - 100>
  PLAYER_START_MAX_VEL_X EQU <6>
  PLAYER_START_MAX_VEL_Y EQU <20>
- PLAYER_X_DIM       EQU <390>
- PLAYER_Y_DIM       EQU <111>
- PLAYER_START_HP    EQU <10>
- PLAYER_DAMAGE      EQU <1>
- PLAYER_START_LIVES EQU <3>
-
-
-;*********************************************************
-; Macros
-;*********************************************************
-
-;
-; Setup sprite list, destroys RAX, RDX, R8, R10, R11
-;
-SETUP_SPRITE_BASIC_LIST_MACRO MACRO BasicSprite, ExplodeSprite, NumberSprites
-  LOCAL SetupSpriteLoop
-  MOV R8,  OFFSET SpriteBasicExplodPtr
-  MOV RDX, OFFSET SpriteBasicListPtr 
-
-  MOV R10, [SpritePointer]
-  MOV R11, R10
-  ADD R11, BasicSprite  * SIZEOF SPRITE_BASIC_INFORMATION
-  ADD R10, ExplodeSprite * SIZEOF SPRITE_BASIC_INFORMATION
-
-  XOR RAX, RAX
-SetupSpriteLoop:
-  MOV QWORD PTR [R8], R10
-  MOV QWORD PTR [RDX], R11
-  ADD R8, 8
-  ADD RDX, 8
-  ADD R11, SIZEOF SPRITE_BASIC_INFORMATION
-  ADD R10, SIZEOF SPRITE_BASIC_INFORMATION
-
-  INC RAX
-  CMP RAX, NumberSprites
-  JB SetupSpriteLoop
-ENDM
-
-
-;
-; Setup sprite list, destroys RAX, RDX, R8, R10, R11
-;
-SETUP_SPRITE_BASIC_LIST_NO_EXPLODE_MACRO MACRO BasicSprite, NumberSprites
-  LOCAL SetupSpriteLoop
-  MOV R8,  OFFSET SpriteBasicExplodPtr
-  MOV RDX, OFFSET SpriteBasicListPtr 
-
-  MOV R10, [SpritePointer]
-  MOV R11, R10
-  ADD R11, BasicSprite  * SIZEOF SPRITE_BASIC_INFORMATION
-  XOR R10, R10
-
-  XOR RAX, RAX
-SetupSpriteLoop:
-  MOV QWORD PTR [R8], R10
-  MOV QWORD PTR [RDX], R11
-  ADD R8, 8
-  ADD RDX, 8
-  ADD R11, SIZEOF SPRITE_BASIC_INFORMATION
-
-  INC RAX
-  CMP RAX, NumberSprites
-  JB SetupSpriteLoop
-ENDM
-
+ PLAYER_X_DIM           EQU <240>
+ PLAYER_Y_DIM           EQU <111>
+ PLAYER_START_HP        EQU <10>
+ PLAYER_DAMAGE          EQU <1>
+ PLAYER_START_LIVES     EQU <3>
 
 
 ;*********************************************************
@@ -521,9 +461,9 @@ OFFSET LevelOneGraphic,\
 200,\ 
 1,\   
 0,\   
+1,\ 
 100,\ 
-100,\ 
-1,\   
+100,\   
 0,\
 0,\
 1,\
@@ -761,11 +701,8 @@ LEVEL_INFORMATION  <?>
     PlayerLives                     dq 0
     PlayerScore                     dq 0
     PlayerOutputText                db 256 DUP(?)
-    PlayerHpText                    db "Hit Points: %I64u",0
     PlayerLivesText                 db "Lives: %I64u",0
-    PlayerBombsText                 db "Bombs: %I64u", 0
     PlayerCurLevelText              db "Level: %I64u", 0
-    PlayerCurWaveText               db "Wave: %I64u", 0
     PlayerScoreFormat               db "%I64u", 0
     SpriteImageFileListAttributes   db 1, 2
     
