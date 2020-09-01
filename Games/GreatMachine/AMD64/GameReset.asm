@@ -61,7 +61,6 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   MOV RCX, LEVEL_INFORMATION.LevelTimerRefresh[RAX]
   MOV LEVEL_INFORMATION.LevelTimer[RAX], RCX
 
-  MOV RCX, LEVEL_INFORMATION.TimerAfterCarsLeaveRefresh[RAX]
   MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RAX], 0
 
   MOV RCX, LEVEL_INFORMATION.TimerBetweenConcurrentRefresh[RAX]
@@ -105,6 +104,7 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   MOV [BoomTimer], 0
 
   MOV [LevelStartTimer], 0
+  MOV [TimerAdjustMs], 0
 
   ;
   ; Reset all game lists

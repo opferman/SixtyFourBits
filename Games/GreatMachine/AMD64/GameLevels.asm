@@ -167,6 +167,8 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   CMP [BoomTimerActive], 0
   JE @BoomNotActive
 
+  MOV [PlayerSprite.SpriteAlive], 0
+
   MOV R9, [BoomYLocation] 
   MOV R8, [BoomXLocation]
   MOV RDX, OFFSET BoomGraphic
@@ -175,6 +177,14 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL GreatMachine_ScreenCapture
+  ;
+  ; We need to adjust the timer so this dead time isn't counted towards the level.
+  ;
+  MOV RCX, [LevelInformationPtr]
+  MOV RAX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
+  SUB RAX, LEVEL_INFORMATION.LevelTimer[RCX]
+  ADD [TimerAdjustMs], RAX
+  MOV [LevelStartTimer], 0
 
   DEC [PlayerLives]
   CMP [PlayerLives], 0

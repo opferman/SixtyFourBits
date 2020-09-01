@@ -98,8 +98,7 @@ NESTED_ENTRY GreatMachine_Winner, _TEXT$00
   MOV RDI, RDX
 
 
-;  MOV RDX, OFFSET WinnerGraphic
-;  DEBUG_FUNCTION_CALL GameEngine_DisplayFullScreenAnimatedImage
+ ; DEBUG_FUNCTION_CALL GreatMachine_DisplayWinnerAnimation
   
   MOV R9, TITLE_Y
   MOV R8, TITLE_X
@@ -161,6 +160,29 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   MOV RAX, [LevelInformationPtr]
   MOV RCX, LEVEL_INFORMATION.LevelStartDelayRefresh[RAX]
   MOV LEVEL_INFORMATION.LevelStartDelay[RAX], RCX
+  MOV LEVEL_INFORMATION.CurrrentNumberOfCars[RAX], 0
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RAX], 0
+  MOV RCX, LEVEL_INFORMATION.TimerBetweenConcurrentRefresh[RAX]
+  MOV LEVEL_INFORMATION.TimerBetweenConcurrent[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.PesdestrianTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.PesdestrianTimer[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimer[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimer[RAX], RCX
+
+  MOV [PlayerSprite.SpriteX], PLAYER_START_X
+  MOV [PlayerSprite.SpriteY], PLAYER_START_Y
+  MOV [PlayerSprite.SpriteVelX], 0
+  MOV [PlayerSprite.SpriteVelY], 0
+
+  MOV [NextPlayerRoadLane], 1
+  MOV [CurrentPlayerRoadLane], 1
+
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
+
+  MOV [PlayerSprite.SpriteAlive], 1
 
   ;
   ; Reset all game lists

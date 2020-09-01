@@ -419,7 +419,7 @@ endif
   ;
   LevelInformationPtr  dq ?
   LevelStartTimer      dq ?
-
+  TimerAdjustMs        dq ?
  ;
  ;
  ;  Description for the LEVEL_INFORMATION structure seen below.
