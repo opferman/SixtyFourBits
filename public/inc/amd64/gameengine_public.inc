@@ -20,3 +20,5 @@ extern GameEngine_LoadGifMemory:proc
 extern GameEngine_DisplaySpriteNoLoop:proc
 extern GameEngine_DisplaySideScrollingGif:proc
 extern GameEngine_DisplaySideScrollingSprite:proc
+extern GameEngine_GetElapsedMs:proc
+extern GameEngine_StartTimerValue:proc

@@ -80,22 +80,88 @@ NESTED_ENTRY GreatMachine_CollisionPlayer, _TEXT$00
    MOV RAX, SCROLLING_GIF.CurrentX[RAX]
 
    ;
-   ; Compare: Player_Rear > Car_Front Then No Crash
-   ;          Player_Front < Car_Rear Then No Crash
+   ; Compare: Player_Rear > X_Front Then No Collision
+   ;          Player_Front < X_Rear Then No Collision
    ;
    MOV R10, [PlayerSprite.SpriteX]
-   ADD R10, PLAYER_CAR_LENGTH           ; Player_Front < Car_Rear
+   ADD R10, PLAYER_CAR_LENGTH           ; Player_Front < X_Rear
    CMP R10, RAX
-   JL @CarIsNotCollision
-
+   JL @IsNotCollision
+   MOV RBX, RAX                         ; Save for evaluation of crash site.
    ADD RAX, RCX
-   CMP [PlayerSprite.SpriteX], RAX       ; Player_Rear > Car_Front
-   JG @CarIsNotCollision
+   CMP [PlayerSprite.SpriteX], RAX       ; Player_Rear > X_Front
+   JG @IsNotCollision
    
+   ; Here we have a collision with "some" object.  We need to determine the object to see 
+   ; what we need to do.
+   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteType[R15]
+
+   CMP RAX, SPRITE_TYPE_CAR        
+   JE @CarCollision
+
+   CMP RAX, SPRITE_TYPE_TOXIC      
+   JE @ToxicCollision
+
+   CMP RAX, SPRITE_TYPE_PART       
+   JE @PartCollision
+
+   CMP RAX, SPRITE_TYPE_PEDESTRIAN 
+   JE @PedesstrianCollision
+   ; Should never get here unless we have a bug.
    INT 3
-   
-@CarIsNotCollision:
-   MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
+;
+; Car Collision is fatal, lose a life
+;
+@CarCollision:
+   MOV [BoomTimerActive], 1
+   MOV RAX, [BoomTimerRefresh]
+   MOV [BoomTimer], RAX
+   MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_BOOM
+   MOV RAX, [PlayerSprite.SpriteY]
+   MOV [BoomYLocation], RAX
+
+   CMP [PlayerSprite.SpriteX], RBX
+   JL @CrashAtFrontOfPlayer
+
+   MOV RAX, [BoomGraphic.ImageWidth]
+   SHR RAX, 1
+   MOV RCX, [PlayerSprite.SpriteX]
+   SUB RCX, RAX
+   MOV [BoomXLocation], RCX
+   JMP @EndOfList
+
+@CrashAtFrontOfPlayer:
+   MOV RAX, [BoomGraphic.ImageWidth]
+   SHR RAX, 1
+   MOV RCX, RBX
+   SUB RCX, RAX
+   MOV [BoomXLocation], RCX
+JMP @EndOfList
+
+;
+; Collect the Fuel
+;
+@ToxicCollision:
+
+JMP @NextItemCheck
+
+;
+; Collect the Part
+;
+@PartCollision:
+
+JMP @NextItemCheck
+
+;
+; Cannot hit pedestrians
+;
+@PedesstrianCollision:
+
+JMP @EndOfList
+
+@NextItemCheck:
+@IsNotCollision:
+   MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]    
    JMP @CheckForCollisions
 
 @EndOfList:

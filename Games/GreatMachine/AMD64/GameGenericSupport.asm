@@ -255,3 +255,32 @@ NESTED_ENTRY GreatMachine_RemoveFromList, _TEXT$00
 
 NESTED_END GreatMachine_RemoveFromList, _TEXT$00
 
+
+;*********************************************************
+;   GreatMachine_UpdateTimer
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_UpdateTimer, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RCX, [LevelStartTimer]
+  DEBUG_FUNCTION_CALL GameEngine_GetElapsedMs
+
+  MOV RCX, [LevelInformationPtr]
+  MOV RDX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
+  SUB RDX, RAX
+  MOV LEVEL_INFORMATION.LevelTimer[RCX], RDX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_UpdateTimer, _TEXT$00

@@ -29,6 +29,7 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
+  MOV RDI, RDX
   MOV [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_AnimateBackground
@@ -55,7 +56,14 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   JMP @LevelDelay
 
 @LevelPlay:
-
+  CMP [LevelStartTimer], 0
+  JNE @LevelTimerRunningUpdate
+  DEBUG_FUNCTION_CALL GameEngine_StartTimerValue
+  MOV [LevelStartTimer], RAX
+  JMP @SkipTimerUpdate
+@LevelTimerRunningUpdate:
+  DEBUG_FUNCTION_CALL GreatMachine_UpdateTimer
+@SkipTimerUpdate:
   MOV R12D, [CurrentPlayerRoadLane]
   MOV EAX, [NextPlayerRoadLane]
   CMP R12, RAX
@@ -155,9 +163,25 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
-
-
 @LevelDelay:
+  CMP [BoomTimerActive], 0
+  JE @BoomNotActive
+
+  MOV R9, [BoomYLocation] 
+  MOV R8, [BoomXLocation]
+  MOV RDX, OFFSET BoomGraphic
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL GreatMachine_ScreenCapture
+
+  DEC [PlayerLives]
+  CMP [PlayerLives], 0
+  JNE @ResetLevel 
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_END_GAME
+@ResetLevel:
+@BoomNotActive:
   MOV RAX, [GreatMachineCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

@@ -84,6 +84,7 @@ GREAT_MACHINE_END_GAME                   EQU <8>
 GREAT_MACHINE_STATE_ENTER_HI_SCORE       EQU <9>
 GREAT_MACHINE_LEVELS                     EQU <10>
 GREAT_MACHINE_STATE_CREDITS              EQU <11>
+GREAT_MACHINE_STATE_BOOM                 EQU <12>
 GREAT_MACHINE_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 
@@ -298,7 +299,7 @@ SKY_SCROLL_Y_INC      EQU <0>
 ; Data Segment
 ;*********************************************************
 .DATA
-    GreatMachineStateFuncPtrs dq  GreatMachine_Loading         ; GREAT_MACHINE_STATE_LOADING
+    GreatMachineStateFuncPtrs dq  GreatMachine_Loading             ; GREAT_MACHINE_STATE_LOADING
                               dq  GreatMachine_IntroScreen         ; GREAT_MACHINE_STATE_INTRO
                               dq  GreatMachine_MenuScreen          ; GREAT_MACHINE_STATE_MENU
                               dq  GreatMachine_GamePlayScreen      ; GREAT_MACHINE_GAMEPLAY
@@ -310,6 +311,7 @@ SKY_SCROLL_Y_INC      EQU <0>
                               dq  GreatMachine_EnterHiScore        ; GREAT_MACHINE_STATE_ENTER_HI_SCORE
                               dq  GreatMachine_Levels              ; GREAT_MACHINE_LEVELS
                               dq  GreatMachine_Credits             ; GREAT_MACHINE_CREDITS
+                              dq  GreatMachine_Boom                ; GREAT_MACHINE_STATE_BOOM
     CurrentTreeTick           dq  0
     ;
     ;  Graphic Resources 
@@ -335,6 +337,7 @@ ifdef USE_FILES
     LevelThreeImage                 db "three.gif",0    
     LevelFourImage                  db "four.gif",0     
     GenericCarImage                 db "GenericCarxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
+    BoomImage                       db "boom.gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -356,6 +359,7 @@ else
     LevelThreeImage                 db "LEVEL_THREE_GIF", 0   
     LevelFourImage                  db "LEVEL_FOUR_GIF", 0   
     GenericCarImage                 db "GENERIC_CARxxx_GIF", 0    ; Change the X's to numbers 
+    BoomImage                       db "BOOM_GIF", 0
 endif	
  
     GamePlayPage                    dq 0
@@ -414,6 +418,7 @@ endif
   ; Level Support
   ;
   LevelInformationPtr  dq ?
+  LevelStartTimer      dq ?
 
  ;
  ;
@@ -484,8 +489,6 @@ OFFSET LevelOneGraphic,\
 1000,\
 GreatMachine_ResetLevel,\
 GreatMachine_NextLevel>                                                              
-
-
 LEVEL_INFORMATION  <?>
 LEVEL_INFORMATION  <?>
 LEVEL_INFORMATION  <?>
@@ -506,13 +509,21 @@ LEVEL_INFORMATION  <?>
     LevelThreeGraphic    IMAGE_INFORMATION  <?>
     LevelFourGraphic     IMAGE_INFORMATION  <?>
 
-;
-; Active Animation Lists
-;
-        TopSideWalkPtr    dq 0
-        LaneZeroPtr       dq 0
-        LaneOnePtr        dq 0
-        BottomSideWalkPtr dq 0
+    ;
+    ; Activate Boom Timer
+    ;
+    BoomTimerActive    dq 0
+    BoomTimer          dq 0
+    BoomTimerRefresh   dq 100
+    BoomYLocation      dq ?
+    BoomXLocation      dq ?
+    ;
+    ; Active Animation Lists
+    ;
+    TopSideWalkPtr    dq 0
+    LaneZeroPtr       dq 0
+    LaneOnePtr        dq 0
+    BottomSideWalkPtr dq 0
 
 
     ;
@@ -739,6 +750,7 @@ LEVEL_INFORMATION  <?>
     MenuScreen         IMAGE_INFORMATION  <?>
     TitleGraphic       IMAGE_INFORMATION  <?>
     GeneralGraphic     IMAGE_INFORMATION  <?>
+    BoomGraphic        IMAGE_INFORMATION  <?>
 
 
 ;

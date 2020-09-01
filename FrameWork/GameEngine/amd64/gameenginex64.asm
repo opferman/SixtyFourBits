@@ -27,6 +27,8 @@ include gameengine_vars.inc
 LMEM_ZEROINIT EQU        <40h>
 MAX_FRAMES_PER_IMAGE EQU <3>
 DEBUG_STACK_SIZE EQU     <25>  ; Currently ignored, perhaps will be enabled in the future.
+HKEY_LOCAL_MACHINE EQU <080000002h>
+KEY_READ EQU <020019h>
 
 extern CloseHandle:proc
 extern WaitForSingleObject:proc
@@ -37,7 +39,9 @@ extern sin:proc
 extern LocalFree:proc
 extern VirtualAlloc:proc
 extern VirtualFree:proc
-
+extern RegOpenKeyExA:proc
+extern RegCloseKey:proc
+extern RegQueryValueExA:proc
 
 public GameEngine_Init
 public GameEngine_Free
@@ -59,6 +63,9 @@ MAX_KEYS EQU <256>
     DoubleBuffer                dq ?
     GameEngineStateFunctionPtrs dq ?
     ThreadLoadHandle            dq ?
+    CpuMhz                      dd ?
+    RegistryCpuKey              db "HARDWARE\DESCRIPTION\System\CentralProcessor\0", 0
+    RegistryMhzValue            db "~MHz", 0
 .CODE
 
 ;*********************************************************
@@ -104,6 +111,8 @@ NESTED_ENTRY GameEngine_Init, _TEXT$00
   MOV RDX, OFFSET GameEngine_FrameStateMachine
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL Engine_Private_OverrideDemoFunction
+
+  DEBUG_FUNCTION_CALL GameEngine_ReadCpuMhz
 
   MOV [GameEngineState], 0
   MOV RCX, GAME_ENGINE_INIT.GameFunctionPtrs[RDI]
@@ -1614,4 +1623,122 @@ NESTED_ENTRY GameEngine_PrintWord, _TEXT$00
   RET
 NESTED_END GameEngine_PrintWord, _TEXT$00
 
+
+
+
+;*********************************************************
+;  GameEngine_ReadCpuMhz
+;     
+;        Parameters: None
+;
+;        Return: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_ReadCpuMhz, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_LV)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_LV
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  ;
+  ; Default CPU MHz to 2GHz if we cannot open the key or query the value
+  ;
+  MOV [CpuMhz], 2000
+  LEA R8, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar1[RSP]
+  MOV STD_FUNCTION_STACK_LV.Parameters.Param5[RSP], R8
+  MOV R9, KEY_READ 
+  XOR R8, R8
+  MOV RDX, OFFSET RegistryCpuKey
+  MOV RCX, HKEY_LOCAL_MACHINE
+  DEBUG_FUNCTION_CALL RegOpenKeyExA 
+  CMP RAX, 0
+  JNE @OpenKeyFailed
+
+  MOV STD_FUNCTION_STACK_LV.LocalVariables.LocalVar2[RSP], 4
+  LEA RAX, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar2[RSP]
+  MOV STD_FUNCTION_STACK_LV.Parameters.Param6[RSP], RAX
+  MOV RAX, OFFSET CpuMhz
+  MOV STD_FUNCTION_STACK_LV.Parameters.Param5[RSP], RAX
+  XOR R9, R9 
+  XOR R8, R8
+  MOV RDX, OFFSET RegistryMhzValue
+  MOV RCX, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL RegQueryValueExA
+  ;
+  ;  Don't care about success or failure, we have to close the handle anyway.
+  ;
+
+  MOV RCX, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL RegCloseKey
+
+
+@OpenKeyFailed:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_LV
+  ADD RSP, SIZE STD_FUNCTION_STACK_LV
+  RET
+NESTED_END GameEngine_ReadCpuMhz, _TEXT$00
+
+
+;*********************************************************
+;  GameEngine_StartTimerValue
+;     
+;        Parameters: None
+;
+;        Return: Start Value
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_StartTimerValue, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  RDTSC
+  SHL RDX, 32
+  OR RAX, RDX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GameEngine_StartTimerValue, _TEXT$00
+
+
+;*********************************************************
+;  GameEngine_GetElapsedMs
+;     
+;        Parameters: Start Value
+;
+;        Return: Milliseconds
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_GetElapsedMs, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  RDTSC
+  SHL RDX, 32
+  OR RAX, RDX
+
+  SUB RAX, RCX
+
+  XOR RDX, RDX
+  DIV [CpuMhz]
+  ; RAX is now microseconds (us)
+  XOR RDX, RDX
+  MOV RCX, 1000
+  DIV RCX
+  ; RAX should now be milliseconds (ms)
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GameEngine_GetElapsedMs, _TEXT$00
+
+
 END
+
+

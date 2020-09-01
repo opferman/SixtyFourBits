@@ -101,6 +101,11 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   MOV [NextPlayerRoadLane], 1
   MOV [CurrentPlayerRoadLane], 1
 
+  MOV [BoomTimerActive], 0
+  MOV [BoomTimer], 0
+
+  MOV [LevelStartTimer], 0
+
   ;
   ; Reset all game lists
   ;

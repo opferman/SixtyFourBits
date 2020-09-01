@@ -28,4 +28,5 @@ GENERIC_CAR4_GIF  GIFFILE resources\GenericCar4.gif
 GENERIC_CAR5_GIF  GIFFILE resources\GenericCar5.gif
 GENERIC_CAR6_GIF  GIFFILE resources\GenericCar6.gif
 GENERIC_CAR7_GIF  GIFFILE resources\GenericCar7.gif
+BOOM_GIF          GIFFILE resources\boom.gif
 #endif
