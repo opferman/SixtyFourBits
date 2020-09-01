@@ -63,7 +63,7 @@ MAX_KEYS EQU <256>
     DoubleBuffer                dq ?
     GameEngineStateFunctionPtrs dq ?
     ThreadLoadHandle            dq ?
-    CpuMhz                      dd ?
+    CpuMhz                      dq 0
     RegistryCpuKey              db "HARDWARE\DESCRIPTION\System\CentralProcessor\0", 0
     RegistryMhzValue            db "~MHz", 0
 .CODE
@@ -1182,7 +1182,99 @@ NESTED_ENTRY GameEngine_DisplayTransparentImage, _TEXT$00
 NESTED_END GameEngine_DisplayTransparentImage, _TEXT$00
 
 
+;*********************************************************
+;   GameEngine_DisplayImage
+;
+;        Parameters: Master struct, Image, X, Y
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GameEngine_DisplayImage, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
 
+  MOV RDI, [DoubleBuffer]
+  
+  ;
+  ; Check if frame should be advanced
+  ;
+  INC IMAGE_INFORMATION.ImageFrameNum[RDX]
+  MOV RAX, IMAGE_INFORMATION.ImageMaxFrames[RDX]
+  CMP IMAGE_INFORMATION.ImageFrameNum[RDX], RAX
+  JB @NoFrameUpdate
+  
+  ;
+  ;  General Frame Update
+  ;
+  MOV IMAGE_INFORMATION.ImageFrameNum[RDX], 0
+  MOV RAX, IMAGE_INFORMATION.ImgOffsets[RDX]
+  ADD IMAGE_INFORMATION.CurrImagePtr[RDX], RAX
+
+  ;
+  ; Check for Frame Wraparound
+  ;
+  INC IMAGE_INFORMATION.CurrentImage[RDX]
+  MOV RAX, IMAGE_INFORMATION.NumberOfImages[RDX]
+  CMP IMAGE_INFORMATION.CurrentImage[RDX], RAX
+  JB @NoFrameReset
+
+  MOV IMAGE_INFORMATION.CurrentImage[RDX], 0   
+  MOV RAX, IMAGE_INFORMATION.ImageListPtr[RDX]
+  MOV IMAGE_INFORMATION.CurrImagePtr[RDX], RAX
+
+@NoFrameReset:
+@NoFrameUpdate:
+
+  MOV RSI, IMAGE_INFORMATION.CurrImagePtr[RDX]
+
+  ; R8 - X
+  ; R9 - Y
+  MOV RAX, R9
+  SHL RAX, 2
+  MOV R9, RDX
+  XOR RDX, RDX
+  MUL MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  ADD RDI, RAX
+  SHL R8, 2
+  ADD RDI, R8
+  MOV RDX, R9
+
+;
+; Plot the image on the screen, no screen bounds checking currently -- TBD
+;
+  XOR R9, R9
+@PlotVerticle:
+  XOR R10, R10
+@PlotHorizontal:
+
+  MOV EAX, [RSI]
+  MOV [RDI], EAX
+  ADD RDI, 4
+  ADD RSI, 4
+  INC R10
+  CMP R10, IMAGE_INFORMATION.ImageWidth[RDX]
+  JB @PlotHorizontal
+  ;
+  ; Wrap to the next location.
+  ;
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  SUB RAX, IMAGE_INFORMATION.ImageWidth[RDX]
+  SHL RAX, 2
+  ADD RDI, RAX
+
+  INC R9
+  CMP R9, IMAGE_INFORMATION.ImageHeight[RDX]
+  JB @PlotVerticle
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GameEngine_DisplayImage, _TEXT$00
 
 ;*********************************************************
 ;   GameEngine_DisplayCenteredImage

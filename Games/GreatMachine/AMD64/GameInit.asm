@@ -99,6 +99,9 @@ endif
   MOV RCX, VK_SPACE
   DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
 
+  MOV RDX, GreatMachine_P_Press
+  MOV RCX, VK_P
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
 
 ;
 ; TBD: Add keys and sequences for cheat codes.
@@ -153,8 +156,10 @@ NESTED_ENTRY GreatMachine_Free, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
-
- 
+  
+;
+; Ya, TBD on clean up :)
+;
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

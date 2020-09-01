@@ -941,6 +941,12 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
   CMP RAX, 0
   JE @FailureExit
 
+  MOV RDX, OFFSET PanelGraphic
+  MOV RCX, OFFSET PanelImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

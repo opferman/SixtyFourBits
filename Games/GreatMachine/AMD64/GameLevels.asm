@@ -163,17 +163,29 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
-@LevelDelay:
   CMP [BoomTimerActive], 0
   JE @BoomNotActive
-
   MOV [PlayerSprite.SpriteAlive], 0
+
+  DEC [PlayerLives]
+  CMP [PlayerLives], 0
+  JNE @DoNotUpdateState
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_END_GAME
+@DoNotUpdateState:
 
   MOV R9, [BoomYLocation] 
   MOV R8, [BoomXLocation]
   MOV RDX, OFFSET BoomGraphic
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+  ;
+  ; Display the Game Panel
+  ;
+  MOV RDX, [LevelInformationPtr] 
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayGamePanel
+
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL GreatMachine_ScreenCapture
@@ -183,15 +195,21 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, [LevelInformationPtr]
   MOV RAX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
   SUB RAX, LEVEL_INFORMATION.LevelTimer[RCX]
-  ADD [TimerAdjustMs], RAX
+  MOV [TimerAdjustMs], RAX
   MOV [LevelStartTimer], 0
+  JMP @SkipPanelUpdate
 
-  DEC [PlayerLives]
-  CMP [PlayerLives], 0
-  JNE @ResetLevel 
-  MOV [GreatMachineCurrentState], GREAT_MACHINE_END_GAME
-@ResetLevel:
 @BoomNotActive:
+
+  ;
+  ; Display the Game Panel
+  ;
+  MOV RDX, [LevelInformationPtr] 
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayGamePanel
+
+@LevelDelay:
+@SkipPanelUpdate:
   MOV RAX, [GreatMachineCurrentState]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

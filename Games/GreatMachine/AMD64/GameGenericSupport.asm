@@ -279,6 +279,13 @@ NESTED_ENTRY GreatMachine_UpdateTimer, _TEXT$00
   MOV RDX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
   SUB RDX, RAX
   SUB RDX, [TimerAdjustMs]
+  CMP RDX, 0
+  JG @SkipUpdateToZero
+  MOV RDX, 0
+  ; 
+  ; Do Level Timeout Stuff.
+  ;
+@SkipUpdateToZero:
   MOV LEVEL_INFORMATION.LevelTimer[RCX], RDX
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

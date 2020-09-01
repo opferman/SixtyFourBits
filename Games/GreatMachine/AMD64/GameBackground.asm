@@ -1,5 +1,5 @@
 ;*********************************************************
-; The Great Machine Game - Keyboard Handlers
+; The Great Machine Game - Parallax Scrolling Background
 ;
 ;  Written in Assembly x64
 ; 

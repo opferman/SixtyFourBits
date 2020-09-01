@@ -237,7 +237,8 @@ LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
 NUMBER_OF_GENERIC_CARS  EQU <7>
 NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
-
+PLAYER_SIDE_PANEL_FONT_SIZE EQU <2>
+PLAYER_SCORE_FONT_SIZE EQU <3>
 ;
 ; Game Over Constants
 ;
@@ -338,6 +339,7 @@ ifdef USE_FILES
     LevelFourImage                  db "four.gif",0     
     GenericCarImage                 db "GenericCarxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
     BoomImage                       db "boom.gif", 0
+    PanelImage                      db "panel.gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -360,6 +362,7 @@ else
     LevelFourImage                  db "LEVEL_FOUR_GIF", 0   
     GenericCarImage                 db "GENERIC_CARxxx_GIF", 0    ; Change the X's to numbers 
     BoomImage                       db "BOOM_GIF", 0
+    PanelImage                      db "PANEL_GIF", 0
 endif	
  
     GamePlayPage                    dq 0
@@ -411,6 +414,8 @@ endif
                                     dq 50, 350
                                     db "Great Machine around the road.",0
                                     dq 50, 400
+                                    db "`P' toggles the game panel.", 0
+                                    dq 50, 450
                                     db "Those are the only controls.", 0
                                     dq 0
 
@@ -420,6 +425,7 @@ endif
   LevelInformationPtr  dq ?
   LevelStartTimer      dq ?
   TimerAdjustMs        dq ?
+  GamePanel            dq ?
  ;
  ;
  ;  Description for the LEVEL_INFORMATION structure seen below.
@@ -712,9 +718,12 @@ LEVEL_INFORMATION  <?>
     PlayerLives                     dq 0
     PlayerScore                     dq 0
     PlayerOutputText                db 256 DUP(?)
-    PlayerLivesText                 db "Lives: %I64u",0
     PlayerCurLevelText              db "Level: %I64u", 0
+    PlayerLivesText                 db "Lives: %I64u",0
+    PlayerBarrels                   db "%I64u of %I64u Fuel", 0
+    PlayerParts                     db "%I64u of %I64u Parts", 0
     PlayerScoreFormat               db "%I64u", 0
+    PlayerTimerFormat               db "%02I64u:%02I64u", 0
     SpriteImageFileListAttributes   db 1, 2
     
 	;
@@ -751,6 +760,7 @@ LEVEL_INFORMATION  <?>
     TitleGraphic       IMAGE_INFORMATION  <?>
     GeneralGraphic     IMAGE_INFORMATION  <?>
     BoomGraphic        IMAGE_INFORMATION  <?>
+    PanelGraphic       IMAGE_INFORMATION  <?>
 
 
 ;
