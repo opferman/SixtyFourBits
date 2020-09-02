@@ -85,7 +85,7 @@ VK_C EQU <043h> ; C key
 VK_E EQU <045h> ; E key
 ;0x46 F key
 ;0x47 G key
-;0x48 H key
+VK_H   EQU <048h> ; H key
 ;0x49 I key
 ;0x4A J key
 ;0x4B K key

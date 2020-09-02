@@ -349,3 +349,38 @@ NESTED_ENTRY GreatMachine_Boom, _TEXT$00
   RET
 
 NESTED_END GreatMachine_Boom, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Pause
+;
+;        Parameters: Level Information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Pause, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL GreatMachine_ScreenBlast
+
+  CMP [PauseGame],0
+  JNE @KeepPausing
+
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
+
+@KeepPausing:
+  MOV RAX, [GreatMachineCurrentState]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_Pause, _TEXT$00
+
+

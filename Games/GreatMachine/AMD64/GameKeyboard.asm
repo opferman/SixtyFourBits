@@ -73,7 +73,34 @@ NESTED_ENTRY GreatMachine_P_Press, _TEXT$00
   RET
 NESTED_END GreatMachine_P_Press, _TEXT$00
 
+;*********************************************************
+;   GreatMachine_H_Press (Hold)
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_H_Press, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  CMP [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
+  JB @GameNotActive
+  CMP [PlayerSprite.SpriteAlive], 0
+  JE @PlayerIsDead
 
+  XOR [PauseGame], 1
+
+@GameNotActive:
+@PlayerIsDead:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_H_Press, _TEXT$00
 
 ;*********************************************************
 ;   GreatMachine_SpaceBar

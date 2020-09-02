@@ -239,6 +239,23 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayGamePanel
 
+  CMP [PauseGame], 0
+  JE @NoPauseorHold
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL GreatMachine_ScreenCapture
+  ;
+  ; We need to adjust the timer so this pause time isn't counted towards the level.
+  ;
+  MOV RCX, [LevelInformationPtr]
+  MOV RAX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
+  SUB RAX, LEVEL_INFORMATION.LevelTimer[RCX]
+  MOV [TimerAdjustMs], RAX
+  MOV [LevelStartTimer], 0
+        
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_PAUSE
+
+@NoPauseorHold:
 @LevelDelay:
 @SkipPanelUpdate:
   MOV RAX, [GreatMachineCurrentState]

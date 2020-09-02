@@ -85,6 +85,7 @@ GREAT_MACHINE_STATE_ENTER_HI_SCORE       EQU <9>
 GREAT_MACHINE_LEVELS                     EQU <10>
 GREAT_MACHINE_STATE_CREDITS              EQU <11>
 GREAT_MACHINE_STATE_BOOM                 EQU <12>
+GREAT_MACHINE_STATE_PAUSE                EQU <13>
 GREAT_MACHINE_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
 
@@ -339,6 +340,7 @@ SKY_SCROLL_Y_INC      EQU <0>
                               dq  GreatMachine_Levels              ; GREAT_MACHINE_LEVELS
                               dq  GreatMachine_Credits             ; GREAT_MACHINE_CREDITS
                               dq  GreatMachine_Boom                ; GREAT_MACHINE_STATE_BOOM
+                              dq  GreatMachine_Pause               ; GREAT_MACHINE_STATE_PAUSE
     CurrentTreeTick           dq  0
     ;
     ;  Graphic Resources 
@@ -1159,6 +1161,7 @@ OFFSET GreatMachine_Winner>
                        SCROLLING_GIF      <?>
                        SCROLLING_GIF      <?>
 
+    PauseGame          dq 0
     HiScoreListPtr     dq OFFSET HiScoreListConst
     HiScoreListConst   db "TEO", 0  ; Easy Mode Scores
 	                   dq 0

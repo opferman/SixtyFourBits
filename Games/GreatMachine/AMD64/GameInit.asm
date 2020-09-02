@@ -103,6 +103,11 @@ endif
   MOV RCX, VK_P
   DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
 
+  MOV RDX, GreatMachine_H_Press
+  MOV RCX, VK_H
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
+  
+
 ;
 ; TBD: Add keys and sequences for cheat codes.
 ;
