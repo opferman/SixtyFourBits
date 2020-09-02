@@ -982,23 +982,50 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
   MOV SPECIAL_SPRITE_STRUCT.SpriteY[R15], 0
   MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R15], 0
   MOV SPECIAL_SPRITE_STRUCT.ScrollingPtr[R15], R14
-  MOV SPECIAL_SPRITE_STRUCT.SpriteType[R15], SPRITE_TYPE_TOXIC
   MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
   MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
   DEBUG_FUNCTION_CALL Math_Rand
-  AND RAX, 0Fh
-  SHL RAX, 7
-  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R15], RAX
-
   ADD R15, SIZE SPECIAL_SPRITE_STRUCT
   ADD R14, SIZE SCROLLING_GIF
   ADD RDI, SIZE IMAGE_INFORMATION
   ADD RSI, 8
   INC RBX
   JMP @LoadGenericItems
-  
-
 @ItemsLoadCompleted:
+
+;
+; Setup Specialized settings
+;
+
+   XOR RBX, RBX
+   MOV R12, [FuelItemsList]
+@SetupFuelItems:
+   CMP RBX, NUMBER_OF_FUEL
+   JE @FuelItemsComplete
+
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_TOXIC
+   AND RAX, 0Fh
+   SHL RAX, 7
+   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R15], RAX
+   ADD R12, SIZE SPECIAL_SPRITE_STRUCT
+   INC RBX
+   JMP @SetupFuelItems
+@FuelItemsComplete:
+
+   XOR RBX, RBX
+   MOV R12, [CarPartsItemsList]
+@SetupPartsItems:
+   CMP RBX, NUMBER_OF_PARTS
+   JE @PartsItemsComplete
+
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART
+   AND RAX, 0Fh
+   SHL RAX, 9
+   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R15], RAX
+   ADD R12, SIZE SPECIAL_SPRITE_STRUCT
+   INC RBX
+   JMP @SetupPartsItems
+@PartsItemsComplete:
 
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

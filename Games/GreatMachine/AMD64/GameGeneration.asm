@@ -45,11 +45,16 @@ NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_GenerateGameFuel
 
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_GenerateGameCarParts
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 NESTED_END GreatMachine_DispatchGamePieces, _TEXT$00
+
 
 
 
@@ -307,6 +312,156 @@ NESTED_ENTRY GreatMachine_GenerateGameFuel, _TEXT$00
   RET
 
 NESTED_END GreatMachine_GenerateGameFuel, _TEXT$00
+
+     
+
+
+;*********************************************************
+;   GreatMachine_GenerateGameCarParts
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_GenerateGameCarParts, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R14, RCX
+  ;
+  ; Check Lanes Available.
+  ;
+  MOV RDI, [LevelInformationPtr]
+  XOR R12, R12
+
+  CMP LEVEL_INFORMATION.CurrentCarPartCountL0[RDI], 1
+  JE @Lane0Closed
+  MOV R12, 1
+
+@Lane0Closed:
+  CMP LEVEL_INFORMATION.CurrentCarPartCountL1[RDI], 1
+  JE @Lane1Closed
+  OR R12, 2
+@Lane1Closed:
+  
+  TEST R12, 1
+  JZ @NoCheckForLane0
+
+  CMP LEVEL_INFORMATION.CarPartGenerateTimerL0[RDI], 0
+  JE @NoTicksOnLane0
+  XOR R12, 1   ; Remove Lane 0
+  DEC LEVEL_INFORMATION.CarPartGenerateTimerL0[RDI]
+@NoCheckForLane0:
+@NoTicksOnLane0:
+  TEST R12, 2
+  JZ @NoCheckForLane1
+
+  CMP LEVEL_INFORMATION.CarPartGenerateTimerL1[RDI], 0
+  JE @NoTicksOnLane1
+  XOR R12, 2   ; Remove Lane 1
+  DEC LEVEL_INFORMATION.CarPartGenerateTimerL1[RDI]
+@NoTicksOnLane1:
+@NoCheckForLane1:
+  CMP R12, 0
+  JE @NoFreeLanes
+
+  XOR RBX, RBX
+  MOV RSI, [CarPartsItemsList]
+@GenerateCarPartLoop:
+  CMP R12, 0
+  JE @CompletedList
+
+  CMP RBX, NUMBER_OF_PARTS
+  JE @CompletedList
+
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI], 0
+  JNE @NextLoopIncrement
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND RAX, SPECIAL_SPRITE_STRUCT.SpriteBiasMask[RSI]
+  CMP RAX, SPECIAL_SPRITE_STRUCT.SpriteBias[RSI]
+  JA @SpriteSkipped
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI], 1
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RSI]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R14]
+  DEC RCX
+  MOV SCROLLING_GIF.CurrentX[RAX], RCX
+  MOV SCROLLING_GIF.XIncrement[RAX], ROAD_SCROLL_X_INC       
+  MOV SCROLLING_GIF.YIncrement[RAX], 0
+
+  CMP R12, 3
+  JNE @OnlyOneLane
+
+  DEBUG_FUNCTION_CALL Math_Rand
+  TEST EAX, 1
+  JZ @UseLane0
+  JMP @UseLane1
+@OnlyOneLane:
+  TEST R12, 1
+  JZ @UseLane1
+  JMP @UseLane0
+@UseLane0:
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RSI]
+  MOV RCX, SCROLLING_GIF.ImageInformation[RAX]
+  MOV RCX, IMAGE_INFORMATION.ImageHeight[RCX]
+  MOV RDX, PLAYER_Y_DIM
+  SUB RDX, RCX
+  MOV RCX, PLAYER_LANE_0
+  ADD RCX, RDX
+  MOV SCROLLING_GIF.CurrentY[RAX], RCX
+
+  XOR R12, 1
+  MOV LEVEL_INFORMATION.CurrentCarPartCountL0[RDI], 1
+  MOV R13, OFFSET LaneZeroPtr
+  JMP  @AddToList
+
+@UseLane1:
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RSI]
+  MOV RCX, SCROLLING_GIF.ImageInformation[RAX]
+  MOV RCX, IMAGE_INFORMATION.ImageHeight[RCX]
+  MOV RDX, PLAYER_Y_DIM
+  SUB RDX, RCX
+  MOV RCX, PLAYER_LANE_1
+  ADD RCX, RDX
+  MOV SCROLLING_GIF.CurrentY[RAX], RCX
+
+  XOR R12, 2
+  MOV LEVEL_INFORMATION.CurrentCarPartCountL1[RDI], 1
+  MOV R13, OFFSET LaneOnePtr
+  JMP  @AddToList
+@AddToList:
+  CMP QWORD PTR [R13], 0
+  JE @AddSelfToList
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  MOV RAX, [R13]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], RAX
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX], RSI
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], R13
+  MOV QWORD PTR [R13], RSI
+  JMP @NextLoopIncrement
+@AddSelfToList:
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  MOV QWORD PTR [R13], RSI
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], R13
+   
+
+@SpriteSkipped:
+@NextLoopIncrement:
+  INC RBX
+  ADD RSI, SIZE SPECIAL_SPRITE_STRUCT
+  JMP @GenerateCarPartLoop
+@CompletedList:
+@NoFreeLanes:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_GenerateGameCarParts, _TEXT$00
 
 
 

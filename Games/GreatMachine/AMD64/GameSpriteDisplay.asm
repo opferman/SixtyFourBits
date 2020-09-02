@@ -100,23 +100,39 @@ NESTED_ENTRY GreatMachine_DisplayLevelSprites, _TEXT$00
   DEC LEVEL_INFORMATION.CurrrentNumberOfCars[RCX]
   JMP @DrawAllScrollingSprites
 @PointsLeaves:
+  JMP @DrawAllScrollingSprites
 @PedesstrianLeaves:
+  JMP @DrawAllScrollingSprites
 @PartLeaves:
-JMP @DrawAllScrollingSprites
+  MOV RCX, [LevelInformationPtr]
+  MOV RDX,OFFSET LaneOnePtr   
+  CMP R9, RDX
+  JE @DecrementCarPartsLane1
+  DEC LEVEL_INFORMATION.CurrentCarPartCountL0[RCX]
+  MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RCX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RCX], RAX
+
+  JMP @DrawAllScrollingSprites
+@DecrementCarPartsLane1:
+  DEC LEVEL_INFORMATION.CurrentCarPartCountL1[RCX]
+  MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RCX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RCX], RAX
+
+  JMP @DrawAllScrollingSprites
 
 @ToxicLeaves:
   MOV RCX, [LevelInformationPtr]
   MOV RDX,OFFSET LaneOnePtr   
   CMP R9, RDX
-  JE @DecrementLane1
+  JE @DecrementToxicLane1
   DEC LEVEL_INFORMATION.CurrentBarrelCountL0[RCX]
-  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RCX]
+  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RCX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RCX], RAX
 
   JMP @DrawAllScrollingSprites
-@DecrementLane1:
+@DecrementToxicLane1:
   DEC LEVEL_INFORMATION.CurrentBarrelCountL1[RCX]
-  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RCX]
+  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RCX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
 
   JMP @DrawAllScrollingSprites

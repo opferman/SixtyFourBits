@@ -95,12 +95,12 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionPlayer
 
-  MOV R8, [LaneZeroPtr]
+  MOV R8, OFFSET LaneZeroPtr
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
 
-  MOV R8, [LaneOnePtr]
+  MOV R8, OFFSET LaneOnePtr
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
@@ -173,6 +173,8 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   DEC [PlayerLives]
   CMP [PlayerLives], 0
   JNE @DoNotUpdateState
+
+@UpdateState:
   DEBUG_FUNCTION_CALL GreatMachine_CheckHiScores
   MOV [GreatMachineCurrentState], GREAT_MACHINE_END_GAME
 @DoNotUpdateState:
@@ -182,6 +184,8 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RDX, OFFSET BoomGraphic
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+
 
   ;
   ; Display the Game Panel
@@ -204,7 +208,30 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   JMP @SkipPanelUpdate
 
 @BoomNotActive:
+  MOV RDX, [LevelInformationPtr] 
+  CMP LEVEL_INFORMATION.LevelTimer[RDX], 0
+  JNE @StillTimeLeft
+  MOV [BoomYLocation], 0
+  MOV [BoomXLocation], 0
+  JMP @UpdateState
+@StillTimeLeft:
+  
+  MOV R9, LEVEL_INFORMATION.LevelCompleteBarrelCount[RDX]
+  MOV R8, LEVEL_INFORMATION.CurrentLevelBarrelCount[RDX]
+  CMP R9, R8
+  JNE @NotComplete
+  MOV R9, LEVEL_INFORMATION.LevelCompleteCarPartCount[RDX]
+  MOV R8, LEVEL_INFORMATION.CurrentCarPartCount[RDX]
+  CMP R9, R8
+  JNE @NotComplete
 
+  MOV RAX, LEVEL_INFORMATION.pfnNextLevel[RDX]
+
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL RAX
+
+@NotComplete:      
   ;
   ; Display the Game Panel
   ;

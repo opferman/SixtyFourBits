@@ -167,17 +167,21 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   MOV RCX, LEVEL_INFORMATION.PesdestrianTimerRefresh[RAX]
   MOV LEVEL_INFORMATION.PesdestrianTimer[RAX], RCX
 
-  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RAX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RAX], RCX
 
-  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RAX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RAX], RCX
 
   MOV LEVEL_INFORMATION.CurrentBarrelCountL0[RAX], 0
   MOV LEVEL_INFORMATION.CurrentBarrelCountL1[RAX], 0
+  MOV LEVEL_INFORMATION.CurrentCarPartCountL0[RAX], 0
+  MOV LEVEL_INFORMATION.CurrentCarPartCountL1[RAX], 0
 
-  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefresh[RAX]
-  MOV LEVEL_INFORMATION.CarPartGenerateTimer[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
 
   MOV [PlayerSprite.SpriteX], PLAYER_START_X
   MOV [PlayerSprite.SpriteY], PLAYER_START_Y
@@ -207,7 +211,7 @@ NESTED_END GreatMachine_ResetLevel, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_NextLevel
 ;
-;        Parameters: Level Information
+;        Parameters: Master Context, Double Buffer
 ;
 ;        Return Value: None
 ;
@@ -218,6 +222,64 @@ NESTED_ENTRY GreatMachine_NextLevel, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+
+  MOV RAX, [LevelInformationPtr]
+  ADD RAX, SIZE LEVEL_INFORMATION
+  MOV [LevelInformationPtr], RAX
+
+  MOV RCX, LEVEL_INFORMATION.LevelTimer[RAX]
+  ADD [PlayerScore], RCX
+
+  MOV RCX, LEVEL_INFORMATION.LevelStartDelayRefresh[RAX]
+  MOV LEVEL_INFORMATION.LevelStartDelay[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.LevelTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.LevelTimer[RAX], RCX
+
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RAX], 0
+
+  MOV RCX, LEVEL_INFORMATION.TimerBetweenConcurrentRefresh[RAX]
+  MOV LEVEL_INFORMATION.TimerBetweenConcurrent[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.PesdestrianTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.PesdestrianTimer[RAX], RCX
+
+  MOV LEVEL_INFORMATION.CurrentLevelBarrelCount[RAX], 0
+
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RAX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RAX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RAX], RCX
+
+  MOV LEVEL_INFORMATION.CurrentBarrelCountL0[RAX], 0
+  MOV LEVEL_INFORMATION.CurrentBarrelCountL1[RAX], 0
+  MOV LEVEL_INFORMATION.CurrentCarPartCount[RAX], 0
+
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
+
+  MOV [PlayerSprite.SpriteX], PLAYER_START_X
+  MOV [PlayerSprite.SpriteY], PLAYER_START_Y
+  MOV [PlayerSprite.SpriteVelX], 0
+  MOV [PlayerSprite.SpriteVelY], 0
+
+  MOV [NextPlayerRoadLane], 1
+  MOV [CurrentPlayerRoadLane], 1
+
+  MOV [BoomTimerActive], 0
+  MOV [BoomTimer], 0
+
+  MOV [LevelStartTimer], 0
+  MOV [TimerAdjustMs], 0
+
+  ;
+  ; Reset all game lists
+  ;
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyAllLists
+  DEBUG_FUNCTION_CALL GreatMachine_ResetPoints
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

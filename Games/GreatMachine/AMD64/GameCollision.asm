@@ -22,7 +22,7 @@
 ;*********************************************************
 ;   GreatMachine_CollisionNPC
 ;
-;        Parameters: Master Context, Level information
+;        Parameters: Master Context, Level information, lane pointer address
 ;
 ;        Return Value: None
 ;
@@ -32,8 +32,112 @@ NESTED_ENTRY GreatMachine_CollisionNPC, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
+  MOV RSI, RCX
+  MOV RDI, RDX
+  MOV R15, R8
+  MOV RBX, [R15]
+@CollisionLoopForNPC:
+  CMP RBX, 0
+  JE @NoMoreCollisions
+
+  CMP SPECIAL_SPRITE_STRUCT.SpriteType[RBX], SPRITE_TYPE_CAR
+  JNE @LoopUpdate
+
+  MOV R12, [R15]
+@InnerLoopForCar:
+  CMP R12, 0
+  JE @LoopUpdate
+  CMP R12, RBX 
+  JE @InnerLoopUpdate
+
+   ;
+   ; Grab the image width and current X location.
+   ;
+   MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[R12]
+   MOV RCX, SCROLLING_GIF.ImageInformation[RAX]
+   MOV RCX, IMAGE_INFORMATION.ImageWidth[RCX]
+   MOV RAX, SCROLLING_GIF.CurrentX[RAX]
+
+   ;
+   ; Compare: Car_Rear > X_Front Then No Collision
+   ;          Car_Front < X_Rear Then No Collision
+   ;
+   MOV R9, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
+   MOV R10, SCROLLING_GIF.ImageInformation[R9]
+   MOV R10, IMAGE_INFORMATION.ImageWidth[R10]
+   MOV R9, SCROLLING_GIF.CurrentX[R9]
+
+   ; R9 = X of Car; R10 = Width Of Car
+   ; RAX = X of Item ; RCX = Width Of Item
+
+   ADD R10, R9                           ; Car_Front < X_Rear
+   CMP R10, RAX
+   JL @IsNotCollision
+   ADD RAX, RCX
+   CMP R9, RAX                         ; Car_Rear > X_Front
+   JG @IsNotCollision
+
+   CMP SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART
+   JNE @TryNextType_One
+
+          MOV RCX, [LevelInformationPtr]
+          MOV RDX,OFFSET LaneOnePtr   
+          CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R12], RDX
+          JE @DecrementLane1ForParts
+          DEC LEVEL_INFORMATION.CurrentCarPartCountL0[RCX]
+          MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RCX]
+          MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RCX], RAX
+          JMP @RemoveFromList
+@DecrementLane1ForParts:
+          DEC LEVEL_INFORMATION.CurrentCarPartCountL1[RCX]
+          MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RCX]
+          MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RCX], RAX
 
 
+   JMP @RemoveFromList
+@TryNextType_One:
+   CMP SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_TOXIC 
+   JNE @TryNextType_Two
+@ToxicCollision:
+
+          MOV RCX, [LevelInformationPtr]
+          MOV RDX,OFFSET LaneOnePtr   
+          CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R12], RDX
+          JE @DecrementLane1ForToxic
+          DEC LEVEL_INFORMATION.CurrentBarrelCountL0[RCX]
+          MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RCX]
+          MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RCX], RAX
+          JMP @RemoveFromList
+@DecrementLane1ForToxic:
+          DEC LEVEL_INFORMATION.CurrentBarrelCountL1[RCX]
+          MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RCX]
+          MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
+
+   JMP @RemoveFromList
+@TryNextType_Two:
+   
+   JMP @RemoveFromList
+
+@RemoveFromList:   
+   ;
+   ; Fix up and Remove Sprite
+   ;  
+   MOV RCX, R12
+   MOV R12, SPECIAL_SPRITE_STRUCT.ListNextPtr[R12] 
+   DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithoutPoints
+   JMP @InnerLoopForCar  
+
+
+
+@IsNotCollision:
+@InnerLoopUpdate:
+  MOV R12, SPECIAL_SPRITE_STRUCT.ListNextPtr[R12] 
+  JMP @InnerLoopForCar  
+@LoopUpdate:
+  MOV RBX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX] 
+  JMP @CollisionLoopForNPC
+
+@NoMoreCollisions:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -133,14 +237,28 @@ NESTED_ENTRY GreatMachine_CollisionPlayer, _TEXT$00
    SHR RAX, 1
    MOV RCX, [PlayerSprite.SpriteX]
    SUB RCX, RAX
+   CMP RCX, 0
+   JGE @SkipZeroing
+   XOR RCX, RCX
+@SkipZeroing:
    MOV [BoomXLocation], RCX
    JMP @EndOfList
+@SecondCheck:
 
 @CrashAtFrontOfPlayer:
    MOV RAX, [BoomGraphic.ImageWidth]
    SHR RAX, 1
    MOV RCX, RBX
    SUB RCX, RAX
+   MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+   MOV R9, RCX
+   ADD R9, [BoomGraphic.ImageWidth]
+   CMP R9, RDX
+   JL @SkipFixUp
+   SUB RDX, [BoomGraphic.ImageWidth]
+   DEC RDX
+   MOV RCX, RDX
+@SkipFixUp:
    MOV [BoomXLocation], RCX
 JMP @EndOfList
 
@@ -152,74 +270,62 @@ JMP @EndOfList
   MOV RCX, [LevelInformationPtr]
   MOV RDX,OFFSET LaneOnePtr   
   CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], RDX
-  JE @DecrementLane1
+  JE @DecrementLane1ForToxic
   DEC LEVEL_INFORMATION.CurrentBarrelCountL0[RCX]
-  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RCX]
+  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RCX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RCX], RAX
-  JMP @CreatePointsEntry
-@DecrementLane1:
+  JMP @CreatePointsEntryForToxic
+@DecrementLane1ForToxic:
   DEC LEVEL_INFORMATION.CurrentBarrelCountL1[RCX]
-  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RCX]
+  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RCX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
 
-@CreatePointsEntry:
-  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[R15]
-
-
-    
+@CreatePointsEntryForToxic:
+  
   MOV R8, LEVEL_INFORMATION.BarrelPoints[RCX]  
   ADD [PlayerScore], R8
   MOV RDX, LEVEL_INFORMATION.LevelCompleteBarrelCount[RCX]
   CMP RDX, LEVEL_INFORMATION.CurrentLevelBarrelCount[RCX]
-  JE @AlreadyComplete
+  JE @AlreadyCompleteForToxic
   INC LEVEL_INFORMATION.CurrentLevelBarrelCount[RCX]
-@AlreadyComplete:
-  MOV RDX, SCROLLING_GIF.CurrentY[RAX]
-  MOV RCX, SCROLLING_GIF.CurrentX[RAX]
-  DEBUG_FUNCTION_CALL GreatMachine_CreatePointEntry
+@AlreadyCompleteForToxic:
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[R15], 0
-  CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
-  JE @NothingInFront
-  ; Fix up next on list to point to before.
-  
-  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
-  MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15]
-  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX], RCX
+  MOV RDX, R8
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
 
-@NothingInFront:
-  CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
-  JE @OnHeadOfList
-  
-  MOV RAX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15]
-  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
-  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RAX], RCX
-
-  JMP @NextItemCheck
-@OnHeadOfList:
-  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15]
-  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
-  CMP RCX, 0
-  JE @NothingOnList
-
-  MOV QWORD PTR [RAX], RCX
-  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], 0
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], 0
-  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
-  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
-
-  JMP @NextItemCheck
-@NothingOnList:
-  MOV QWORD PTR [RAX], 0
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], 0
-  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
-  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
 JMP @NextItemCheck
 
 ;
 ; Collect the Part
 ;
 @PartCollision:
+  MOV RCX, [LevelInformationPtr]
+  MOV RDX,OFFSET LaneOnePtr   
+  CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], RDX
+  JE @DecrementLane1ForParts
+  DEC LEVEL_INFORMATION.CurrentCarPartCountL0[RCX]
+  MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RCX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RCX], RAX
+  JMP @CreatePointsEntryForParts
+@DecrementLane1ForParts:
+  DEC LEVEL_INFORMATION.CurrentCarPartCountL1[RCX]
+  MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RCX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RCX], RAX
+
+@CreatePointsEntryForParts:
+  
+  MOV R8, LEVEL_INFORMATION.CarPartsPoints[RCX]  
+  ADD [PlayerScore], R8
+  MOV RDX, LEVEL_INFORMATION.LevelCompleteCarPartCount[RCX]
+  CMP RDX, LEVEL_INFORMATION.CurrentCarPartCount[RCX]
+  JE @AlreadyCompleteForParts
+  INC LEVEL_INFORMATION.CurrentCarPartCount[RCX]
+@AlreadyCompleteForParts:
+
+  MOV RDX, R8
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
 
 JMP @NextItemCheck
 
@@ -234,7 +340,7 @@ JMP @EndOfList
 ; Random items you get points for getting
 ;
 @PointsItem:
-
+  INT 3 ; Should never be on the list.
 JMP @NextItemCheck
 
 @NextItemCheck:
@@ -250,3 +356,126 @@ JMP @NextItemCheck
 NESTED_END GreatMachine_CollisionPlayer, _TEXT$00
 
 
+
+;*********************************************************
+;   GreatMachine_RemoveItemFromListWithPoints
+;
+;        Parameters: Special Sprite Information, Points
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_RemoveItemFromListWithPoints, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RSI]
+  MOV R8, RDX
+  MOV RDX, SCROLLING_GIF.CurrentY[RAX]
+  MOV RCX, SCROLLING_GIF.CurrentX[RAX]
+  DEBUG_FUNCTION_CALL GreatMachine_CreatePointEntry
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI], 0
+  CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  JE @NothingInFront
+  ; Fix up next on list to point to before.
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], RCX
+
+@NothingInFront:
+  CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  JE @OnHeadOfList
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RAX], RCX
+
+  JMP @CompletedRemoval
+@OnHeadOfList:
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  CMP RCX, 0
+  JE @NothingOnList
+
+  MOV QWORD PTR [RAX], RCX
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+
+  JMP @CompletedRemoval
+@NothingOnList:
+  MOV QWORD PTR [RAX], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+
+@CompletedRemoval:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_RemoveItemFromListWithPoints, _TEXT$00
+
+
+
+;*********************************************************
+;   GreatMachine_RemoveItemFromListWithoutPoints
+;
+;        Parameters: Special Sprite Information
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_RemoveItemFromListWithoutPoints, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI], 0
+  CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  JE @NothingInFront
+  ; Fix up next on list to point to before.
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], RCX
+
+@NothingInFront:
+  CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+  JE @OnHeadOfList
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RAX], RCX
+
+  JMP @CompletedRemoval
+@OnHeadOfList:
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
+  CMP RCX, 0
+  JE @NothingOnList
+
+  MOV QWORD PTR [RAX], RCX
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+
+  JMP @CompletedRemoval
+@NothingOnList:
+  MOV QWORD PTR [RAX], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
+
+@CompletedRemoval:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_RemoveItemFromListWithoutPoints, _TEXT$00

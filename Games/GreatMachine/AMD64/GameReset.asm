@@ -60,7 +60,7 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
 
   MOV RCX, LEVEL_INFORMATION.LevelTimerRefresh[RAX]
   MOV LEVEL_INFORMATION.LevelTimer[RAX], RCX
-
+  MOV LEVEL_INFORMATION.CurrrentNumberOfCars[RAX], 0
   MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RAX], 0
 
   MOV RCX, LEVEL_INFORMATION.TimerBetweenConcurrentRefresh[RAX]
@@ -71,19 +71,20 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
 
   MOV LEVEL_INFORMATION.CurrentLevelBarrelCount[RAX], 0
 
-  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RAX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RAX], RCX
 
-  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RAX]
   MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RAX], RCX
 
   MOV LEVEL_INFORMATION.CurrentBarrelCountL0[RAX], 0
   MOV LEVEL_INFORMATION.CurrentBarrelCountL1[RAX], 0
-
   MOV LEVEL_INFORMATION.CurrentCarPartCount[RAX], 0
 
-  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefresh[RAX]
-  MOV LEVEL_INFORMATION.CarPartGenerateTimer[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
+  MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
 
   ;
   ; Reset Player
