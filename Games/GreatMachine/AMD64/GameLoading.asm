@@ -791,7 +791,6 @@ endif
   MOV SPECIAL_SPRITE_STRUCT.SpriteMaxVelX[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.SpriteX[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.SpriteY[R13], 0
-  MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.ScrollingPtr[R13], R14
   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], SPRITE_TYPE_CAR
@@ -923,7 +922,7 @@ NESTED_END GreatMachine_LoadGraphicsImage, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_LoadGraphicsImage
 ;
-;        Parameters: Pointer to Image (Resource or File depending on USE_FILES define), Graphics Pointer
+;        Parameters: None
 ;
 ;        Return Value: TRUE or FALSE
 ;
@@ -946,6 +945,60 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
   CMP RAX, 0
   JE @FailureExit
+
+  ;
+  ; Load the list of generic items
+  ;
+  XOR RBX, RBX
+  MOV RSI, OFFSET GenericItemsImagePtr
+  MOV RDI, OFFSET GenericItemsImageList
+  MOV R14, OFFSET GenericItemsScrollList
+  MOV R15, OFFSET GenericItemsList
+
+@LoadGenericItems:
+  CMP RBX, NUMBER_OF_GENERIC_ITEMS
+  JE @ItemsLoadCompleted
+
+  MOV RDX, RDI
+  MOV RCX, [RSI]
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  ;
+  ; Setup Scrolling Structure for Items
+  ;
+  MOV SCROLLING_GIF.CurrentX[R14], 0
+  MOV SCROLLING_GIF.CurrentY[R14], 0
+  MOV SCROLLING_GIF.XIncrement[R14], ROAD_SCROLL_X_INC
+  MOV SCROLLING_GIF.YIncrement[R14], ROAD_SCROLL_Y_INC
+  MOV SCROLLING_GIF.ImageInformation[R14], RDI
+
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteVelX[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteMaxVelX[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteX[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteY[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.ScrollingPtr[R15], R14
+  MOV SPECIAL_SPRITE_STRUCT.SpriteType[R15], SPRITE_TYPE_TOXIC
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND RAX, 0Fh
+  SHL RAX, 7
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R15], RAX
+
+  ADD R15, SIZE SPECIAL_SPRITE_STRUCT
+  ADD R14, SIZE SCROLLING_GIF
+  ADD RDI, SIZE IMAGE_INFORMATION
+  ADD RSI, 8
+  INC RBX
+  JMP @LoadGenericItems
+  
+
+@ItemsLoadCompleted:
 
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

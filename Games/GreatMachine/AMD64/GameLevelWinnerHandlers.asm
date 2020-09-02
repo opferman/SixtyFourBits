@@ -168,7 +168,14 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   MOV LEVEL_INFORMATION.PesdestrianTimer[RAX], RCX
 
   MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
-  MOV LEVEL_INFORMATION.BarrelGenerateTimer[RAX], RCX
+  MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RAX], RCX
+
+  MOV LEVEL_INFORMATION.CurrentBarrelCountL0[RAX], 0
+  MOV LEVEL_INFORMATION.CurrentBarrelCountL1[RAX], 0
+
   MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefresh[RAX]
   MOV LEVEL_INFORMATION.CarPartGenerateTimer[RAX], RCX
 
@@ -188,6 +195,8 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   ; Reset all game lists
   ;
   DEBUG_FUNCTION_CALL GreatMachine_EmptyAllLists
+
+  DEBUG_FUNCTION_CALL GreatMachine_ResetPoints
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

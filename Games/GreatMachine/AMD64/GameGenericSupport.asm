@@ -293,3 +293,78 @@ NESTED_ENTRY GreatMachine_UpdateTimer, _TEXT$00
   RET
 
 NESTED_END GreatMachine_UpdateTimer, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_ResetPoints
+;
+;        Parameters: None
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_ResetPoints, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  XOR RBX, RBX
+  MOV RDI, OFFSET DisplayPointsList 
+@ClearPointsLoop:
+  CMP RBX, POINTS_DISPLAY_LIST_SIZE
+  JE @DoneClearPoints
+
+  MOV DISPLAY_PLAYER_POINTS.PointTicks[RDI], 0
+
+  ADD RDI, SIZE DISPLAY_PLAYER_POINTS
+  INC RBX
+  JMP @ClearPointsLoop
+
+@DoneClearPoints:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_ResetPoints, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_CreatePointEntry
+;
+;        Parameters: StartX, StartY, Signed Point
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_CreatePointEntry, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  XOR RBX, RBX
+  MOV RDI, OFFSET DisplayPointsList 
+@FindPointEntryLoop:
+  CMP RBX, POINTS_DISPLAY_LIST_SIZE
+  JE @EmptyPointNotFound
+  CMP DISPLAY_PLAYER_POINTS.PointTicks[RDI], 0
+  JNE @TryNextPoint
+  MOV DISPLAY_PLAYER_POINTS.PointTicks[RDI], POINTS_DISPLAY_TICKS
+
+  MOV DISPLAY_PLAYER_POINTS.NumberOfPoints[RDI], R8
+  MOV DISPLAY_PLAYER_POINTS.PointX[RDI], RCX        
+  MOV DISPLAY_PLAYER_POINTS.PointY[RDI], RDX        
+
+@TryNextPoint:
+  ADD RDI, SIZE DISPLAY_PLAYER_POINTS
+  INC RBX
+  JMP @FindPointEntryLoop
+
+@EmptyPointNotFound:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_CreatePointEntry, _TEXT$00

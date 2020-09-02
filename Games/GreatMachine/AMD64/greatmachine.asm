@@ -92,6 +92,8 @@ SPRITE_TYPE_CAR        EQU <1>
 SPRITE_TYPE_TOXIC      EQU <2>
 SPRITE_TYPE_PART       EQU <3>
 SPRITE_TYPE_PEDESTRIAN EQU <4>
+SPRITE_TYPE_POINT_ITEM EQU <5>
+
 
 NUMBER_OF_CAR_GIFS     EQU <7>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
 NUMBER_OF_CARS         EQU <7>
@@ -115,6 +117,12 @@ SPECIAL_SPRITE_STRUCT struct
    ListBeforePtr    dq ?
 SPECIAL_SPRITE_STRUCT ends
 
+DISPLAY_PLAYER_POINTS struct
+   PointTicks       dq ?
+   NumberOfPoints   dq ?
+   PointX           dq ?
+   PointY           dq ?
+DISPLAY_PLAYER_POINTS ends
 
 SPRITE_STRUCT  struct
    ImagePointer    dq ?   ; Sprite Basic Information
@@ -184,9 +192,13 @@ LEVEL_INFORMATION STRUCT
   ; Toxic Waste Barrels
   LevelCompleteBarrelCount        dq ?
   CurrentLevelBarrelCount         dq ?
-  BarrelGenerateTimer             dq ?
+  BarrelGenerateTimerL0           dq ?
+  BarrelGenerateTimerL1           dq ?
+  CurrentBarrelCountL0            dq ?
+  CurrentBarrelCountL1            dq ?
   CanHaveBadBarrels               dq ?
   BarrelGenerateTimerRefresh      dq ?
+  BarrelPoints                    dq ?
 
   ; Car Parts
   LevelCompleteCarPartCount       dq ?
@@ -204,6 +216,9 @@ LEVEL_INFORMATION ENDS
 ;
 ; Constants for Game 
 ;
+POINTS_DISPLAY_TICKS     EQU <10>
+POINTS_DISPLAY_LIST_SIZE EQU <4>
+
 MAX_SCORES             EQU <5>
 TITLE_X                EQU <50>
 TITLE_Y                EQU <10>
@@ -238,7 +253,13 @@ LEVEL_NUMBER_X         EQU <510>
 NUMBER_OF_GENERIC_CARS  EQU <7>
 NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
 PLAYER_SIDE_PANEL_FONT_SIZE EQU <2>
-PLAYER_SCORE_FONT_SIZE EQU <3>
+PLAYER_SCORE_FONT_SIZE EQU <4>
+
+NUMBER_OF_GENERIC_ITEMS EQU <8>
+NUMBER_OF_FUEL          EQU <2>
+NUMBER_OF_PARTS         EQU <6>
+
+
 ;
 ; Game Over Constants
 ;
@@ -340,6 +361,10 @@ ifdef USE_FILES
     GenericCarImage                 db "GenericCarxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
     BoomImage                       db "boom.gif", 0
     PanelImage                      db "panel.gif", 0
+    FuelImage                       db "fuel.gif", 0
+    CarPart1Image                   db "carpart1.gif", 0
+    CarPart2Image                   db "carpart2.gif", 0
+    CarPart3Image                   db "carpart3.gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -363,6 +388,10 @@ else
     GenericCarImage                 db "GENERIC_CARxxx_GIF", 0    ; Change the X's to numbers 
     BoomImage                       db "BOOM_GIF", 0
     PanelImage                      db "PANEL_GIF", 0
+    FuelImage                       db "FUEL_GIF", 0
+    CarPart1Image                   db "CARPART1_GIF", 0
+    CarPart2Image                   db "CARPART2_GIF", 0
+    CarPart3Image                   db "CARPART3_GIF", 0
 endif	
  
     GamePlayPage                    dq 0
@@ -472,7 +501,7 @@ OFFSET LevelOneGraphic,\
 200,\ 
 1,\   
 0,\   
-1,\ 
+0,\ 
 100,\ 
 100,\   
 0,\
@@ -487,14 +516,19 @@ OFFSET LevelOneGraphic,\
 10,\  
 0,\   
 500,\ 
-0,\   
 500,\ 
+0,\
+0,\
+0,\   
+500,\
+25,\
 5,\   
 0,\   
 1000,\
 1000,\
 GreatMachine_ResetLevel,\
-GreatMachine_NextLevel>                                                              
+GreatMachine_NextLevel>      
+                                                        
 LEVEL_INFORMATION  <?>
 LEVEL_INFORMATION  <?>
 LEVEL_INFORMATION  <?>
@@ -567,7 +601,8 @@ LEVEL_INFORMATION  <?>
                                     db "Medium Mode",0
                                     dq 400, 400
                                     db "Hard Mode", 0
-									dq 0
+                                    dq 0
+
 	
     PressSpaceToContinue            db "<Press Spacebar>", 0
     PressEnterToContinue            db "<Press Enter>", 0
@@ -695,13 +730,13 @@ LEVEL_INFORMATION  <?>
     HardModeText                    db "Hard Mode",0
 
 
-    PointsScoreFormat               db "%I64u",0
+    PointsScoreFormat               db "%I64i",0
     PointsScoreString               db 256 DUP(?)
 
     HiScoreFormatString             db "%s - %I64u", 0
     HiScoreString                   db "                                      ",0
     
-    HiScoreLocationPtr             dq ?
+    HiScoreLocationPtr              dq ?
 
     ;
     ; Menu Selection 
@@ -722,7 +757,7 @@ LEVEL_INFORMATION  <?>
     PlayerLivesText                 db "Lives: %I64u",0
     PlayerBarrels                   db "%I64u of %I64u Fuel", 0
     PlayerParts                     db "%I64u of %I64u Parts", 0
-    PlayerScoreFormat               db "%I64u", 0
+    PlayerScoreFormat               db "%I64i", 0
     PlayerTimerFormat               db "%02I64u:%02I64u", 0
     SpriteImageFileListAttributes   db 1, 2
     
@@ -762,6 +797,18 @@ LEVEL_INFORMATION  <?>
     BoomGraphic        IMAGE_INFORMATION  <?>
     PanelGraphic       IMAGE_INFORMATION  <?>
 
+
+;
+; Active Points Strutures Shouldn't need more than 8
+;
+    DisplayPointsList DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
+                      DISPLAY_PLAYER_POINTS <?>
 
 ;
 ; Car Graphics
@@ -825,6 +872,71 @@ LEVEL_INFORMATION  <?>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
+
+   GenericItemsImagePtr  dq OFFSET FuelImage
+                         dq OFFSET FuelImage 
+                         dq OFFSET CarPart1Image
+                         dq OFFSET CarPart2Image
+                         dq OFFSET CarPart3Image
+                         dq OFFSET CarPart1Image 
+                         dq OFFSET CarPart2Image 
+                         dq OFFSET CarPart3Image 
+                         dq ? 
+                         dq ? 
+                         dq ? 
+                         dq ? 
+                         dq ? 
+                         dq ? 
+
+
+   FuelItemsList         dq OFFSET GenericItemsList
+   CarPartsItemsList     dq OFFSET GenericItems_CarParts
+
+   GenericItemsList          SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_CarParts     SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+
+   GenericItemsScrollList      SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>
+                               SCROLLING_GIF      <?>                       
+                               SCROLLING_GIF      <?>                       
+                               SCROLLING_GIF      <?>                       
+
+   GenericItemsImageList IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+                         IMAGE_INFORMATION <?>
+
 
 ;
 ;  Tree Graphics

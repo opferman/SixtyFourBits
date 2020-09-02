@@ -30,4 +30,8 @@ GENERIC_CAR6_GIF  GIFFILE resources\GenericCar6.gif
 GENERIC_CAR7_GIF  GIFFILE resources\GenericCar7.gif
 BOOM_GIF          GIFFILE resources\boom.gif
 PANEL_GIF         GIFFILE resources\panel.gif
+FUEL_GIF          GIFFILE resources\fuel.gif
+CARPART1_GIF      GIFFILE resources\carpart1.gif
+CARPART2_GIF      GIFFILE resources\carpart2.gif
+CARPART3_GIF      GIFFILE resources\carpart3.gif
 #endif

@@ -163,6 +163,9 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayPoints
+
   CMP [BoomTimerActive], 0
   JE @BoomNotActive
   MOV [PlayerSprite.SpriteAlive], 0
@@ -170,6 +173,7 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   DEC [PlayerLives]
   CMP [PlayerLives], 0
   JNE @DoNotUpdateState
+  DEBUG_FUNCTION_CALL GreatMachine_CheckHiScores
   MOV [GreatMachineCurrentState], GREAT_MACHINE_END_GAME
 @DoNotUpdateState:
 

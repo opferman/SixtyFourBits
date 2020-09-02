@@ -107,7 +107,13 @@ NESTED_ENTRY GreatMachine_CollisionPlayer, _TEXT$00
 
    CMP RAX, SPRITE_TYPE_PEDESTRIAN 
    JE @PedesstrianCollision
-   ; Should never get here unless we have a bug.
+
+   CMP RAX, SPRITE_TYPE_POINT_ITEM
+   JE @PointsItem
+   ;
+   ; Unless we have a bug, we cannot get here because SpriteType cannot be set
+   ; to any other number.
+   ;
    INT 3
 ;
 ; Car Collision is fatal, lose a life
@@ -143,6 +149,71 @@ JMP @EndOfList
 ;
 @ToxicCollision:
 
+  MOV RCX, [LevelInformationPtr]
+  MOV RDX,OFFSET LaneOnePtr   
+  CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], RDX
+  JE @DecrementLane1
+  DEC LEVEL_INFORMATION.CurrentBarrelCountL0[RCX]
+  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RCX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RCX], RAX
+  JMP @CreatePointsEntry
+@DecrementLane1:
+  DEC LEVEL_INFORMATION.CurrentBarrelCountL1[RCX]
+  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefresh[RCX]
+  MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
+
+@CreatePointsEntry:
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[R15]
+
+
+    
+  MOV R8, LEVEL_INFORMATION.BarrelPoints[RCX]  
+  ADD [PlayerScore], R8
+  MOV RDX, LEVEL_INFORMATION.LevelCompleteBarrelCount[RCX]
+  CMP RDX, LEVEL_INFORMATION.CurrentLevelBarrelCount[RCX]
+  JE @AlreadyComplete
+  INC LEVEL_INFORMATION.CurrentLevelBarrelCount[RCX]
+@AlreadyComplete:
+  MOV RDX, SCROLLING_GIF.CurrentY[RAX]
+  MOV RCX, SCROLLING_GIF.CurrentX[RAX]
+  DEBUG_FUNCTION_CALL GreatMachine_CreatePointEntry
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[R15], 0
+  CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
+  JE @NothingInFront
+  ; Fix up next on list to point to before.
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX], RCX
+
+@NothingInFront:
+  CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
+  JE @OnHeadOfList
+  
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RAX], RCX
+
+  JMP @NextItemCheck
+@OnHeadOfList:
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15]
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
+  CMP RCX, 0
+  JE @NothingOnList
+
+  MOV QWORD PTR [RAX], RCX
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
+
+  JMP @NextItemCheck
+@NothingOnList:
+  MOV QWORD PTR [RAX], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R15], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R15], 0
 JMP @NextItemCheck
 
 ;
@@ -158,6 +229,13 @@ JMP @NextItemCheck
 @PedesstrianCollision:
 
 JMP @EndOfList
+
+;
+; Random items you get points for getting
+;
+@PointsItem:
+
+JMP @NextItemCheck
 
 @NextItemCheck:
 @IsNotCollision:
