@@ -78,6 +78,12 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DispatchGamePieces 
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
 
   ;**************************************************************
   ; Level Action - Section Two - Detection
@@ -94,16 +100,34 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionPlayer
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
 
   MOV R8, OFFSET LaneZeroPtr
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
 
   MOV R8, OFFSET LaneOnePtr
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
 
   ;**************************************************************
   ; Level Action - Section Three - Display Graphics and Sprites

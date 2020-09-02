@@ -102,6 +102,32 @@ NESTED_ENTRY GreatMachine_H_Press, _TEXT$00
   RET
 NESTED_END GreatMachine_H_Press, _TEXT$00
 
+ifdef MACHINE_GAME_DEBUG
+
+;*********************************************************
+;   GreatMachine_D_Press (Debug)
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_D_Press, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  INT 3
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_D_Press, _TEXT$00
+
+endif
+
 ;*********************************************************
 ;   GreatMachine_SpaceBar
 ;
@@ -308,7 +334,7 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
 
   ;MOV [CurrentLevelInformationPtr], RCX
 
-  DEBUG_FUNCTION_CALL GreatMachine_ResetLevel
+  DEBUG_FUNCTION_CALL GreatMachine_ResetLevelToOne
 
   MOV [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
   MOV RCX, GREAT_MACHINE_LEVELS

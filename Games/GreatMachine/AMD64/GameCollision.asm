@@ -39,9 +39,15 @@ NESTED_ENTRY GreatMachine_CollisionNPC, _TEXT$00
 @CollisionLoopForNPC:
   CMP RBX, 0
   JE @NoMoreCollisions
-
+ifdef MACHINE_GAME_DEBUG
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX],0
+  JNE @DebugSkip
+  INT 3
+@DebugSkip: 
+endif
   CMP SPECIAL_SPRITE_STRUCT.SpriteType[RBX], SPRITE_TYPE_CAR
   JNE @LoopUpdate
+
 
   MOV R12, [R15]
 @InnerLoopForCar:
@@ -49,7 +55,12 @@ NESTED_ENTRY GreatMachine_CollisionNPC, _TEXT$00
   JE @LoopUpdate
   CMP R12, RBX 
   JE @InnerLoopUpdate
-
+ifdef MACHINE_GAME_DEBUG
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[R12],0
+  JNE @DebugSkip2
+  INT 3
+@DebugSkip2: 
+endif
    ;
    ; Grab the image width and current X location.
    ;
@@ -125,6 +136,12 @@ NESTED_ENTRY GreatMachine_CollisionNPC, _TEXT$00
    MOV RCX, R12
    MOV R12, SPECIAL_SPRITE_STRUCT.ListNextPtr[R12] 
    DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithoutPoints
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
    JMP @InnerLoopForCar  
 
 
@@ -174,7 +191,12 @@ NESTED_ENTRY GreatMachine_CollisionPlayer, _TEXT$00
 @CheckForCollisions:
    CMP R15, 0
    JE @EndOfList
-  
+ifdef MACHINE_GAME_DEBUG
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[R15],0
+  JNE @DebugSkip
+  INT 3
+@DebugSkip:  
+endif
    ;
    ; Grab the image width and current X location.
    ;
@@ -292,9 +314,18 @@ JMP @EndOfList
 
   MOV RDX, R8
   MOV RCX, R15
+  MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
   DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
 
-JMP @NextItemCheck
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
+
+
+JMP @CheckForCollisions
 
 ;
 ; Collect the Part
@@ -322,12 +353,20 @@ JMP @NextItemCheck
   JE @AlreadyCompleteForParts
   INC LEVEL_INFORMATION.CurrentCarPartCount[RCX]
 @AlreadyCompleteForParts:
-
+  
   MOV RDX, R8
   MOV RCX, R15
+  MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
   DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
 
-JMP @NextItemCheck
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET LaneZeroPtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET LaneOnePtr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
+
+JMP @CheckForCollisions
 
 ;
 ; Cannot hit pedestrians
@@ -376,7 +415,12 @@ NESTED_ENTRY GreatMachine_RemoveItemFromListWithPoints, _TEXT$00
   MOV RDX, SCROLLING_GIF.CurrentY[RAX]
   MOV RCX, SCROLLING_GIF.CurrentX[RAX]
   DEBUG_FUNCTION_CALL GreatMachine_CreatePointEntry
-
+ifdef MACHINE_GAME_DEBUG
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI],0
+  JNE @DebugSkip
+  INT 3
+@DebugSkip:
+endif
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RSI], 0
   CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI], 0
   JE @NothingInFront
@@ -384,7 +428,7 @@ NESTED_ENTRY GreatMachine_RemoveItemFromListWithPoints, _TEXT$00
   
   MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
   MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
-  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], RCX
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX], RCX
 
 @NothingInFront:
   CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
@@ -444,7 +488,7 @@ NESTED_ENTRY GreatMachine_RemoveItemFromListWithoutPoints, _TEXT$00
   
   MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RSI]
   MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI]
-  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], RCX
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX], RCX
 
 @NothingInFront:
   CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
@@ -479,3 +523,67 @@ NESTED_ENTRY GreatMachine_RemoveItemFromListWithoutPoints, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END GreatMachine_RemoveItemFromListWithoutPoints, _TEXT$00
+
+
+
+;*********************************************************
+;   GreatMachine_VerifyLinkedListIntegrity
+;
+;        Parameters: Linked List
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_VerifyLinkedListIntegrity, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+  MOV RDI, [RSI]
+
+  CMP RDI, 0
+  JE @NothingElseOnTheList
+
+  CMP SPECIAL_SPRITE_STRUCT.ListBeforePtr[RDI], 0
+  JE @EntryIsCorrectBackPointer
+  INT 3
+@EntryIsCorrectBackPointer:
+
+  CMP SPECIAL_SPRITE_STRUCT.ListNextPtr[RDI], 0
+  JE @NothingElseOnTheList
+
+@LoopLinkedList:
+  CMP RDI, 0
+  JE @DoneChecking
+
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 0
+  JNE @SpriteIsActive
+  INT 3
+@SpriteIsActive:
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ListNextPtr[RDI]
+  CMP RAX, 0
+  JE @NoMoreOnList
+  MOV RCX, SPECIAL_SPRITE_STRUCT.ListBeforePtr[RAX]
+
+  CMP RCX, RDI
+  JE @BackPointerCorrect
+  INT 3
+@BackPointerCorrect:
+ 
+  MOV RDI, RAX
+
+  JMP @LoopLinkedList
+@NoMoreOnList:
+@DoneChecking:
+@NothingElseOnTheList:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_VerifyLinkedListIntegrity, _TEXT$00
+
+
+
+
+

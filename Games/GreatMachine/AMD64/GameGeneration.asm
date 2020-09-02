@@ -273,6 +273,7 @@ NESTED_ENTRY GreatMachine_GenerateGameFuel, _TEXT$00
   MOV SCROLLING_GIF.CurrentY [RAX], PLAYER_LANE_0
   XOR R12, 1
   MOV LEVEL_INFORMATION.CurrentBarrelCountL0[RDI], 1
+  ADD LEVEL_INFORMATION.CarPartGenerateTimerL0[RDI], SPECIAL_DEBOUNCE
   MOV R13, OFFSET LaneZeroPtr
   JMP  @AddToList
 
@@ -281,6 +282,7 @@ NESTED_ENTRY GreatMachine_GenerateGameFuel, _TEXT$00
   MOV SCROLLING_GIF.CurrentY[RAX], PLAYER_LANE_1
   XOR R12, 2
   MOV LEVEL_INFORMATION.CurrentBarrelCountL1[RDI], 1
+  ADD LEVEL_INFORMATION.CarPartGenerateTimerL1[RDI], SPECIAL_DEBOUNCE
   MOV R13, OFFSET LaneOnePtr
   JMP  @AddToList
 @AddToList:
@@ -298,7 +300,7 @@ NESTED_ENTRY GreatMachine_GenerateGameFuel, _TEXT$00
   MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RSI], 0
   MOV QWORD PTR [R13], RSI
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RSI], R13
-   
+  
 
 @SpriteSkipped:
 @NextLoopIncrement:
@@ -416,6 +418,7 @@ NESTED_ENTRY GreatMachine_GenerateGameCarParts, _TEXT$00
 
   XOR R12, 1
   MOV LEVEL_INFORMATION.CurrentCarPartCountL0[RDI], 1
+  ADD LEVEL_INFORMATION.BarrelGenerateTimerL0[RDI], SPECIAL_DEBOUNCE
   MOV R13, OFFSET LaneZeroPtr
   JMP  @AddToList
 
@@ -431,6 +434,7 @@ NESTED_ENTRY GreatMachine_GenerateGameCarParts, _TEXT$00
 
   XOR R12, 2
   MOV LEVEL_INFORMATION.CurrentCarPartCountL1[RDI], 1
+  ADD LEVEL_INFORMATION.BarrelGenerateTimerL1[RDI], SPECIAL_DEBOUNCE
   MOV R13, OFFSET LaneOnePtr
   JMP  @AddToList
 @AddToList:

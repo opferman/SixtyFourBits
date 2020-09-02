@@ -322,6 +322,15 @@ SKY_SCROLL_Y_INC      EQU <0>
  PLAYER_DAMAGE          EQU <1>
  PLAYER_START_LIVES     EQU <3>
 
+ ;
+ ; Special DeBounce for Items
+ ;
+ SPECIAL_DEBOUNCE       EQU <200>
+
+ ;
+ ; Enable Debug Capabilities 
+ ;
+ MACHINE_GAME_DEBUG     EQU <1>
 
 ;*********************************************************
 ; Data Segment
@@ -400,7 +409,7 @@ else
     CarPart2Image                   db "CARPART2_GIF", 0
     CarPart3Image                   db "CARPART3_GIF", 0
 endif	
- 
+    HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
     GamePlayTextOne                 dq 50, 300
                                     db "Doc Green has traveled into the", 0
@@ -451,7 +460,9 @@ endif
                                     db "Great Machine around the road.",0
                                     dq 50, 400
                                     db "`P' toggles the game panel.", 0
-                                    dq 50, 450
+                                    dq 50, 400
+                                    db "`H' is 'hold' or 'pause'.", 0
+                                    dq 50, 500
                                     db "Those are the only controls.", 0
                                     dq 0
 
