@@ -28,6 +28,9 @@ include input_public.inc
 include gif_public.inc
 include gameengine_public.inc
 include primatives_public.inc
+include vpal_public.inc
+include soft3d_public.inc
+
 
 ;*********************************************************
 ; External WIN32/C Functions
@@ -257,6 +260,8 @@ LEVEL_NAME_X           EQU <50>
 LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
 NUMBER_OF_GENERIC_CARS  EQU <7>
+NUMBER_OF_PEOPLE_GIFS   EQU <7>
+NUMBER_OF_PEOPLE        EQU <7>
 NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
 PLAYER_SIDE_PANEL_FONT_SIZE EQU <2>
 PLAYER_SCORE_FONT_SIZE EQU <4>
@@ -265,6 +270,12 @@ NUMBER_OF_GENERIC_ITEMS EQU <8>
 NUMBER_OF_FUEL          EQU <2>
 NUMBER_OF_PARTS         EQU <6>
 
+STAR_FIELD_ENTRY struct
+   Location       TD_POINT <?>
+   Velocity       mmword    ?  
+   StarOnScreen   dq        ?
+   Color          db        ?
+STAR_FIELD_ENTRY ends
 
 ;
 ; Game Over Constants
@@ -306,6 +317,9 @@ MOUNTAIN_SCROLL_Y_INC EQU <0>
 SKY_SCROLL_X_INC      EQU <-1>
 SKY_SCROLL_Y_INC      EQU <0>
 
+TOP_SIDEWALK_PERSON    EQU <PLAYER_LANE_0 - 95>
+BOTTOM_SIDEWALK_PERSON EQU <PLAYER_LANE_1 + 55>
+
 ;
 ; Player Defaults
 ;
@@ -330,7 +344,7 @@ SKY_SCROLL_Y_INC      EQU <0>
  ;
  ; Enable Debug Capabilities 
  ;
- MACHINE_GAME_DEBUG     EQU <1>
+ MACHINE_GAME_DEBUG     EQU <0>
 
 ;*********************************************************
 ; Data Segment
@@ -375,12 +389,14 @@ ifdef USE_FILES
     LevelThreeImage                 db "three.gif",0    
     LevelFourImage                  db "four.gif",0     
     GenericCarImage                 db "GenericCarxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
+    GenericPersonImage              db "Personxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
     BoomImage                       db "boom.gif", 0
     PanelImage                      db "panel.gif", 0
     FuelImage                       db "fuel.gif", 0
     CarPart1Image                   db "carpart1.gif", 0
     CarPart2Image                   db "carpart2.gif", 0
     CarPart3Image                   db "carpart3.gif", 0
+    CarSpinImage                    db "CarSpin.gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -402,12 +418,14 @@ else
     LevelThreeImage                 db "LEVEL_THREE_GIF", 0   
     LevelFourImage                  db "LEVEL_FOUR_GIF", 0   
     GenericCarImage                 db "GENERIC_CARxxx_GIF", 0    ; Change the X's to numbers 
+    GenericPersonImage              db "PERSONxxx_GIF", 0    ; Change the X's to numbers 
     BoomImage                       db "BOOM_GIF", 0
     PanelImage                      db "PANEL_GIF", 0
     FuelImage                       db "FUEL_GIF", 0
     CarPart1Image                   db "CARPART1_GIF", 0
     CarPart2Image                   db "CARPART2_GIF", 0
     CarPart3Image                   db "CARPART3_GIF", 0
+    CarSpinImage                    db "CARSPIN_GIF", 0
 endif	
     HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
@@ -422,9 +440,9 @@ endif
                                     dq 50, 500
                                     db "needs to collect enough radioactive",0
                                     dq 50, 550
-                                    db "radioactive fueld to get back home", 0 
+                                    db "fuel to get back home.  The fuel", 0 
                                     dq 50, 600
-                                    db "which is radioactive waste.", 0
+                                    db "is in radioactive barrels.", 0
                                     dq 0
 
     GamePlayTextTwo                 dq 50, 300
@@ -445,13 +463,13 @@ endif
 
 
     GamePlayTextThree               dq 50, 300
-                                    db "number of toxic waste barrels you", 0
+                                    db "number of toxic waste barrels and", 0
                                     dq 50, 350
-                                    db "need to collect. Collect enough",0
+                                    db "parts you need to collect. Collect",0
                                     dq 50, 400
-                                    db "fuel and all the parts to build", 0
+                                    db "enough fuel and all the parts to", 0
                                     dq 50, 450
-                                    db "the Great Machine to get home!",0  
+                                    db "build the Great Machine to get home!",0  
                                     dq 0
 
     GamePlayTextFour                dq 50, 300
@@ -460,7 +478,7 @@ endif
                                     db "Great Machine around the road.",0
                                     dq 50, 400
                                     db "`P' toggles the game panel.", 0
-                                    dq 50, 400
+                                    dq 50, 450
                                     db "`H' is 'hold' or 'pause'.", 0
                                     dq 50, 500
                                     db "Those are the only controls.", 0
@@ -575,8 +593,8 @@ OFFSET LevelOneGraphic,\
 0,\
 0,\
 0,\
-0,\
-0,\
+15,\
+15,\
 10,\
 0,\
 800,\
@@ -616,8 +634,8 @@ OFFSET LevelTwoGraphic,\
 0,\
 0,\
 0,\
-0,\
-0,\
+50,\
+50,\
 20,\
 0,\
 500,\
@@ -657,8 +675,8 @@ OFFSET LevelThreeGraphic,\
 0,\
 0,\
 0,\
-0,\
-0,\
+50,\
+50,\
 20,\
 0,\
 500,\
@@ -698,8 +716,8 @@ OFFSET LevelFourGraphic,\
 0,\
 0,\
 0,\
-0,\
-0,\
+50,\
+50,\
 20,\
 0,\
 200,\
@@ -961,8 +979,20 @@ OFFSET GreatMachine_Winner>
         InitialsConst                   db "A--", 0
         InitialsEnter                   db "   ", 0
         InitialsEnterPtr                dq ?
-
-
+  VirtualPallete   dq ?
+  StarEntryPtr     dq ?
+  Soft3D           dq ?
+  TwoDPlot         TD_POINT_2D <?>
+  WorldLocation    TD_POINT    <?>
+  View_Distance    mmword   1024.0
+  ConstantZero     mmword 0.0
+  CurrentVelocity  dq 1
+  CameraX          mmword 0.0
+  CameraY          mmword 0.0
+  CameraXVel       mmword -0.00872665
+  CameraYVel       mmword -0.00872665
+  ConstantNeg      mmword -1.0
+  DoubleBuffer     dq ?
     ;
     ; Game Variable Structures
     ;
@@ -984,7 +1014,9 @@ OFFSET GreatMachine_Winner>
     GeneralGraphic     IMAGE_INFORMATION  <?>
     BoomGraphic        IMAGE_INFORMATION  <?>
     PanelGraphic       IMAGE_INFORMATION  <?>
-
+    CarSpinGraphic     IMAGE_INFORMATION  <?>
+    CarSpinConvert     SPRITE_CONVERT     <?>
+    CarSpinSprite      SPRITE_BASIC_INFORMATION <?>
 
 ;
 ; Active Points Strutures Shouldn't need more than 8
@@ -1060,6 +1092,72 @@ OFFSET GreatMachine_Winner>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
                        IMAGE_INFORMATION <?>
+
+
+;
+; Person Graphics
+;
+   GenericPersonListPtr   dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+                       dq ?
+
+   GenericPersonSpriteList      SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+                             SPECIAL_SPRITE_STRUCT      <?>                       
+
+   GenericPersonScrollList      SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>
+                             SCROLLING_GIF      <?>                       
+                             SCROLLING_GIF      <?>                       
+                             SCROLLING_GIF      <?>                       
+
+   GenericPersonImageList IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+                       IMAGE_INFORMATION <?>
+
+
 
    GenericItemsImagePtr  dq OFFSET FuelImage
                          dq OFFSET FuelImage 

@@ -494,12 +494,23 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   JE @FailureExit 
 
   ;
+  ; Load the Pedestrian/People Graphics
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_LoadPeopleGraphics
+  CMP RAX, 0
+  JE @FailureExit 
+
+  ;
   ; Load Items and other support graphics
   ;
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_LoadItemsAndSupportGraphics
   CMP RAX, 0
   JE @FailureExit 
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_CreateStarField
 
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -818,6 +829,132 @@ endif
 NESTED_END GreatMachine_LoadCarGraphics, _TEXT$00
 
 
+
+;*********************************************************
+;   GreatMachine_LoadPeopleGraphics
+;
+;        Parameters: Master Structure
+;
+;        Return Value: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadPeopleGraphics, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  XOR RBX, RBX
+  MOV R15, OFFSET GenericPersonImageList
+  MOV R14, OFFSET GenericPersonScrollList
+  MOV R13, OFFSET GenericPersonSpriteList
+  MOV R12, OFFSET GenericPersonListPtr
+@LoadPeopleGraphics:
+  CMP RBX, NUMBER_OF_PEOPLE_GIFS   ; This way you can disable the cars by setting the equates to 0
+  JE @PeopleComplete
+  INC RBX
+
+ifdef USE_FILES
+  MOV RCX, OFFSET GenericPersonImage
+  ADD RCX, 6
+  MOV DL, BL
+  CMP DL, 10
+  JB @Perform1sConversion
+  MOV DL, '0'
+  ADD DL, BL
+  JMP @AddDotGifNull
+  MOV BYTE PTR [RCX], '1'
+  INC RCX
+  SUB DL, 10
+@Perform1sConversion:
+  ADD DL, '0'
+  MOV BYTE PTR [RCX], DL
+  INC RCX
+@AddDotGifNull:
+  MOV BYTE PTR [RCX], '.'
+  INC RCX
+  MOV BYTE PTR [RCX], 'g'
+  INC RCX
+  MOV BYTE PTR [RCX], 'i'
+  INC RCX
+  MOV BYTE PTR [RCX], 'f'
+  INC RCX
+  MOV BYTE PTR [RCX], 0
+else
+  MOV RCX, OFFSET GenericPersonImage
+  ADD RCX, 6
+  MOV DL, BL
+  CMP DL, 10
+  JB @Perform1sConversion
+  MOV DL, '0'
+  ADD DL, BL
+  JMP @AddDotGifNull
+  MOV BYTE PTR [RCX], '1'
+  INC RCX
+  SUB DL, 10
+@Perform1sConversion:
+  ADD DL, '0'
+  MOV BYTE PTR [RCX], DL
+  INC RCX
+@AddDotGifNull:
+  MOV BYTE PTR [RCX], '_'
+  INC RCX
+  MOV BYTE PTR [RCX], 'G'
+  INC RCX
+  MOV BYTE PTR [RCX], 'I'
+  INC RCX
+  MOV BYTE PTR [RCX], 'F'
+  INC RCX
+  MOV BYTE PTR [RCX], 0
+endif
+
+  MOV RDX, R15                          ; Car Image List Entry
+  MOV RCX, OFFSET GenericPersonImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV SCROLLING_GIF.CurrentX[R14], 0
+  MOV SCROLLING_GIF.CurrentY[R14], 0
+  MOV SCROLLING_GIF.XIncrement[R14], ROAD_SCROLL_X_INC
+  MOV SCROLLING_GIF.YIncrement[R14], ROAD_SCROLL_Y_INC
+  MOV SCROLLING_GIF.ImageInformation[R14], R15
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteVelX[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteMaxVelX[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteX[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpriteY[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.ScrollingPtr[R13], R14
+  MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], SPRITE_TYPE_PEDESTRIAN
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R13], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R13], 0
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND RAX, 0Fh
+  SHL RAX, 7
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R13], RAX
+
+  MOV QWORD PTR [R12], R13
+
+  ADD R12, 8
+  ADD R13, SIZE SPECIAL_SPRITE_STRUCT
+  ADD R14, SIZE SCROLLING_GIF
+  ADD R15, SIZE IMAGE_INFORMATION
+  JMP @LoadPeopleGraphics
+@PeopleComplete:
+  MOV EAX, 1
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadPeopleGraphics, _TEXT$00
+
+
+
 ;*********************************************************
 ;   GreatMachine_LoadLevelNameGraphics
 ;
@@ -920,6 +1057,162 @@ NESTED_END GreatMachine_LoadGraphicsImage, _TEXT$00
 
 
 ;*********************************************************
+;   GreatMachine_CreateStarField
+;
+;        Parameters: Master Context
+;
+;        Return Value: 
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_CreateStarField, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  MOV RDX, 1
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL DBuffer_Create
+  MOV [DoubleBuffer], RAX
+  TEST RAX, RAX
+  JZ @StarInit_Failed
+
+  MOV RCX, 256
+  DEBUG_FUNCTION_CALL VPal_Create
+  TEST RAX, RAX
+  JZ @StarInit_Failed
+  MOV [VirtualPallete], RAX
+  
+
+  XOR R8, R8
+  XOR RDX, RDX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL Soft3D_Init
+  MOV [Soft3D], RAX
+  TEST RAX, RAX
+  JZ @StarInit_Failed
+
+
+  LEA RCX, [WorldLocation]
+  MOV TD_POINT.x[RCX], 0
+  MOV TD_POINT.y[RCX], 0
+  MOV TD_POINT.z[RCX], 0
+
+  MOVSD xmm0, [View_Distance]
+  MOVSD xmm1, xmm0
+  MOV RCX, [SOft3D]
+  DEBUG_FUNCTION_CALL Soft3D_SetViewDistance
+
+  XOR R12, R12
+
+@PopulatePallete:
+  MOV RAX, R12
+  MOV AH, AL
+  SHL RAX, 8
+  MOV AL, AH
+
+  MOV R8, RAX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
+
+  INC R12
+  CMP R12, 256
+  JB @PopulatePallete
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_CreateStars
+@StarInit_Failed:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_CreateStarField, _TEXT$00  
+
+;*********************************************************
+;  GreatMachine_CreateStars
+;
+;        Parameters: Master Context
+;          
+;         Return: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_CreateStars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RCX
+
+  MOV R9, 4         ; PAGE_READWRITE
+  MOV R8, 03000h    ; MEM_COMMIT | MEM_RESERVE
+  MOV RDX, (SIZE STAR_FIELD_ENTRY * 1000)
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL VirtualAlloc
+  CMP RAX, 0
+  JE @Failure
+
+  MOV RDI, RAX
+  MOV [StarEntryPtr], RAX
+  XOR RSI, RSI
+
+@Initialize_Stars:
+
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  XOR RDX, RDX
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm0
+  
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
+  XOR RDX, RDX
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm0
+  
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 0FFh
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
+
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV STAR_FIELD_ENTRY.Color[RDI], AL
+
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 3
+  INC RAX
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
+
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, 1000
+  JB @Initialize_Stars
+
+  MOV EAX, 1
+@Failure:  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_CreateStars, _TEXT$00
+
+
+
+;*********************************************************
 ;   GreatMachine_LoadGraphicsImage
 ;
 ;        Parameters: None
@@ -933,6 +1226,35 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+
+  MOV RDX, OFFSET CarSpinGraphic
+  MOV RCX, OFFSET CarSpinImage
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RAX, OFFSET CarSpinGraphic
+  MOV [CarSpinConvert.ImageInformationPtr], RAX
+  MOV IMAGE_INFORMATION.ImageMaxFrames[RAX], 15
+
+  MOV RAX, OFFSET CarSpinSprite
+  MOV [CarSpinConvert.SpriteBasicInformtionPtr], RAX
+  MOV [CarSpinConvert.SpriteBasicAllocated], 0
+  MOV [CarSpinConvert.SpriteX], 0                   
+  MOV [CarSpinConvert.SpriteY], 0      
+  MOV RAX, [CarSpinGraphic.ImageWidth]
+  MOV [CarSpinConvert.SpriteX2], RAX                  
+  MOV RAX, [CarSpinGraphic.ImageHeight]
+  MOV [CarSpinConvert.SpriteY2], RAX          
+  MOV [CarSpinConvert.SpriteImageStart], 0          
+  MOV [CarSpinConvert.SpriteNumImages], 6           
+
+  MOV RCX, OFFSET CarSpinConvert
+  DEBUG_FUNCTION_CALL GameEngine_ConvertImageToSprite
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV [CarSpinSprite.SpriteMaxFrames], 25
 
   MOV RDX, OFFSET BoomGraphic
   MOV RCX, OFFSET BoomImage
@@ -1026,7 +1348,7 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
    INC RBX
    JMP @SetupPartsItems
 @PartsItemsComplete:
-
+   MOV EAX, 1
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

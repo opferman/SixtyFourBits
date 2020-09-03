@@ -97,8 +97,16 @@ NESTED_ENTRY GreatMachine_Winner, _TEXT$00
   MOV RSI, RCX
   MOV RDI, RDX
 
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayWinnerAnimation
 
- ; DEBUG_FUNCTION_CALL GreatMachine_DisplayWinnerAnimation
+  MOV R9, 400
+  MOV R8, 230
+ ; MOV [CarSpinGraphic.ImageFrameNum], 0  ; keep resetting it so it doesn't animate
+  MOV RDX, OFFSET CarSpinGraphic
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
+
+
   
   MOV R9, TITLE_Y
   MOV R8, TITLE_X
@@ -541,5 +549,213 @@ NESTED_ENTRY GreatMachine_Pause, _TEXT$00
   RET
 
 NESTED_END GreatMachine_Pause, _TEXT$00
+
+
+
+;*********************************************************
+;  GreatMachine_MoveStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_MoveStars, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RDI, [StarEntryPtr]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Move_Stars:
+
+  MOVSD xmm0, STAR_FIELD_ENTRY.Location.z[RDI]
+  UCOMISD xmm0,  mmword ptr [ConstantZero]
+  JG @CheckOffScreen
+  JMP @CreateNewStar
+
+@CheckOffScreen:
+  CMP STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_OFF_SCREEN
+  JE @CreateNewStar
+
+  MOVSD xmm0, STAR_FIELD_ENTRY.Velocity[RDI]
+  MOVSD xmm1, STAR_FIELD_ENTRY.Location.z[RDI]
+  SUBSD xmm1, xmm0
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm1
+
+  CMP STAR_FIELD_ENTRY.Color[RDI], 255
+  JE @SkipIncrementColor
+
+  INC STAR_FIELD_ENTRY.Color[RDI]
+ @SkipIncrementColor:
+
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, 1000
+  JB @Move_Stars
+  JMP @StarMoveComplete
+
+@CreateNewStar:
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  XOR RDX, RDX
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.x[RDI], xmm0
+  
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[R12]
+  XOR RDX, RDX
+  DIV RCX
+  SHR RCX, 1
+  SUB RDX, RCX
+  
+  cvtsi2sd xmm0, RDX
+  MOVSD STAR_FIELD_ENTRY.Location.y[RDI], xmm0
+  
+  DEBUG_FUNCTION_CALL Math_rand
+  AND RAX, 0FFh
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Location.z[RDI], xmm0
+
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], SOFT3D_PIXEL_ON_SCREEN
+
+  DEBUG_FUNCTION_CALL Math_rand
+  MOV STAR_FIELD_ENTRY.Color[RDI], AL
+
+  MOV RAX, [CurrentVelocity]
+  cvtsi2sd xmm0, rax
+  MOVSD STAR_FIELD_ENTRY.Velocity[RDI], xmm0
+
+  JMP  @SkipIncrementColor
+@StarMoveComplete:
+   
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END GreatMachine_MoveStars, _TEXT$00
+
+;*********************************************************
+;  GreatMachine_PlotStars
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_PlotStars, _TEXT$00
+ alloc_stack(SIZEOF STD_FUNCTION_STACK_MIN)
+ save_reg rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi
+ save_reg rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi
+ save_reg rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx
+ save_reg r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RDI, [StarEntryPtr]
+  XOR RSI, RSI
+  MOV R12, RCX
+  
+@Plot_Stars:
+  MOV STD_FUNCTION_STACK_MIN.Parameters.Param5[RSP], 0
+  LEA R9, [TwoDPlot]
+  LEA R8, [WorldLocation]
+  LEA RDX, STAR_FIELD_ENTRY.Location[RDI]
+  MOV RCX, [SOft3D]
+  DEBUG_FUNCTION_CALL Soft3D_Convert3Dto2D
+  MOV STAR_FIELD_ENTRY.StarOnScreen[RDI], RAX
+  CMP RAX, SOFT3D_PIXEL_OFF_SCREEN
+  JE @SkipPixelPlot
+  
+  MOV RBX, [DoubleBuffer]
+  LEA R9, [TwoDPlot]
+
+  MOV RCX, TD_POINT_2D.y[R9]
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  MUL RCX
+  ADD RBX, RAX
+  ADD RBX, TD_POINT_2D.x[R9]
+  
+  MOV AL, STAR_FIELD_ENTRY.Color[RDI]
+  MOV [RBX], AL
+
+ @SkipPixelPlot:
+  ADD RDI, SIZE STAR_FIELD_ENTRY
+  INC RSI
+  CMP RSI, 1000
+  JB @Plot_Stars
+  
+  MOV rdi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRdi[RSP]
+  MOV rsi, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRsi[RSP]
+  MOV rbx, STD_FUNCTION_STACK_MIN.SaveRegs.SaveRbx[RSP]
+  MOV r12, STD_FUNCTION_STACK_MIN.SaveRegs.SaveR12[RSP]
+  ADD RSP, SIZE STD_FUNCTION_STACK_MIN
+  RET
+NESTED_END GreatMachine_PlotStars, _TEXT$00
+
+;*********************************************************
+;  GreatMachine_IncStarVelocity
+;
+;        Parameters: Leaf function for updating Velocity
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_IncStarVelocity, _TEXT$00
+  .ENDPROLOG 
+  CMP [CurrentVelocity], 5
+  JAE @SkipUpdate
+  INC [CurrentVelocity]
+@SkipUpdate:
+  RET
+NESTED_END GreatMachine_IncStarVelocity, _TEXT$00
+
+
+;*********************************************************
+;  GreatMachine_DisplayWinnerAnimation
+;
+;        Parameters: Master Context, Double Buffer
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_DisplayWinnerAnimation, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RDI, RCX
+  MOV R9, RDX
+  MOV RCX, [DoubleBuffer]
+  MOV RDX, [VirtualPallete]
+  MOV R8, DB_FLAG_CLEAR_BUFFER
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateOther32BitDoubleBuffer
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL GreatMachine_MoveStars
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL GreatMachine_PlotStars
+
+  DEBUG_FUNCTION_CALL GreatMachine_IncStarVelocity
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_DisplayWinnerAnimation, _TEXT$00
 
 

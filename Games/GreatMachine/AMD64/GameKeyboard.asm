@@ -277,6 +277,9 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
   SHL RDX, 3
   ADD RCX, RDX
   MOV RCX, QWORD PTR [RCX]
+
+  MOV RCX, GREAT_MACHINE_LEVELS
+
   MOV [GreatMachineCurrentState], RCX
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
 

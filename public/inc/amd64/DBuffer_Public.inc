@@ -3,3 +3,4 @@ extern Dbuffer_Free:proc
 extern Dbuffer_UpdateScreen:proc
 extern DBuffer_Create:proc
 extern Dbuffer_ClearBuffer:proc
+extern Dbuffer_UpdateOther32BitDoubleBuffer:proc

@@ -49,6 +49,10 @@ NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_GenerateGameCarParts
 
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_GeneratePedestrians
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -469,3 +473,96 @@ NESTED_END GreatMachine_GenerateGameCarParts, _TEXT$00
 
 
 
+
+;*********************************************************
+;   GreatMachine_GeneratePedestrians
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_GeneratePedestrians, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R12, RCX
+;  MOV RDI, RDX 
+
+  MOV RSI, [LevelInformationPtr]
+  CMP LEVEL_INFORMATION.PesdestrianTimer[RSI], 0
+  JNE @StillTicking
+
+  MOV RBX, [GenericPersonListPtr]
+  XOR RDI, RDI
+@CheckPeople:
+  CMP RDI, NUMBER_OF_PEOPLE
+  JE @NoMorePeopleToCheck
+  
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX], 0
+  JNE @SpriteIsAlreadyActive
+  
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND RAX, SPECIAL_SPRITE_STRUCT.SpriteBiasMask[RBX]
+  CMP RAX, SPECIAL_SPRITE_STRUCT.SpriteBias[RBX]
+  JA @SpriteSkipped
+
+  ;
+  ; Now this sprite will become active and put on one of the list.
+  ;
+  MOV RAX, LEVEL_INFORMATION.PesdestrianTimerRefresh[RSI]
+  MOV LEVEL_INFORMATION.PesdestrianTimer[RSI], RAX
+
+  DEBUG_FUNCTION_CALL Math_Rand
+
+  MOV R15, OFFSET TopSideWalkPtr
+  MOV R14, TOP_SIDEWALK_PERSON
+  TEST EAX, 1
+  JE @TopSideWalkItIs
+  MOV R15, OFFSET BottomSideWalkPtr
+  MOV R14, BOTTOM_SIDEWALK_PERSON
+@TopSideWalkItIs:
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX], 1
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
+  MOV SCROLLING_GIF.CurrentY[RAX], R14
+  MOV RCX, SCROLLING_GIF.ImageInformation [RAX]
+
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  DEC RCX
+  MOV SCROLLING_GIF.CurrentX[RAX], RCX
+
+  CMP QWORD PTR [R15], 0
+  JE @AddSelfToList
+
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
+  MOV RCX, QWORD PTR [R15]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], RBX
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], RCX
+  MOV QWORD PTR [R15], RBX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
+  JMP @NoMorePeopleToCheck
+
+@SpriteIsAlreadyActive:
+@SpriteSkipped:
+  INC RDI
+  ADD RBX, SIZE SPECIAL_SPRITE_STRUCT
+  JMP @CheckPeople
+
+@AddSelfToList:
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
+  MOV QWORD PTR [R15], RBX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
+  JMP @NoMorePeopleToCheck
+ 
+@StillTicking:
+  DEC LEVEL_INFORMATION.PesdestrianTimer[RSI]
+@NoMorePeopleToCheck:  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_GeneratePedestrians, _TEXT$00

@@ -102,6 +102,10 @@ NESTED_ENTRY GreatMachine_DisplayLevelSprites, _TEXT$00
 @PointsLeaves:
   JMP @DrawAllScrollingSprites
 @PedesstrianLeaves:
+  MOV RCX, [LevelInformationPtr]
+  MOV RAX, LEVEL_INFORMATION.PesdestrianTimerRefresh[RCX]
+  MOV LEVEL_INFORMATION.PesdestrianTimer[RCX], RAX
+
   JMP @DrawAllScrollingSprites
 @PartLeaves:
   MOV RCX, [LevelInformationPtr]
