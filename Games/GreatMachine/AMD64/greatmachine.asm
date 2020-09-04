@@ -401,10 +401,14 @@ ifdef USE_FILES
     GenericPersonImage              db "Personxxx.gif", 0   ; change the x's to numbers and add back in ".gif", 0
     BoomImage                       db "boom.gif", 0
     PanelImage                      db "panel.gif", 0
-    FuelImage                       db "fuel.gif", 0
+    FuelImage1                      db "fuel.gif", 0
+    FuelImage2                      db "fuel2.gif", 0
     CarPart1Image                   db "carpart1.gif", 0
     CarPart2Image                   db "carpart2.gif", 0
     CarPart3Image                   db "carpart3.gif", 0
+    CarPart4Image                   db "carpart4.gif", 0
+    CarPart5Image                   db "carpart5.gif", 0
+    CarPart6Image                   db "carpart6.gif", 0
     CarSpinImage                    db "CarSpin.gif", 0
     Item1Image                      db "Item1.gif", 0
 else	
@@ -431,10 +435,14 @@ else
     GenericPersonImage              db "PERSONxxx_GIF", 0    ; Change the X's to numbers 
     BoomImage                       db "BOOM_GIF", 0
     PanelImage                      db "PANEL_GIF", 0
-    FuelImage                       db "FUEL_GIF", 0
+    FuelImage1                      db "FUEL_GIF", 0
+    FuelImage2                      db "FUEL2_GIF", 0
     CarPart1Image                   db "CARPART1_GIF", 0
     CarPart2Image                   db "CARPART2_GIF", 0
     CarPart3Image                   db "CARPART3_GIF", 0
+    CarPart4Image                   db "CARPART4_GIF", 0
+    CarPart5Image                   db "CARPART5_GIF", 0
+    CarPart6Image                   db "CARPART6_GIF", 0
     CarSpinImage                    db "CARSPIN_GIF", 0
     Item1Image                      db "ITEM1_GIF", 0
 endif	
@@ -935,14 +943,14 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
 
 
 
-   GenericItemsImagePtr  dq OFFSET FuelImage
-                         dq OFFSET FuelImage 
+   GenericItemsImagePtr  dq OFFSET FuelImage1
+                         dq OFFSET FuelImage2 
                          dq OFFSET CarPart1Image
                          dq OFFSET CarPart2Image
                          dq OFFSET CarPart3Image
-                         dq OFFSET CarPart1Image 
-                         dq OFFSET CarPart2Image 
-                         dq OFFSET CarPart3Image 
+                         dq OFFSET CarPart4Image 
+                         dq OFFSET CarPart5Image 
+                         dq OFFSET CarPart6Image 
                          dq OFFSET Item1Image
                          dq ? 
                          dq ? 

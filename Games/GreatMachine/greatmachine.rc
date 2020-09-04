@@ -31,9 +31,13 @@ GENERIC_CAR7_GIF  GIFFILE resources\GenericCar7.gif
 BOOM_GIF          GIFFILE resources\boom.gif
 PANEL_GIF         GIFFILE resources\panel.gif
 FUEL_GIF          GIFFILE resources\fuel.gif
+FUEL2_GIF         GIFFILE resources\fuel2.gif
 CARPART1_GIF      GIFFILE resources\carpart1.gif
 CARPART2_GIF      GIFFILE resources\carpart2.gif
 CARPART3_GIF      GIFFILE resources\carpart3.gif
+CARPART4_GIF      GIFFILE resources\carpart4.gif
+CARPART5_GIF      GIFFILE resources\carpart5.gif
+CARPART6_GIF      GIFFILE resources\carpart6.gif
 CARSPIN_GIF       GIFFILE resources\carspin.gif
 PERSON1_GIF       GIFFILE resources\person1.gif
 PERSON2_GIF       GIFFILE resources\person2.gif
