@@ -209,8 +209,8 @@ LEVEL_INFORMATION STRUCT
   CurrentCarPartCount             dq ?
   CarPartGenerateTimerL0          dq ?
   CarPartGenerateTimerL1          dq ?
-  CarPartGenerateTimerRefreshL0       dq ?
-  CarPartGenerateTimerRefreshL1       dq ?
+  CarPartGenerateTimerRefreshL0   dq ?
+  CarPartGenerateTimerRefreshL1   dq ?
   CurrentCarPartCountL0           dq ?
   CurrentCarPartCountL1           dq ?
   CarPartsPoints                  dq ?
@@ -348,7 +348,7 @@ BOTTOM_SIDEWALK_PERSON EQU <PLAYER_LANE_1 + 55>
  ;
  ; Special DeBounce for Items
  ;
- SPECIAL_DEBOUNCE       EQU <200>
+ SPECIAL_DEBOUNCE       EQU <30>
 
  ;
  ; Enable Debug Capabilities 
@@ -519,10 +519,10 @@ LevelInformationMedium  LEVEL_INFORMATION   <1, 1000 * 60 * 4, 1000 * 60 * 4, OF
 
 ;                                                                                                             Cars Section          People        Fuel Section                        Car Parts              Items
 ;                                                                                                        ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------     
-LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,3,5,0,0,0,15,15,20,0,200, 150,0,0,200, 150,100,15,0, 300,  200, 100,  200,0,0,300, 20, 20, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <2,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelTwoGraphic,  200,200,2,0,1,100,100,0,0,4,5,0,0,0,50,50,30,0,250, 100,0,0,250, 100,200,20,0, 300,  200, 175,   75,0,0,600, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <3,1000 * 30 * 5,1000 * 30 * 5,OFFSET LevelThreeGraphic,200,200,2,0,1,100,100,0,0,4,5,0,0,0,25,25,35,0,200,  50,0,0,200,  50,300,30,0, 200,  100,  50,  150,0,0,700, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <4,1000 * 60 * 2,1000 * 60 * 2,OFFSET LevelFourGraphic, 200,200,2,0,1,100,100,0,0,5,6,0,0,0,40,40,40,0, 50, 500,0,0, 50, 500,400,35,0, 150,  178,  25,   50,0,0,900, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
+LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,3,5,0,0,0,15,15,20,0,200, 150,0,0,200, 150,100,15,0, 300,  200, 100,  200,0,0,300, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <2,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelTwoGraphic,  200,200,2,0,1,100,100,0,0,4,5,0,0,0,50,50,30,0,250, 100,0,0,250, 100,200,20,0, 300,  200, 175,   75,0,0,600, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <3,1000 * 30 * 5,1000 * 30 * 5,OFFSET LevelThreeGraphic,200,200,2,0,1,100,100,0,0,4,5,0,0,0,25,25,35,0,200, 100,0,0,200,  50,300,30,0, 200,  100,  50,  150,0,0,700, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <4,1000 * 60 * 2,1000 * 60 * 2,OFFSET LevelFourGraphic, 200,200,2,0,1,100,100,0,0,5,6,0,0,0,40,40,40,0,150, 300,0,0, 50, 500,400,35,0, 150,  178,  25,   50,0,0,900, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
 
 
     LevelNameGraphic     IMAGE_INFORMATION  <?>
