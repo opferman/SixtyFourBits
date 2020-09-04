@@ -125,8 +125,17 @@ endif
           MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
 
    JMP @RemoveFromList
+
 @TryNextType_Two:
+   CMP SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_TOXIC 
+   JNE @TryNextType_Three
+@ExtraLivesCollision:
+    MOV RCX, [LevelInformationPtr]
+    MOV RAX, LEVEL_INFORMATION.ItemGenerateTimerRefresh[RCX]
+    MOV LEVEL_INFORMATION.ItemGenerateTimer[RCX], RAX
    
+   JMP @RemoveFromList 
+@TryNextType_Three:   
    JMP @RemoveFromList
 
 @RemoveFromList:   
@@ -372,15 +381,27 @@ JMP @CheckForCollisions
 ; Cannot hit pedestrians
 ;
 @PedesstrianCollision:
-
+  ; TBD
+  INT 3; Currently, should never be on the list.
 JMP @EndOfList
 
 ;
 ; Random items you get points for getting
 ;
 @PointsItem:
-  INT 3 ; Should never be on the list.
-JMP @NextItemCheck
+  ;
+  ; Only allowed to get 1 extra life per level.
+  ;
+  MOV RCX, [LevelInformationPtr]
+  LEA RAX, [POINT_EXTRA_LIFE]
+  MOV LEVEL_INFORMATION.ItemGenerateTimer[RCX], RAX
+
+  INC [PlayerLives]
+  LEA RDX, [POINT_EXTRA_LIFE]
+  MOV RCX, R15
+  MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
+  DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
+JMP @CheckForCollisions
 
 @NextItemCheck:
 @IsNotCollision:

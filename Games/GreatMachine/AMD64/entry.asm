@@ -59,6 +59,9 @@ pszWindowTitle       db 'The Great Machine', 0
 pszMsgCpt       db 'The Great Machine ', 0
 pszMsgTxt       db 'Do you want to view in full screen?', 0
 
+pszWarnCpt       db 'WARNING', 0
+pszWarnTxt       db 'This game will run best in FULLSCREEN.', 0
+
 .CODE
 
 
@@ -89,6 +92,13 @@ NESTED_ENTRY WinMain, _TEXT$00
   LEA RCX, [GlobalDemoStructure]    
   MOV WINMAIN_FRAME.InitializationStruct.GlobalDemoStructure[RSP], RCX
   MOV WINMAIN_FRAME.InitializationStruct.DisableEscapeExit[RSP], 0
+
+
+  MOV R9, 30h ; MB_OK | MB_ICONWARNING
+  LEA R8, [pszWarnCpt]
+  LEA RDX, [pszWarnTxt]
+  XOR RCX, RCX
+  CALL MessageBoxA
 
   MOV R9, 24h ; MB_YESNO | MB_ICONQUESTION
   LEA R8, [pszMsgCpt]

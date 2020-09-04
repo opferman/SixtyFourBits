@@ -42,4 +42,6 @@ PERSON4_GIF       GIFFILE resources\person4.gif
 PERSON5_GIF       GIFFILE resources\person5.gif
 PERSON6_GIF       GIFFILE resources\person6.gif
 PERSON7_GIF       GIFFILE resources\person7.gif
+PERSON8_GIF       GIFFILE resources\person8.gif
+ITEM1_GIF         GIFFILE resources\item1.gif
 #endif

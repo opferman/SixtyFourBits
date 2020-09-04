@@ -87,6 +87,8 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RAX], RCX
   MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.ItemGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.ItemGenerateTimer[RAX], RCX
 
   ;
   ; Reset Player

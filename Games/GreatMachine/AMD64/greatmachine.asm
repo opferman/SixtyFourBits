@@ -214,6 +214,12 @@ LEVEL_INFORMATION STRUCT
   CurrentCarPartCountL0           dq ?
   CurrentCarPartCountL1           dq ?
   CarPartsPoints                  dq ?
+  ;
+  ; Items
+  ;
+  ItemGenerateTimer               dq ?
+  ItemGenerateTimerRefresh        dq ?
+
 
   ;
   ; Function Pointers
@@ -260,15 +266,18 @@ LEVEL_NAME_X           EQU <50>
 LEVEL_NUMBER_Y         EQU <768/2 - 30>
 LEVEL_NUMBER_X         EQU <510>
 NUMBER_OF_GENERIC_CARS  EQU <7>
-NUMBER_OF_PEOPLE_GIFS   EQU <7>
-NUMBER_OF_PEOPLE        EQU <7>
+NUMBER_OF_PEOPLE_GIFS   EQU <8>
+NUMBER_OF_PEOPLE        EQU <8>
 NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
 PLAYER_SIDE_PANEL_FONT_SIZE EQU <2>
 PLAYER_SCORE_FONT_SIZE EQU <4>
 
-NUMBER_OF_GENERIC_ITEMS EQU <8>
+POINT_EXTRA_LIFE       EQU <0FFFFFFFFFFFFFFFFh>
+
+NUMBER_OF_GENERIC_ITEMS EQU <9>
 NUMBER_OF_FUEL          EQU <2>
 NUMBER_OF_PARTS         EQU <6>
+NUMBER_OF_ITEMS         EQU <1>
 
 STAR_FIELD_ENTRY struct
    Location       TD_POINT <?>
@@ -397,6 +406,7 @@ ifdef USE_FILES
     CarPart2Image                   db "carpart2.gif", 0
     CarPart3Image                   db "carpart3.gif", 0
     CarSpinImage                    db "CarSpin.gif", 0
+    Item1Image                      db "Item1.gif", 0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -426,6 +436,7 @@ else
     CarPart2Image                   db "CARPART2_GIF", 0
     CarPart3Image                   db "CARPART3_GIF", 0
     CarSpinImage                    db "CARSPIN_GIF", 0
+    Item1Image                      db "ITEM1_GIF", 0
 endif	
     HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
@@ -483,7 +494,7 @@ endif
                                     dq 50, 500
                                     db "Those are the only controls.", 0
                                     dq 0
-
+    ExtraLife                       db "+1 Life", 0
   ;
   ; Level Support
   ;
@@ -491,263 +502,28 @@ endif
   LevelStartTimer      dq ?
   TimerAdjustMs        dq ?
   GamePanel            dq ?
- ;
- ;
- ;  Description for the LEVEL_INFORMATION structure seen below.
- ;
- ;
- 
-; Level Number                                                               LevelNumber                                               
- ; Level Timer in milliseconds                                               LevelTimer                                
- ; Level Timer Refresh (Constant) in Milliseconds                            LevelTimerRefresh                         
- ; Level Number Graphic                                                      LevelNumberGraphic                              
- ; Level One Start Delay in Ticks (Ticks are # of screen updates)            LevelStartDelay              
- ; Level One Start Delay Refresh (Constant)                                  LevelStartDelayRefresh       
- ; Number of concurrent cars on the level (Constant)                         NumberOfConcurrentCars       
- ; Current Number of Cars on the Level                                       CurrrentNumberOfCars
- ; Can have cars in multiple lanes at the same time                          CarsCanBeMultipleLanes       
- ; In Ticks, how long before a new car can be generated                  TimerAfterCarsLeave              
- ; Refresh the tick rate for car generation (constant)                   TimerAfterCarsLeaveRefresh       
- ; Timer between concurrent car generation (if any) in ticks             TimerBetweenConcurrent           
- ; Timer between concurrent car generation (if any) in ticks (constant)  TimerBetweenConcurrentRefresh  
- ; The minimum velocity a car can have                                   MinAddedVelocity               
- ; The maximum velocity a car can have                                   MaxAddedVelocity                
- ; The velocity can change during game play                              VelocityCanBeDynamic            
- ; The car can change lanes during game play                             CarCanChangeLanes                 
- ; If pedestrians can be in the street.                                  PedestriansCanBeInStreet         
- ; Tick count between generating pedestrians                             PesdestrianTimer                 
- ; refresh the tick count generating pedestrians (constant)              PesdestrianTimerRefresh          
- ; Number of barrels to complete level (constant)                        LevelCompleteBarrelCount         
- ; current barrel count                                                  CurrentLevelBarrelCount          
- ; tick count between generating barrels                                 BarrelGenerateTimer              
- ;  Can have barrels that are bad and loose points                       CanHaveBadBarrels                
- ; tick count for barrel generation refresh (Constant)                   BarrelGenerateTimerRefresh       
- ; Number of car parts you need to complete level  (Constant)            LevelCompleteCarPartCount        
- ;  Current number of car parts                                          CurrentCarPartCount              
- ; Car part generator timer in ticks                                     CarPartGenerateTimer             
- ; Car part geneerator timer refresh in ticks (Constant)                 CarPartGenerateTimerRefresh      
- ; Function pointer to reset this level.                                 pfnLevelReset                    
- ; Function pointer to go to the next levell                             pfnNextLevel   
- 
-;
-; Easy cust and past configuration
-; 
-;LevelNumber                     dq ?  <1,\                   
-;LevelTimer                      dq ?   1000 * 60 * 5,\                                 
-;LevelTimerRefresh               dq ?   1000 * 60 * 5,\                                 
-;LevelNumberGraphic              dq ?   OFFSET LevelOneGraphic,\                        
-;LevelStartDelay                 dq ?   200,\                                           
-;LevelStartDelayRefresh          dq ?   200,\                                           
-;NumberOfConcurrentCars          dq ?   1,\                                             
-;CurrrentNumberOfCars            dq ?   0,\                                             
-;CarsCanBeMultipleLanes          dq ?   0,\                                             
-;TimerAfterCarsLeave             dq ?   100,\                                           
-;TimerAfterCarsLeaveRefresh      dq ?   100,\                                           
-;TimerBetweenConcurrent          dq ?   0,\                                             
-;TimerBetweenConcurrentRefresh   dq ?   0,\                                             
-;MinAddedVelocity                dq ?   1,\                                             
-;MaxAddedVelocity                dq ?   3,\                     
-;VelocityCanBeDynamic            dq ?   0,\                     
-;CarCanChangeLanes               dq ?   0,\                     
-;PedestriansCanBeInStreet        dq ?   0,\                     
-;PesdestrianTimer                dq ?   0,\                    
-;PesdestrianTimerRefresh         dq ?   0,\                    
-;LevelCompleteBarrelCount        dq ?   10,\                    
-;CurrentLevelBarrelCount         dq ?   0,\                     
-;BarrelGenerateTimerL0           dq ?   800,\                   
-;BarrelGenerateTimerL1           dq ?   1500,\                   
-;CurrentBarrelCountL0            dq ?   0,\                     
-;CurrentBarrelCountL1            dq ?   0,\                     
-;BarrelGenerateTimerRefreshL0    dq ?   800,\                   
-;BarrelGenerateTimerRefreshL1    dq ?   1500,\                    
-;BarrelPoints                    dq ?   25,\                     
-;LevelCompleteCarPartCount       dq ?   5,\                     
-;CurrentCarPartCount             dq ?   0,\                  
-;CarPartGenerateTimerL0          dq ?   2000,\                  
-;CarPartGenerateTimerL1          dq ?   1000,\                   
-;CarGenerateTimerRefreshL0       dq ?   2000,\                  
-;CarGenerateTimerRefreshL1       dq ?   1000,\                  
-;CurrentCarPartCountL0           dq ?   0,\
-;CurrentCarPartCountL1           dq ?   0,\   
-; CarPartsPoints                        150 \            
-;pfnLevelReset                   dq ?   OFFSET GreatMachine_ResetLevel,\                  
-;pfnNextLevel                    dq ?   OFFSET GreatMachine_NextLevel>                 
-                  
-                  
+                 
+;                                                                                                              Cars Section          People        Fuel Section                        Car Parts              Items
+;                                                                                                         ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------
+LevelInformationEasy LEVEL_INFORMATION   <1,1000 * 60 * 6, 1000 * 60 * 6,OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,1,3,0,0,0,15,15,10,0,800,1500,0,0,800,1500, 25, 5,0,2000,1000,2000,1000,0,0,150, 5000, 5000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <2,1000 * 60 * 5, 1000 * 60 * 5,OFFSET LevelTwoGraphic,  200,200,1,0,0, 75, 75,0,0,2,4,0,0,0,50,50,20,0,500, 800,0,0,500, 800, 50,10,0,1000, 700,1000, 700,0,0,200, 4000, 4000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <3,1000 * 60 * 4, 1000 * 60 * 4,OFFSET LevelThreeGraphic,200,200,1,0,0, 75, 75,0,0,2,4,0,0,0,25,25,20,0,500, 800,0,0,500, 800, 50,15,0, 500, 200, 500, 200,0,0,200, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <4,1000 * 60 * 3, 1000 * 60 * 3,OFFSET LevelFourGraphic, 200,200,1,0,0, 50, 50,0,0,3,5,0,0,0,40,40,20,0,200, 500,0,0,200, 500,100,20,0, 200, 500, 200, 500,0,0,500, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
 
-LevelInformationEasy LEVEL_INFORMATION   <1,\
-1000 * 60 * 5,\
-1000 * 60 * 5,\
-OFFSET LevelOneGraphic,\
-200,\
-200,\
-1,\
-0,\
-0,\
-100,\
-100,\
-0,\
-0,\
-1,\
-3,\
-0,\
-0,\
-0,\
-15,\
-15,\
-10,\
-0,\
-800,\
-1500,\
-0,\
-0,\
-800,\
-1500,\
-25,\
-5,\
-0,\
-2000,\
-1000,\
-2000,\
-1000,\
-0,\
-0,\
-150,\
-OFFSET GreatMachine_ResetLevel,\
-OFFSET GreatMachine_NextLevel>
-                                  
-LEVEL_INFORMATION   <2,\
-265000,\
-265000,\
-OFFSET LevelTwoGraphic,\
-200,\
-200,\
-1,\
-0,\
-0,\
-75,\
-75,\
-0,\
-0,\
-2,\
-4,\
-0,\
-0,\
-0,\
-50,\
-50,\
-20,\
-0,\
-500,\
-800,\
-0,\
-0,\
-500,\
-800,\
-50,\
-10,\
-0,\
-1000,\
-700,\
-1000,\
-700,\
-0,\
-0,\
-200,\
-OFFSET GreatMachine_ResetLevel,\
-OFFSET GreatMachine_NextLevel>
+;                                                                                                                   Cars Section          People        Fuel Section                        Car Parts              Items
+;                                                                                                              ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------
+LevelInformationMedium  LEVEL_INFORMATION   <1, 1000 * 60 * 4, 1000 * 60 * 4, OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,2,4,0,0,0,15,15,15,0,800, 500,0,0,800, 500, 50,10,0, 500, 900, 500, 900,0,0,150, 4000, 4000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                        LEVEL_INFORMATION   <2, 1000 * 60 * 4, 1000 * 60 * 4, OFFSET LevelTwoGraphic,  200,200,1,0,0, 75, 75,0,0,3,4,0,0,0,50,50,20,0,500, 800,0,0,500, 800, 50,15,0, 400, 700, 400, 700,0,0,300, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                        LEVEL_INFORMATION   <3, 1000 * 60 * 3, 1000 * 60 * 3, OFFSET LevelThreeGraphic,200,200,1,0,0, 75, 75,0,0,4,5,0,0,0,25,25,25,0,100,  75,0,0,100,  75, 70,20,0, 200, 250, 200, 250,0,0,400, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                        LEVEL_INFORMATION   <4, 1000 * 30 * 5, 1000 * 30 * 5, OFFSET LevelFourGraphic, 200,200,2,0,1, 50, 50,0,0,5,5,0,0,0,40,40,30,0, 50,  10,0,0, 50,  10,150,25,0,  50, 550,  50, 550,0,0,700, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
 
-LEVEL_INFORMATION  <3,\
-(1000 * 60 * 4),\
-(1000 * 60 * 4),\
-OFFSET LevelThreeGraphic,\
-200,\
-200,\
-1,\
-0,\
-0,\
-75,\
-75,\
-0,\
-0,\
-2,\
-4,\
-0,\
-0,\
-0,\
-25,\
-25,\
-20,\
-0,\
-500,\
-800,\
-0,\
-0,\
-500,\
-800,\
-50,\
-15,\
-0,\
-500,\
-200,\
-500,\
-200,\
-0,\
-0,\
-200,\
-OFFSET GreatMachine_ResetLevel,\
-OFFSET GreatMachine_NextLevel>
+;                                                                                                             Cars Section          People        Fuel Section                        Car Parts              Items
+;                                                                                                        ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------     
+LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,3,5,0,0,0,15,15,20,0,200, 150,0,0,200, 150,100,15,0, 300,  200, 100,  200,0,0,300, 20, 20, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <2,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelTwoGraphic,  200,200,2,0,1,100,100,0,0,4,5,0,0,0,50,50,30,0,250, 100,0,0,250, 100,200,20,0, 300,  200, 175,   75,0,0,600, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <3,1000 * 30 * 5,1000 * 30 * 5,OFFSET LevelThreeGraphic,200,200,2,0,1,100,100,0,0,4,5,0,0,0,25,25,35,0,200,  50,0,0,200,  50,300,30,0, 200,  100,  50,  150,0,0,700, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
+                     LEVEL_INFORMATION   <4,1000 * 60 * 2,1000 * 60 * 2,OFFSET LevelFourGraphic, 200,200,2,0,1,100,100,0,0,5,6,0,0,0,40,40,40,0, 50, 500,0,0, 50, 500,400,35,0, 150,  178,  25,   50,0,0,900, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
 
-LEVEL_INFORMATION  <4,\
-(1000 * 60 * 3),\
-(1000 * 60 * 3),\
-OFFSET LevelFourGraphic,\
-200,\
-200,\
-1,\
-0,\
-0,\
-50,\
-50,\
-0,\
-0,\
-3,\
-5,\
-0,\
-0,\
-0,\
-40,\
-40,\
-20,\
-0,\
-200,\
-500,\
-0,\
-0,\
-200,\
-500,\
-100,\
-20,\
-0,\
-200,\
-500,\
-200,\
-500,\
-0,\
-0,\
-500,\
-OFFSET GreatMachine_ResetLevel,\
-OFFSET GreatMachine_Winner>
-
-    LevelInformationMedium LEVEL_INFORMATION  <?>
-                           LEVEL_INFORMATION  <?>
-                           LEVEL_INFORMATION  <?>
-                           LEVEL_INFORMATION  <?>
-
-    LevelInformationHard   LEVEL_INFORMATION  <?>
-                           LEVEL_INFORMATION  <?>
-                           LEVEL_INFORMATION  <?>
-                           LEVEL_INFORMATION  <?>
 
     LevelNameGraphic     IMAGE_INFORMATION  <?>
     LevelOneGraphic      IMAGE_INFORMATION  <?>
@@ -1112,7 +888,7 @@ OFFSET GreatMachine_Winner>
                        dq ?
                        dq ?
 
-   GenericPersonSpriteList      SPECIAL_SPRITE_STRUCT      <?>
+   GenericPersonSpriteList   SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
@@ -1127,7 +903,7 @@ OFFSET GreatMachine_Winner>
                              SPECIAL_SPRITE_STRUCT      <?>                       
                              SPECIAL_SPRITE_STRUCT      <?>                       
 
-   GenericPersonScrollList      SCROLLING_GIF      <?>
+   GenericPersonScrollList   SCROLLING_GIF      <?>
                              SCROLLING_GIF      <?>
                              SCROLLING_GIF      <?>
                              SCROLLING_GIF      <?>
@@ -1167,7 +943,7 @@ OFFSET GreatMachine_Winner>
                          dq OFFSET CarPart1Image 
                          dq OFFSET CarPart2Image 
                          dq OFFSET CarPart3Image 
-                         dq ? 
+                         dq OFFSET Item1Image
                          dq ? 
                          dq ? 
                          dq ? 
@@ -1177,6 +953,7 @@ OFFSET GreatMachine_Winner>
 
    FuelItemsList         dq OFFSET GenericItemsList
    CarPartsItemsList     dq OFFSET GenericItems_CarParts
+   ItemsItemsList        dq OFFSET GenericItems_Item      ; Currently, not a list.
 
    GenericItemsList          SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
@@ -1186,7 +963,7 @@ OFFSET GreatMachine_Winner>
                              SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_Item         SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>
                              SPECIAL_SPRITE_STRUCT      <?>                       

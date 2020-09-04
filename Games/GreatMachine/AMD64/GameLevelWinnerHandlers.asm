@@ -243,6 +243,8 @@ NESTED_ENTRY GreatMachine_ResetLevelToOne, _TEXT$00
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RAX], RCX
   MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
+  MOV RCX, LEVEL_INFORMATION.ItemGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.ItemGenerateTimer[RAX], RCX
 
   MOV [PlayerSprite.SpriteX], PLAYER_START_X
   MOV [PlayerSprite.SpriteY], PLAYER_START_Y
@@ -413,6 +415,9 @@ NESTED_ENTRY GreatMachine_NextLevel, _TEXT$00
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RAX], RCX
   MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
+
+  MOV RCX, LEVEL_INFORMATION.ItemGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.ItemGenerateTimer[RAX], RCX
 
   MOV [PlayerSprite.SpriteX], PLAYER_START_X
   MOV [PlayerSprite.SpriteY], PLAYER_START_Y

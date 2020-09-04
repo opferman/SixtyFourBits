@@ -53,6 +53,10 @@ NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_GeneratePedestrians
 
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_GenerateItems
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -126,12 +130,22 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
   MOV R11, LEVEL_INFORMATION.MaxAddedVelocity[RSI]
   SUB R11, R10
   MOV R12, R11
+
+  ;
+  ; Second car has to go min velocity so it does not
+  ; overtake car 1 and there should be enough space for
+  ; the player to get through.
+  ;
+  MOV RDX, LEVEL_INFORMATION.MinAddedVelocity[RSI]
+  CMP LEVEL_INFORMATION.CurrrentNumberOfCars[RSI], 1
+  JA @SecondCarHasToGoMinVelocity
   DEBUG_FUNCTION_CALL Math_Rand
   XOR RDX, RDX
   DIV R12
   ADD RDX, LEVEL_INFORMATION.MinAddedVelocity[RSI]
+@SecondCarHasToGoMinVelocity:  
+
   MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
-  
   MOV SCROLLING_GIF.CurrentY[RAX], R14
   MOV SCROLLING_GIF.XIncrement[RAX], RDX       
   MOV SCROLLING_GIF.YIncrement[RAX], 0
@@ -151,7 +165,20 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
   MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], RCX
   MOV QWORD PTR [R15], RBX
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
+  CMP LEVEL_INFORMATION.CarsCanBeMultipleLanes[RSI], 0
+  JE @ContinueThisLoop
+  
+  MOV RAX, LEVEL_INFORMATION.TimerAfterCarsLeaveRefresh[RSI]
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RSI], RAX
+  ;
+  ; Since we can have multiple cars on the screen, we DO need to use
+  ; the timer tick delay.
+  ; 
 
+  JMP @AlreadyMaximumCapacityForCars
+
+
+@ContinueThisLoop:
 @SpriteIsAlreadyActive:
 @SpriteSkipped:
   INC RDI
@@ -163,7 +190,16 @@ NESTED_ENTRY GreatMachine_GenerateGameCars, _TEXT$00
   MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
   MOV QWORD PTR [R15], RBX
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
-  JMP @CheckCars
+  CMP LEVEL_INFORMATION.CarsCanBeMultipleLanes[RSI], 0
+  JE @ContinueThisLoop
+  
+  MOV RAX, LEVEL_INFORMATION.TimerAfterCarsLeaveRefresh[RSI]
+  MOV LEVEL_INFORMATION.TimerAfterCarsLeave[RSI], RAX
+  ;
+  ; Since we can have multiple cars on the screen, we DO need to use
+  ; the timer tick delay.
+  ; 
+  JMP @AlreadyMaximumCapacityForCars
 
 @UpdateDebounce:
   INC RDI
@@ -566,3 +602,84 @@ NESTED_ENTRY GreatMachine_GeneratePedestrians, _TEXT$00
   RET
 
 NESTED_END GreatMachine_GeneratePedestrians, _TEXT$00
+
+
+
+
+;*********************************************************
+;   GreatMachine_GenerateItems
+;
+;        Parameters: Master Context, Double Buffer
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_GenerateItems, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R12, RCX
+;  MOV RDI, RDX 
+
+  MOV RSI, [LevelInformationPtr]
+  CMP LEVEL_INFORMATION.ItemGenerateTimer[RSI], 0
+  JNE @StillTicking
+
+  MOV RBX, [ItemsItemsList]
+  CMP SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX], 0
+  JNE @SpriteIsAlreadyActive
+  
+  DEBUG_FUNCTION_CALL Math_Rand
+  AND RAX, SPECIAL_SPRITE_STRUCT.SpriteBiasMask[RBX]
+  CMP RAX, SPECIAL_SPRITE_STRUCT.SpriteBias[RBX]
+  JA @SpriteSkipped
+
+  DEBUG_FUNCTION_CALL Math_Rand
+
+  MOV R15, OFFSET LaneZeroPtr
+  MOV R14, PLAYER_LANE_0
+  TEST EAX, 1
+  JE @LaneZeroItIs
+  MOV R15, OFFSET LaneOnePtr
+  MOV R14, PLAYER_LANE_1
+@LaneZeroItIs:
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RBX], 1
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RBX]
+  MOV SCROLLING_GIF.CurrentY[RAX], R14
+  MOV RCX, SCROLLING_GIF.ImageInformation [RAX]
+
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  DEC RCX
+  MOV SCROLLING_GIF.CurrentX[RAX], RCX
+
+  CMP QWORD PTR [R15], 0
+  JE @AddSelfToList
+
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
+  MOV RCX, QWORD PTR [R15]
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RCX], RBX
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], RCX
+  MOV QWORD PTR [R15], RBX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
+  JMP @SpriteIsNowActive
+
+@AddSelfToList:
+  MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[RBX], 0
+  MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[RBX], 0
+  MOV QWORD PTR [R15], RBX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RBX], R15
+  JMP @SpriteIsNowActive
+ 
+@StillTicking:
+  DEC LEVEL_INFORMATION.ItemGenerateTimer[RSI]
+@SpriteSkipped:
+@SpriteIsNowActive:
+@SpriteIsAlreadyActive:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_GenerateItems, _TEXT$00

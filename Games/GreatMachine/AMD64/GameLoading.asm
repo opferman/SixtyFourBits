@@ -1348,6 +1348,10 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
    INC RBX
    JMP @SetupPartsItems
 @PartsItemsComplete:
+   MOV [GenericItems_Item.SpriteType], SPRITE_TYPE_POINT_ITEM   
+   MOV [GenericItems_Item.SpriteDeBounceRefresh], 2000
+   
+      
    MOV EAX, 1
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

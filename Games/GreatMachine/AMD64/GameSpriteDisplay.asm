@@ -492,6 +492,9 @@ NESTED_ENTRY GreatMachine_DisplayPoints, _TEXT$00
   CMP DISPLAY_PLAYER_POINTS.PointTicks[RDI], 0
   JE @AdvanceToNextEntry
   DEC DISPLAY_PLAYER_POINTS.PointTicks[RDI]
+  LEA RCX, [POINT_EXTRA_LIFE]
+  CMP DISPLAY_PLAYER_POINTS.NumberOfPoints[RDI], RCX
+  JE @ExtraLifeText
 
   MOV R12, 0FFFFFFh
   CMP DISPLAY_PLAYER_POINTS.NumberOfPoints[RDI], 0
@@ -503,7 +506,7 @@ NESTED_ENTRY GreatMachine_DisplayPoints, _TEXT$00
   MOV RDX, OFFSET PointsScoreFormat
   MOV RCX, OFFSET PointsScoreString
   DEBUG_FUNCTION_CALL sprintf
-
+  
   MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], R12
   MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
   MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], POINTS_DISPLAY_LIST_SIZE
@@ -512,7 +515,19 @@ NESTED_ENTRY GreatMachine_DisplayPoints, _TEXT$00
   MOV RDX, OFFSET PointsScoreString
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
+  JMP @ContinueDisplayingText
+@ExtraLifeText:
 
+  MOV STD_FUNCTION_STACK.Parameters.Param7[RSP], 0FFFFFFFFh
+  MOV STD_FUNCTION_STACK.Parameters.Param6[RSP], 0
+  MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], POINTS_DISPLAY_LIST_SIZE
+  MOV R9, DISPLAY_PLAYER_POINTS.PointY[RDI]
+  MOV R8, DISPLAY_PLAYER_POINTS.PointX[RDI]
+  MOV RDX, OFFSET ExtraLife
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GameEngine_PrintWord
+       
+@ContinueDisplayingText:  
   SUB DISPLAY_PLAYER_POINTS.PointY[RDI], 2
 
 @AdvanceToNextEntry:
