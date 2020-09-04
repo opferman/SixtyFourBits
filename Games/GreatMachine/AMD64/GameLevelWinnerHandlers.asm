@@ -315,6 +315,12 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   MOV RCX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RAX]
   MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RAX], RCX
 
+  CMP LEVEL_INFORMATION.ItemGenerateTimer[RAX], 0
+  JNE SkipUpdateOfItemTimer
+  MOV RCX, LEVEL_INFORMATION.ItemGenerateTimerRefresh[RAX]
+  MOV LEVEL_INFORMATION.ItemGenerateTimer[RAX], RCX
+SkipUpdateOfItemTimer:
+
   MOV [PlayerSprite.SpriteX], PLAYER_START_X
   MOV [PlayerSprite.SpriteY], PLAYER_START_Y
   MOV [PlayerSprite.SpriteVelX], 0
@@ -326,6 +332,7 @@ NESTED_ENTRY GreatMachine_ResetLevel, _TEXT$00
   MOV [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
 
   MOV [PlayerSprite.SpriteAlive], 1
+  
 
   ;
   ; Reset all game lists
