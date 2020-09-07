@@ -353,7 +353,7 @@ BOTTOM_SIDEWALK_PERSON EQU <PLAYER_LANE_1 + 55>
  ;
  ; Enable Debug Capabilities 
  ;
- MACHINE_GAME_DEBUG     EQU <0>
+; MACHINE_GAME_DEBUG     EQU <0>
 
 ;*********************************************************
 ; Data Segment
