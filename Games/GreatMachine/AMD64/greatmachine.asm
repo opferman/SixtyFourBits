@@ -10,7 +10,12 @@
 ;
 ;*********************************************************
 
-; USE_FILES EQU <1>
+
+;*********************************************************
+; Code Switches
+;*********************************************************
+; USE_FILES              EQU <1>
+; MACHINE_GAME_DEBUG     EQU <1>
 
 ;*********************************************************
 ; Assembly Options
@@ -91,162 +96,55 @@ GREAT_MACHINE_STATE_BOOM                 EQU <12>
 GREAT_MACHINE_STATE_PAUSE                EQU <13>
 GREAT_MACHINE_FAILURE_STATE              EQU <GAME_ENGINE_FAILURE_STATE>
 
-
+;
+; Types of Sprites Available in the Game
+;
 SPRITE_TYPE_CAR        EQU <1>
-SPRITE_TYPE_TOXIC      EQU <2>
-SPRITE_TYPE_PART       EQU <3>
-SPRITE_TYPE_PEDESTRIAN EQU <4>
-SPRITE_TYPE_POINT_ITEM EQU <5>
-
-
-NUMBER_OF_CAR_GIFS     EQU <7>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
-NUMBER_OF_CARS         EQU <7>
-
-
-SPECIAL_SPRITE_STRUCT struct
-   SpriteIsActive   dq ?
-   SpriteListPtr    dq ?  ; Pointer to the listhead in case we are first and need to update it.
-   SpriteVelX       dq ?
-   SpriteMaxVelX    dq ?
-   SpriteX          dq ?
-   SpriteY          dq ?
-   SpriteType       dq ?
-   SpritePoints     dq ?
-   SpriteBias            dq ?
-   SpriteBiasMask        dq ?
-   SpriteDeBounce        dq ?
-   SpriteDeBounceRefresh dq ?
-   ScrollingPtr     dq ?
-   ListNextPtr      dq ?
-   ListBeforePtr    dq ?
-SPECIAL_SPRITE_STRUCT ends
-
-DISPLAY_PLAYER_POINTS struct
-   PointTicks       dq ?
-   NumberOfPoints   dq ?
-   PointX           dq ?
-   PointY           dq ?
-DISPLAY_PLAYER_POINTS ends
-
-SPRITE_STRUCT  struct
-   ImagePointer    dq ?   ; Sprite Basic Information
-   ExplodePointer  dq ?   ; Optional Sprite Basic Information
-   SpriteAlive     dq ?
-   SpriteX         dq ?
-   SpriteY         dq ?
-   SpriteVelX      dq ?
-   SpriteVelY      dq ?
-   SpriteMovementDebounce dq ?
-   SpriteVelMaxX   dq ?
-   SpriteVelMaxY   dq ?
-   SpriteVelTempX  dq ?
-   SpriteVelTempY  dq ?
-   SpriteOwnerPtr  dq ?
-   SpriteWidth     dq ?
-   SpriteHeight    dq ?
-   SpritePlayerRadius dq ?
-   DisplayHit      dq ?
-   HitPoints       dq ?   ; Amount of damage needed to be destroyed
-   MaxHp           dq ?
-   PointsTimer     dq ?
-   PointsGiven     dq ?
-   PointsGivenX    dq ?
-   PointsGivenY    dq ?
-   Damage          dq ?   ; How much damage this sprite does on collsion
-   pNext           dq ?
-   pPrev           dq ?
-   KillOffscreen   dq ?   ; If it goes off screen, it ends or should it be reset.
-   SpriteInactiveListPtr dq ?
-   SpriteCategory        dq ?
-   SpriteBasePointsValue dq ?
-   pfnSpriteMovementUpdate  dq ?                        ; Movement update function pointer
-   pfnAddedBackToList    dq ?
-SPRITE_STRUCT  ends 
-
-LEVEL_INFORMATION STRUCT 
-  LevelNumber                     dq ?
-  LevelTimer                      dq ?
-  LevelTimerRefresh               dq ?
-  LevelNumberGraphic              dq ?   
-  LevelStartDelay                 dq ?
-  LevelStartDelayRefresh          dq ?
-
-  ;
-  ; Game Piece Configurations
-  ;
-
-  ; Cars
-  NumberOfConcurrentCars          dq ?
-  CurrrentNumberOfCars            dq ?
-  CarsCanBeMultipleLanes          dq ?
-  TimerAfterCarsLeave             dq ?
-  TimerAfterCarsLeaveRefresh      dq ?
-  TimerBetweenConcurrent          dq ?
-  TimerBetweenConcurrentRefresh   dq ?
-  MinAddedVelocity                dq ?
-  MaxAddedVelocity                dq ?
-  VelocityCanBeDynamic            dq ?
-  CarCanChangeLanes               dq ?
-
-  ; Pedestrians
-  PedestriansCanBeInStreet        dq ?
-  PesdestrianTimer                dq ?
-  PesdestrianTimerRefresh         dq ?
-  
-  ; Toxic Waste Barrels
-  LevelCompleteBarrelCount        dq ?
-  CurrentLevelBarrelCount         dq ?
-  BarrelGenerateTimerL0           dq ?
-  BarrelGenerateTimerL1           dq ?
-  CurrentBarrelCountL0            dq ?
-  CurrentBarrelCountL1            dq ?
-  BarrelGenerateTimerRefreshL0    dq ?
-  BarrelGenerateTimerRefreshL1    dq ?
-  BarrelPoints                    dq ?
-
-  ; Car Parts
-  LevelCompleteCarPartCount       dq ?
-  CurrentCarPartCount             dq ?
-  CarPartGenerateTimerL0          dq ?
-  CarPartGenerateTimerL1          dq ?
-  CarPartGenerateTimerRefreshL0   dq ?
-  CarPartGenerateTimerRefreshL1   dq ?
-  CurrentCarPartCountL0           dq ?
-  CurrentCarPartCountL1           dq ?
-  CarPartsPoints                  dq ?
-  ;
-  ; Items
-  ;
-  ItemGenerateTimer               dq ?
-  ItemGenerateTimerRefresh        dq ?
-
-
-  ;
-  ; Function Pointers
-  ;
-  pfnLevelReset                   dq ?
-  pfnNextLevel                    dq ?
-LEVEL_INFORMATION ENDS
+SPRITE_TYPE_FUEL       EQU <2>
+SPRITE_TYPE_PART1      EQU <3>
+SPRITE_TYPE_PART2      EQU <4>
+SPRITE_TYPE_PART3      EQU <5>
+SPRITE_TYPE_PEDESTRIAN EQU <6>
+SPRITE_TYPE_EXTRA_LIFE EQU <7>
+SPRITE_TYPE_HAZARD     EQU <8>
 
 ;
-; Constants for Game 
+; Item and Array Counts
 ;
-POINTS_DISPLAY_TICKS     EQU <10>
-POINTS_DISPLAY_LIST_SIZE EQU <4>
+NUMBER_OF_CARS           EQU <7>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
+NUMBER_OF_PEOPLE         EQU <8>
+NUMBER_OF_LEVELS         EQU <4> ; If this is changed you need to update the level structure array 
+NUMBER_OF_GENERIC_ITEMS  EQU <9> ; NUMBER_OF_PARTS + NUMBER_OF_FUEL + NUMBER_OF_ITEMS
+NUMBER_OF_FUEL           EQU <2>
+NUMBER_OF_PARTS1         EQU <2>
+NUMBER_OF_PARTS2         EQU <2>
+NUMBER_OF_PARTS3         EQU <2>
+NUMBER_OF_EXTRA_LIFE     EQU <1>
+NUMBER_OF_HAZARDS        EQU <0>
+NUMBER_OF_TREE_SCROLLING EQU <12>
 
-MAX_SCORES             EQU <5>
-TITLE_X                EQU <50>
-TITLE_Y                EQU <10>
-INTRO_Y                EQU <768 - 80>
-INTRO_X                EQU <300>
-INTRO_FONT_SIZE        EQU <3>
-CREDITS_FONT_SIZE      EQU <2>
-MAX_GAME_OPTIONS       EQU <3>
-MAX_MENU_SELECTION     EQU <7>
-MENU_MAX_TIMEOUT       EQU <30*50> ; About 22 Seconds
-LEVEL_TIMER_ONE        EQU <2000>
-LEVEL_INFINITE         EQU <-1>
-LARGE_GAME_ALLOCATION  EQU <1024*1024*20> ; 20 MB
+;
+; Lane Information
+;
+LANE_GENERATE_LEFT              EQU <1>
+LANE_GENERATE_RIGHT             EQU <0>
+LANE_BITMASK_0                  EQU <01h>
+LANE_BITMASK_1                  EQU <02h>
+LANE_BITMASK_2                  EQU <04h>
+LANE_TOP_SIDEWALK_BITMASK       EQU <08h>
+LANE_BOTTOM_SIDEWALK_BITMASK    EQU <010h>
+
+;
+; Constants for Points
+;
+POINTS_DISPLAY_TICKS     EQU <10>       ; Ticks to display the Points
+POINTS_DISPLAY_LIST_SIZE EQU <4>        ; How many points can be displayed at once
+POINT_EXTRA_LIFE         EQU <0FFFFFFFFFFFFFFFFh>
+
+
+;
+; Hi Scores constants
+;
 HI_SCORE_MODE_Y        EQU <325>
 HI_SCORE_MODE_X        EQU <350>
 HI_SCORE_MODE_FONT     EQU <3>
@@ -258,26 +156,287 @@ MAX_HI_SCORES          EQU <10>
 HI_SCORE_TITLE_X       EQU <275>
 HI_SCORE_TITLE_Y       EQU <275>
 HI_SCORE_TITLE_SIZE    EQU <5>
-LEVEL_INTRO_TIMER_SIZE EQU <30*5>  
-NUMBER_OF_TREE_SCROLLING EQU <12>
+
+;
+; Screen locations and font sizes
+;
+TITLE_X                EQU <50>
+TITLE_Y                EQU <10>
+INTRO_Y                EQU <768 - 80>
+INTRO_X                EQU <300>
+INTRO_FONT_SIZE        EQU <3>
+CREDITS_FONT_SIZE      EQU <2>
+GAME_OVER_X            EQU <125>
+GAME_OVER_Y            EQU <300>
+GAME_OVER_SIZE         EQU <10>
+WINNER_X               EQU <225>
+WINNER_Y               EQU <300>
+WINNER_SIZE            EQU <10>
+HS_GAME_OVER_X         EQU <100>
+HS_GAME_OVER_Y         EQU <300>
+HS_GAME_OVER_SIZE      EQU <10>
+ENTER_INITIALS_X       EQU <275>
+ENTER_INITIALS_Y       EQU <400>
+ENTER_INITIALS_SIZE    EQU <3>
+INITIALS_X             EQU <350>
+INITIALS_Y             EQU <500>
+INITIALS_SIZE          EQU <10>
+
+
+;
+; Parallax Scrolling Constants
+;
+ROAD_SCROLL_X_INC      EQU <-5>
+ROAD_SCROLL_Y_INC      EQU <0>
+MOUNTAIN_SCROLL_X_INC  EQU <-2>
+MOUNTAIN_SCROLL_Y_INC  EQU <0>
+SKY_SCROLL_X_INC       EQU <-1>
+SKY_SCROLL_Y_INC       EQU <0>
 TREE_GENERATE_TICK     EQU <75>
-LEVEL_NAME_Y           EQU <768/2 - 30>
-LEVEL_NAME_X           EQU <50>
-LEVEL_NUMBER_Y         EQU <768/2 - 30>
-LEVEL_NUMBER_X         EQU <510>
-NUMBER_OF_GENERIC_CARS  EQU <7>
-NUMBER_OF_PEOPLE_GIFS   EQU <8>
-NUMBER_OF_PEOPLE        EQU <8>
-NUMBER_OF_LEVELS        EQU <4> ; If this is changed you need to update the level structure array 
+
+;
+; Game Options and Menu Constants
+;
+
+MAX_GAME_OPTIONS       EQU <3>
+MAX_MENU_SELECTION     EQU <7>
+MENU_MAX_TIMEOUT       EQU <30*50> ; About 22 Seconds
+
+
+;
+; Cached Allocation Constant
+;
+LARGE_GAME_ALLOCATION  EQU <1024*1024*5> ; 5 MB
+
+
+;
+; Level Graphics Intro Placement
+;
+LEVEL_NAME_Y                EQU <768/2 - 30>
+LEVEL_NAME_X                EQU <50>
+LEVEL_NUMBER_Y              EQU <768/2 - 30>
+LEVEL_NUMBER_X              EQU <510>
+
+;
+; Player Runtime Stats Font Constants
+;
 PLAYER_SIDE_PANEL_FONT_SIZE EQU <2>
-PLAYER_SCORE_FONT_SIZE EQU <4>
+PLAYER_SCORE_FONT_SIZE      EQU <4>
+PLAYER_SCORE_FONT_SIZE EQU <INTRO_FONT_SIZE>
+PLAYER_SCORE_X         EQU <500>
+PLAYER_SCORE_Y         EQU <10>
 
-POINT_EXTRA_LIFE       EQU <0FFFFFFFFFFFFFFFFh>
 
-NUMBER_OF_GENERIC_ITEMS EQU <9>
-NUMBER_OF_FUEL          EQU <2>
-NUMBER_OF_PARTS         EQU <6>
-NUMBER_OF_ITEMS         EQU <1>
+;
+; Sidewalk Character Placement
+;
+TOP_SIDEWALK_PERSON    EQU <PLAYER_LANE_0 - 95>
+BOTTOM_SIDEWALK_PERSON EQU <PLAYER_LANE_2 + 55>
+
+;
+; Player Defaults
+;
+ PLAYER_CAR_LENGTH      EQU <240>  ; Hard coding the sprite length.
+ PLAYER_START_X         EQU <(1024/2) - (240/2)>  ; Hardcode to middle of screen
+ PLAYER_START_Y         EQU <550 + 18>
+ PLAYER_LANE_2          EQU <PLAYER_START_Y>
+ PLAYER_LANE_1          EQU <PLAYER_START_Y - 100>
+ PLAYER_LANE_0          EQU <PLAYER_LANE_1 - 100>
+ PLAYER_START_MAX_VEL_X EQU <6>
+ PLAYER_START_MAX_VEL_Y EQU <20>
+ PLAYER_Y_DIM           EQU <111>
+ PLAYER_START_LIVES     EQU <3>
+
+;
+; Reset Constants
+;
+ PLAYER_GAME_RESET         EQU <0>
+ PLAYER_LEVEL_RESET        EQU <1>
+ PLAYER_NEXT_LEVEL_RESET   EQU <2>
+ PLAYER_WRAP_AROUND        EQU <3>
+ LEVEL_GAME_RESET          EQU <4>
+ LEVEL_LEVEL_RESET         EQU <5>
+ LEVEL_NEXT_LEVEL_RESET    EQU <6>
+ LEVEL_WRAP_AROUND         EQU <7>
+ GLOBALS_GAME_RESET        EQU <8>
+ GLOBALS_LEVEL_RESET       EQU <9>
+ GLOBALS_NEXT_LEVEL_RESET  EQU <10>
+ GLOBALS_WRAP_AROUND       EQU <11>
+
+
+
+
+
+;*********************************************************
+; Structures 
+;*********************************************************
+
+SPECIAL_SPRITE_STRUCT struct
+   SpriteIsActive          dq ?
+   SpriteListPtr           dq ?  ; Pointer to the listhead in case we are first and need to update it.
+   SpriteVelX              dq ?
+   SpriteMaxVelX           dq ?
+   SpriteX                 dq ?
+   SpriteY                 dq ?
+   SpriteLaneBitmask       dq ?
+   SpriteType              dq ?
+   SpritePoints            dq ?
+   SpriteGenerationPercent dq ?  ; 0 to 100
+   SpriteDeBounce          dq ?  
+   SpriteDeBounceRefresh   dq ?  ; The Debounce for this sprite
+   ScrollingPtr            dq ?
+   ListNextPtr             dq ?
+   ListBeforePtr           dq ?
+   pfnCollisionNpc         dq ?
+   pfnCollisionPlayer      dq ?
+   pfnSpriteOffScreen      dq ?
+SPECIAL_SPRITE_STRUCT ends
+
+
+GENERATE_STRUCT struct
+   pfnTickDebounceUpdate  dq ?
+   pfnPreGenerateCheck    dq ?
+   pfnLoopCheck           dq ?
+   pfnActivateSprite      dq ?
+   ItemListPtr            dq ?
+   NumberOfItemsOnList    dq ?
+GENERATE_STRUCT ends
+
+
+
+DISPLAY_PLAYER_POINTS struct
+   PointTicks       dq ?
+   NumberOfPoints   dq ?
+   PointX           dq ?
+   PointY           dq ?
+DISPLAY_PLAYER_POINTS ends
+
+SPRITE_STRUCT  struct
+   SpriteAlive              dq ?
+   SpriteX                  dq ?
+   SpriteY                  dq ?
+   SpriteVelX               dq ?
+   SpriteVelY               dq ?
+   SpriteVelMaxX            dq ?
+   SpriteVelMaxY            dq ?
+SPRITE_STRUCT  ends 
+
+
+LEVEL_INFO STRUCT
+  LevelNumber             dq ?
+  LevelNumberGraphic      dq ?
+
+;
+; Number of Items settings for the level
+;
+  NumberOfConcurrentCars            dq ?
+  CurrentNumberOfCars               dq ?
+  NumberOfConcurrentFuel            dq ?
+  CurrentNumberOfFuel               dq ?
+  NumberOfConcurrentPartOne         dq ?
+  CurrentNumberOfPartOne            dq ?
+  NumberOfConcurrentPartTwo         dq ?
+  CurrentNumberOfPartTwo            dq ?
+  NumberOfConcurrentPartThree       dq ?
+  CurrentNumberOfPartThree          dq ?
+  NumberOfConcurrentBlockers        dq ?
+  CurrentNumberOfBlockers           dq ?
+ 
+;
+; Tracking Required Level Completion Criteria
+;
+  RequiredFuelCollection            dq ?
+  CurrentFuelCollection             dq ?
+  RequiredPartOneCollection         dq ?
+  CurrentPartOneCollection          dq ?
+  RequiredPartTwoCollection         dq ?
+  CurrentPartTwoCollection          dq ?
+  RequiredPartThreeCollection       dq ?
+  CurrentPartThreeCollection        dq ?
+;
+; Generation Percentage
+;
+  GenerateCarsPercentage            dq ?
+  GenerateFuelPercentage            dq ?
+  GenerateCarPartOnPercentage       dq ?
+  GenerateCarPartTwoPercentage      dq ?
+  GenerateCarPartThreePercentage    dq ?
+  GenerateHazardsPercentage         dq ?
+  GenerateExtraLifePercentage       dq ?
+  GeneratePedestriansPercentage     dq ?
+;
+; Points
+;
+  FuelPoints                        dq ?
+  CarPartOnePoints                  dq ?
+  CarPartTwoPoints                  dq ?
+  CarPartThreePoints                dq ?
+
+;
+; Sprite Debounce Refresh 
+;
+  CarDebounceRefresh                dq ?
+  FuelDebounceRefresh               dq ?
+  ExtraLifeDebounceRefresh          dq ?
+  Parts1DebounceRefresh             dq ?
+  Parts2DebounceRefresh             dq ?
+  Parts3DebounceRefresh             dq ?
+  HazardDebounceRefresh             dq ?
+  PedestrianDebounceRefresh         dq ?
+
+;
+; Number Of Blocking Items Per Lane
+;
+  BlockingItemCountLane0            dq ?
+  BlockingItemCountLane1            dq ?
+  BlockingItemCountLane2            dq ?
+
+;
+; Various Settings to tweak the level
+;
+  MinCarVelocity                    dq ?
+  MaxCarVelocity                    dq ?
+  PedestriansCanBeInStreet          dq ?
+
+;
+; Timers
+;
+  LevelStartDelay                   dq ?
+  LevelStartDelayRefresh            dq ?
+  LevelTimer                        dq ?
+  LevelTimerRefresh                 dq ?
+  TimerBetweenConCurrentCars        dq ?
+  TimerBetweenConcurrentCarsRefresh dq ?
+  TimerAfterCarExitsScreen          dq ?
+  TimerAfterCarExitsScreenRefresh   dq ?
+  TimerForPedestrians               dq ?
+  TimerForPedestriansRefresh        dq ?
+  TimerForFuel                      dq ?
+  TimerForFuelRefresh               dq ?
+  TimerForExtraLives                dq ?
+  TimerForExtraLivesRefresh         dq ?
+  TimerForHazard                    dq ?
+  TimerForHazardRefresh             dq ?
+  TimerForParts1                    dq ?
+  TimerForParts1Refresh             dq ?
+  TimerForParts2                    dq ?
+  TimerForParts2Refresh             dq ?
+  TimerForParts3                    dq ?
+  TimerForParts3Refresh             dq ?
+  TimerForLane0ItemSelection        dq ?
+  TimerForLane0ItemSelectionRefresh dq ?
+  TimerForLane1ItemSelection        dq ?
+  TimerForLane1ItemSelectionRefresh dq ?
+  TimerForLane2ItemSelection        dq ?
+  TimerForLane2ItemSelectionRefresh dq ?
+
+;
+; Function Pointers
+;
+  pfnLevelReset                   dq ?
+  pfnNextLevel                    dq ?
+LEVEL_INFO ENDS
+
 
 STAR_FIELD_ENTRY struct
    Location       TD_POINT <?>
@@ -285,75 +444,6 @@ STAR_FIELD_ENTRY struct
    StarOnScreen   dq        ?
    Color          db        ?
 STAR_FIELD_ENTRY ends
-
-;
-; Game Over Constants
-;
-GAME_OVER_X     EQU <125>
-GAME_OVER_Y     EQU <300>
-GAME_OVER_SIZE  EQU <10>
-
-WINNER_X     EQU <225>
-WINNER_Y     EQU <300>
-WINNER_SIZE  EQU <10>
-
-;
-; High Scores Constants
-;
-HS_GAME_OVER_X    EQU <100>
-HS_GAME_OVER_Y    EQU <300>
-HS_GAME_OVER_SIZE EQU <10>
-
-ENTER_INITIALS_X    EQU <275>
-ENTER_INITIALS_Y    EQU <400>
-ENTER_INITIALS_SIZE EQU <3>
-
-INITIALS_X    EQU <350>
-INITIALS_Y    EQU <500>
-INITIALS_SIZE EQU <10>
-
-PLAYER_SCORE_FONT_SIZE EQU <INTRO_FONT_SIZE>
-PLAYER_SCORE_X         EQU <500>
-PLAYER_SCORE_Y         EQU <10>
-
-;
-; Parallax Scrolling Constants
-;
-ROAD_SCROLL_X_INC     EQU <-5>
-ROAD_SCROLL_Y_INC     EQU <0>
-MOUNTAIN_SCROLL_X_INC EQU <-2>
-MOUNTAIN_SCROLL_Y_INC EQU <0>
-SKY_SCROLL_X_INC      EQU <-1>
-SKY_SCROLL_Y_INC      EQU <0>
-
-TOP_SIDEWALK_PERSON    EQU <PLAYER_LANE_0 - 95>
-BOTTOM_SIDEWALK_PERSON EQU <PLAYER_LANE_1 + 55>
-
-;
-; Player Defaults
-;
- PLAYER_CAR_LENGTH      EQU <240>  ; Hard coding the sprite length.
- PLAYER_START_X         EQU <(1024/2) - (240/2)>  ; Hardcode to middle of screen
- PLAYER_START_Y         EQU <550>
- PLAYER_LANE_1          EQU <PLAYER_START_Y>
- PLAYER_LANE_0          EQU <PLAYER_START_Y - 100>
- PLAYER_START_MAX_VEL_X EQU <6>
- PLAYER_START_MAX_VEL_Y EQU <20>
- PLAYER_X_DIM           EQU <240>
- PLAYER_Y_DIM           EQU <111>
- PLAYER_START_HP        EQU <10>
- PLAYER_DAMAGE          EQU <1>
- PLAYER_START_LIVES     EQU <3>
-
- ;
- ; Special DeBounce for Items
- ;
- SPECIAL_DEBOUNCE       EQU <30>
-
- ;
- ; Enable Debug Capabilities 
- ;
-; MACHINE_GAME_DEBUG     EQU <0>
 
 ;*********************************************************
 ; Data Segment
@@ -411,6 +501,10 @@ ifdef USE_FILES
     CarPart6Image                   db "carpart6.gif", 0
     CarSpinImage                    db "CarSpin.gif", 0
     Item1Image                      db "Item1.gif", 0
+    PanelIcon1                      db "fuel_icon.gif",0
+    PanelIcon2                      db "CarPart1_icon.gif",0
+    PanelIcon3                      db "CarPart2_icon.gif",0
+    PanelIcon4                      db "CarPart3_icon.gif",0
 else	
     GifResourceType                 db "GIFFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
@@ -445,6 +539,10 @@ else
     CarPart6Image                   db "CARPART6_GIF", 0
     CarSpinImage                    db "CARSPIN_GIF", 0
     Item1Image                      db "ITEM1_GIF", 0
+    PanelIcon1                      db "ICON1_GIF", 0
+    PanelIcon2                      db "ICON2_GIF", 0
+    PanelIcon3                      db "ICON3_GIF", 0
+    PanelIcon4                      db "ICON4_GIF", 0
 endif	
     HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
@@ -510,27 +608,174 @@ endif
   LevelStartTimer      dq ?
   TimerAdjustMs        dq ?
   GamePanel            dq ?
-                 
-;                                                                                                              Cars Section          People        Fuel Section                        Car Parts              Items
-;                                                                                                         ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------
-LevelInformationEasy LEVEL_INFORMATION   <1,1000 * 60 * 6, 1000 * 60 * 6,OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,1,3,0,0,0,15,15,10,0,800,1500,0,0,800,1500, 25, 5,0,2000,1000,2000,1000,0,0,150, 5000, 5000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <2,1000 * 60 * 5, 1000 * 60 * 5,OFFSET LevelTwoGraphic,  200,200,1,0,0, 75, 75,0,0,2,4,0,0,0,50,50,20,0,500, 800,0,0,500, 800, 50,10,0,1000, 700,1000, 700,0,0,200, 4000, 4000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <3,1000 * 60 * 4, 1000 * 60 * 4,OFFSET LevelThreeGraphic,200,200,1,0,0, 75, 75,0,0,2,4,0,0,0,25,25,20,0,500, 800,0,0,500, 800, 50,15,0, 500, 200, 500, 200,0,0,200, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <4,1000 * 60 * 3, 1000 * 60 * 3,OFFSET LevelFourGraphic, 200,200,1,0,0, 50, 50,0,0,3,5,0,0,0,40,40,20,0,200, 500,0,0,200, 500,100,20,0, 200, 500, 200, 500,0,0,500, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
+  
+  ;
+  ; Options Short Cuts
+  ;
+  LevelInformationEasy       EQU <LevelInfo_Easy_1_LevelNumber>
+  LevelInformationMedium     EQU <LevelInfo_Easy_1_LevelNumber>  
+  LevelInformationHard       EQU <LevelInfo_Easy_1_LevelNumber>
+   
+  ;
+  ; Level Data.  Structure too big to initialize directly.
+  ;
+  LevelInfo_Easy_1_LevelNumber                       dq 1
+  LevelInfo_Easy_1_LevelNumberGraphic                dq OFFSET LevelOneGraphic
+  LevelInfo_Easy_1_NumberOfConcurrentCars            dq 2
+  LevelInfo_Easy_1_CurrentNumberOfCars               dq 0
+  LevelInfo_Easy_1_NumberOfConcurrentFuel            dq 2
+  LevelInfo_Easy_1_CurrentNumberOfFuel               dq 0
+  LevelInfo_Easy_1_NumberOfConcurrentPartOne         dq 1
+  LevelInfo_Easy_1_CurrentNumberOfPartOne            dq 0
+  LevelInfo_Easy_1_NumberOfConcurrentPartTwo         dq 1
+  LevelInfo_Easy_1_CurrentNumberOfPartTwo            dq 0
+  LevelInfo_Easy_1_NumberOfConcurrentPartThree       dq 1
+  LevelInfo_Easy_1_CurrentNumberOfPartThree          dq 0
+  LevelInfo_Easy_1_NumberOfConcurrentBlockers        dq 1
+  LevelInfo_Easy_1_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_1_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_1_CurrentFuelCollection             dq 0
+  LevelInfo_Easy_1_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_1_CurrentPartOneCollection          dq 0
+  LevelInfo_Easy_1_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_1_CurrentPartTwoCollection          dq 0
+  LevelInfo_Easy_1_RequiredPartThreeCollection       dq 1
+  LevelInfo_Easy_1_CurrentPartThreeCollection        dq 0
+  LevelInfo_Easy_1_GenerateCarsPercentage            dq 15
+  LevelInfo_Easy_1_GenerateFuelPercentage            dq 35
+  LevelInfo_Easy_1_GenerateCarPartOnPercentage       dq 20
+  LevelInfo_Easy_1_GenerateCarPartTwoPercentage      dq 15
+  LevelInfo_Easy_1_GenerateCarPartThreePercentage    dq 10
+  LevelInfo_Easy_1_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_1_GenerateExtraLifePercentage       dq 5
+  LevelInfo_Easy_1_GeneratePedestriansPercentage     dq 25
+  LevelInfo_Easy_1_FuelPoints                        dq 150
+  LevelInfo_Easy_1_CarPartOnePoints                  dq 200
+  LevelInfo_Easy_1_CarPartTwoPoints                  dq 300
+  LevelInfo_Easy_1_CarPartThreePoints                dq 400
+  LevelInfo_Easy_1_CarDebounceRefresh                dq 500
+  LevelInfo_Easy_1_FuelDebounceRefresh               dq 50
+  LevelInfo_Easy_1_ExtraLifeDebounceRefresh          dq 2000
+  LevelInfo_Easy_1_Parts1DebounceRefresh             dq 100
+  LevelInfo_Easy_1_Parts2DebounceRefresh             dq 300
+  LevelInfo_Easy_1_Parts3DebounceRefresh             dq 500
+  LevelInfo_Easy_1_HazardDebounceRefresh             dq 50
+  LevelInfo_Easy_1_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_1_BlockingItemCountLane0            dq 0
+  LevelInfo_Easy_1_BlockingItemCountLane1            dq 0
+  LevelInfo_Easy_1_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_1_MinCarVelocity                    dq 3
+  LevelInfo_Easy_1_MaxCarVelocity                    dq 4
+  LevelInfo_Easy_1_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_1_LevelStartDelay                   dq 200
+  LevelInfo_Easy_1_LevelStartDelayRefresh            dq 200
+  LevelInfo_Easy_1_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_1_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_1_TimerBetweenConCurrentCars        dq 0
+  LevelInfo_Easy_1_TimerBetweenConcurrentCarsRefresh dq 50
+  LevelInfo_Easy_1_TimerAfterCarExitsScreen          dq 0
+  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq 100
+  LevelInfo_Easy_1_TimerForPedestrians               dq 0
+  LevelInfo_Easy_1_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_1_TimerForFuel                      dq 0
+  LevelInfo_Easy_1_TimerForFuelRefresh               dq 50
+  LevelInfo_Easy_1_TimerForExtraLives                dq 2000
+  LevelInfo_Easy_1_TimerForExtraLivesRefresh         dq 2000
+  LevelInfo_Easy_1_TimerForHazard                    dq 50
+  LevelInfo_Easy_1_TimerForHazardRefresh             dq 50
+  LevelInfo_Easy_1_TimerForParts1                    dq 100
+  LevelInfo_Easy_1_TimerForParts1Refresh             dq 100
+  LevelInfo_Easy_1_TimerForParts2                    dq 100
+  LevelInfo_Easy_1_TimerForParts2Refresh             dq 100
+  LevelInfo_Easy_1_TimerForParts3                    dq 100
+  LevelInfo_Easy_1_TimerForParts3Refresh             dq 100
+  LevelInfo_Easy_1_TimerForLane0ItemSelection        dq 50
+  LevelInfo_Easy_1_TimerForLane0ItemSelectionRefresh dq 50
+  LevelInfo_Easy_1_TimerForLane1ItemSelection        dq 50
+  LevelInfo_Easy_1_TimerForLane1ItemSelectionRefresh dq 50
+  LevelInfo_Easy_1_TimerForLane2ItemSelection        dq 50
+  LevelInfo_Easy_1_TimerForLane2ItemSelectionRefresh dq 50
+  LevelInfo_Easy_1_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Easy_1_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
-;                                                                                                                   Cars Section          People        Fuel Section                        Car Parts              Items
-;                                                                                                              ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------
-LevelInformationMedium  LEVEL_INFORMATION   <1, 1000 * 60 * 4, 1000 * 60 * 4, OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,2,4,0,0,0,15,15,15,0,800, 500,0,0,800, 500, 50,10,0, 500, 900, 500, 900,0,0,150, 4000, 4000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                        LEVEL_INFORMATION   <2, 1000 * 60 * 4, 1000 * 60 * 4, OFFSET LevelTwoGraphic,  200,200,1,0,0, 75, 75,0,0,3,4,0,0,0,50,50,20,0,500, 800,0,0,500, 800, 50,15,0, 400, 700, 400, 700,0,0,300, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                        LEVEL_INFORMATION   <3, 1000 * 60 * 3, 1000 * 60 * 3, OFFSET LevelThreeGraphic,200,200,1,0,0, 75, 75,0,0,4,5,0,0,0,25,25,25,0,100,  75,0,0,100,  75, 70,20,0, 200, 250, 200, 250,0,0,400, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                        LEVEL_INFORMATION   <4, 1000 * 30 * 5, 1000 * 30 * 5, OFFSET LevelFourGraphic, 200,200,2,0,1, 50, 50,0,0,5,5,0,0,0,40,40,30,0, 50,  10,0,0, 50,  10,150,25,0,  50, 550,  50, 550,0,0,700, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
-
-;                                                                                                             Cars Section          People        Fuel Section                        Car Parts              Items
-;                                                                                                        ;;;;;;;;;;;;;;;;;;;;;;;;; ======= ****************************** ++++++++++++++++++++++++++++++++ -----------     
-LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelOneGraphic,  200,200,1,0,0,100,100,0,0,3,5,0,0,0,15,15,20,0,200, 150,0,0,200, 150,100,15,0, 300,  200, 100,  200,0,0,300, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <2,1000 * 60 * 3,1000 * 60 * 3,OFFSET LevelTwoGraphic,  200,200,2,0,1,100,100,0,0,4,5,0,0,0,50,50,30,0,250, 100,0,0,250, 100,200,20,0, 300,  200, 175,   75,0,0,600, 3000, 3000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <3,1000 * 30 * 5,1000 * 30 * 5,OFFSET LevelThreeGraphic,200,200,2,0,1,100,100,0,0,4,5,0,0,0,25,25,35,0,200, 100,0,0,200,  50,300,30,0, 200,  100,  50,  150,0,0,700, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_NextLevel>
-                     LEVEL_INFORMATION   <4,1000 * 60 * 2,1000 * 60 * 2,OFFSET LevelFourGraphic, 200,200,2,0,1,100,100,0,0,5,6,0,0,0,40,40,40,0,150, 300,0,0, 50, 500,400,35,0, 150,  178,  25,   50,0,0,900, 2000, 2000, OFFSET GreatMachine_ResetLevel, OFFSET GreatMachine_Winner>
+  LevelInfo_Easy_2_LevelNumber                       dq 2
+  LevelInfo_Easy_2_LevelNumberGraphic                dq OFFSET LevelTwoGraphic
+  LevelInfo_Easy_2_NumberOfConcurrentCars            dq 1
+  LevelInfo_Easy_2_CurrentNumberOfCars               dq 0
+  LevelInfo_Easy_2_NumberOfConcurrentFuel            dq 2
+  LevelInfo_Easy_2_CurrentNumberOfFuel               dq 0
+  LevelInfo_Easy_2_NumberOfConcurrentPartOne         dq 1
+  LevelInfo_Easy_2_CurrentNumberOfPartOne            dq 0
+  LevelInfo_Easy_2_NumberOfConcurrentPartTwo         dq 1
+  LevelInfo_Easy_2_CurrentNumberOfPartTwo            dq 0
+  LevelInfo_Easy_2_NumberOfConcurrentPartThree       dq 1
+  LevelInfo_Easy_2_CurrentNumberOfPartThree          dq 0
+  LevelInfo_Easy_2_NumberOfConcurrentBlockers        dq 1
+  LevelInfo_Easy_2_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_2_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_2_CurrentFuelCollection             dq 0
+  LevelInfo_Easy_2_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_2_CurrentPartOneCollection          dq 0
+  LevelInfo_Easy_2_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_2_CurrentPartTwoCollection          dq 0
+  LevelInfo_Easy_2_RequiredPartThreeCollection       dq 1
+  LevelInfo_Easy_2_CurrentPartThreeCollection        dq 0
+  LevelInfo_Easy_2_GenerateCarsPercentage            dq 15
+  LevelInfo_Easy_2_GenerateFuelPercentage            dq 35
+  LevelInfo_Easy_2_GenerateCarPartOnPercentage       dq 20
+  LevelInfo_Easy_2_GenerateCarPartTwoPercentage      dq 15
+  LevelInfo_Easy_2_GenerateCarPartThreePercentage    dq 10
+  LevelInfo_Easy_2_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_2_GenerateExtraLifePercentage       dq 5
+  LevelInfo_Easy_2_GeneratePedestriansPercentage     dq 25
+  LevelInfo_Easy_2_FuelPoints                        dq 150
+  LevelInfo_Easy_2_CarPartOnePoints                  dq 200
+  LevelInfo_Easy_2_CarPartTwoPoints                  dq 300
+  LevelInfo_Easy_2_CarPartThreePoints                dq 400
+  LevelInfo_Easy_2_CarDebounceRefresh                dq 500
+  LevelInfo_Easy_2_FuelDebounceRefresh               dq 50
+  LevelInfo_Easy_2_ExtraLifeDebounceRefresh          dq 2000
+  LevelInfo_Easy_2_Parts1DebounceRefresh             dq 100
+  LevelInfo_Easy_2_Parts2DebounceRefresh             dq 300
+  LevelInfo_Easy_2_Parts3DebounceRefresh             dq 500
+  LevelInfo_Easy_2_HazardDebounceRefresh             dq 50
+  LevelInfo_Easy_2_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_2_BlockingItemCountLane0            dq 0
+  LevelInfo_Easy_2_BlockingItemCountLane1            dq 0
+  LevelInfo_Easy_2_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_2_MinCarVelocity                    dq 3
+  LevelInfo_Easy_2_MaxCarVelocity                    dq 4
+  LevelInfo_Easy_2_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_2_LevelStartDelay                   dq 200
+  LevelInfo_Easy_2_LevelStartDelayRefresh            dq 200
+  LevelInfo_Easy_2_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_2_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_2_TimerBetweenConCurrentCars        dq 0
+  LevelInfo_Easy_2_TimerBetweenConcurrentCarsRefresh dq 50
+  LevelInfo_Easy_2_TimerAfterCarExitsScreen          dq 0
+  LevelInfo_Easy_2_TimerAfterCarExitsScreenRefresh   dq 100
+  LevelInfo_Easy_2_TimerForPedestrians               dq 0
+  LevelInfo_Easy_2_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_2_TimerForFuel                      dq 0
+  LevelInfo_Easy_2_TimerForFuelRefresh               dq 50
+  LevelInfo_Easy_2_TimerForExtraLives                dq 2000
+  LevelInfo_Easy_2_TimerForExtraLivesRefresh         dq 2000
+  LevelInfo_Easy_2_TimerForHazard                    dq 50
+  LevelInfo_Easy_2_TimerForHazardRefresh             dq 50
+  LevelInfo_Easy_2_TimerForParts1                    dq 100
+  LevelInfo_Easy_2_TimerForParts1Refresh             dq 100
+  LevelInfo_Easy_2_TimerForParts2                    dq 100
+  LevelInfo_Easy_2_TimerForParts2Refresh             dq 100
+  LevelInfo_Easy_2_TimerForParts3                    dq 100
+  LevelInfo_Easy_2_TimerForParts3Refresh             dq 100
+  LevelInfo_Easy_2_TimerForLane0ItemSelection        dq 50
+  LevelInfo_Easy_2_TimerForLane0ItemSelectionRefresh dq 50
+  LevelInfo_Easy_2_TimerForLane1ItemSelection        dq 50
+  LevelInfo_Easy_2_TimerForLane1ItemSelectionRefresh dq 50
+  LevelInfo_Easy_2_TimerForLane2ItemSelection        dq 50
+  LevelInfo_Easy_2_TimerForLane2ItemSelectionRefresh dq 50
+  LevelInfo_Easy_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Easy_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
 
     LevelNameGraphic     IMAGE_INFORMATION  <?>
@@ -547,16 +792,42 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
     BoomTimerRefresh   dq 100
     BoomYLocation      dq ?
     BoomXLocation      dq ?
+
     ;
     ; Active Animation Lists
     ;
     TopSideWalkPtr    dq 0
-    LaneZeroPtr       dq 0
-    LaneOnePtr        dq 0
+    Lane0Ptr          dq 0
+    Lane1Ptr          dq 0
+    Lane2Ptr          dq 0
     BottomSideWalkPtr dq 0
+
+    ;
+    ; Lane Selection Space
+    ;
+    LaneSelectionSpace  dq 0, 0
+                        dq 0, 0
+                        dq 0, 0
+                        dq 0, 0
+                        dq 0, 0
 
 
     ;
+    ; Indexable Array
+    ;
+    Lane0YLocation    dq PLAYER_LANE_0
+    Lane1YLocation    dq PLAYER_LANE_1
+    Lane2YLocation    dq PLAYER_LANE_2
+    
+    ;
+    ; Panel Item Icons
+    ;
+    PanelIcon1Graphic   IMAGE_INFORMATION <?>
+    PanelIcon2Graphic   IMAGE_INFORMATION <?>
+    PanelIcon3Graphic   IMAGE_INFORMATION <?>
+    PanelIcon4Graphic   IMAGE_INFORMATION <?>
+
+    ;                    
     ;  Player Support Structures
     ;
     CurrentPlayerSprite             dq ?
@@ -564,18 +835,12 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
     PlayerFirstCarConvert           SPRITE_CONVERT     <?>         
     PlayerSprite                    SPRITE_STRUCT      <?>
     PlayerSpriteBasicInformation    SPRITE_BASIC_INFORMATION <?>
-    DeBounceMovement                dq 0                        
     NextPlayerRoadLane              dd ?
     CurrentPlayerRoadLane           dd ?
-    ;
-    ; Hi Score File Name
-    ;
-    HiScoreAppData            db 1024 DUP(?)
-    HiScoreAppDataDirFormat   db "%s\\GreatMachinex64", 0
-    HiScoreAppDataFileFormat  db "%s\\GreatMachinex64\\GreatMachinex64.HS", 0
-    HiScoreAppDataFileFormat2 db "%s\\GreatMachinex64.HS", 0
-    ApplicationDataEnv        db "APPDATA",0
-
+    MovingLanesDown                 dd ?
+    PlayerLives                     dq 0
+    PlayerScore                     dq 0
+    PlayerLanePtr                   dq 0
 
     ;
     ; Inactive Lists - Change the constant "TOTAL_ENEMY_LISTS" if additional are added or removed.
@@ -584,16 +849,23 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
     ;
     ; Game Text
     ;
+    GameModeText                    dq OFFSET EasyMode
+                                    dq OFFSET MediumMode
+                                    dq OFFSET HardMode
+    ;
+    ; Gmae Mode Selection
+    ;
     GameModeSelect                  dq 0
     ModeSelectText                  dq 400, 300
-                                    db "Easy Mode", 0
+    EasyMode                        db "Easy Mode", 0
                                     dq 365, 350
-                                    db "Medium Mode",0
+    MediumMode                      db "Medium Mode",0
                                     dq 400, 400
-                                    db "Hard Mode", 0
+    HardMode                        db "Hard Mode", 0
                                     dq 0
-
-	
+    ;
+    ; Screen Text Data
+    ;
     PressSpaceToContinue            db "<Press Spacebar>", 0
     PressEnterToContinue            db "<Press Enter>", 0
     MenuText                        dq 400, 300
@@ -713,20 +985,16 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
                                     dq 50, 350
                                     db "No credit is required.", 0
                                     dq 0
-                                    									
+
+    ;
+    ; Strings
+    ;                               									
     HighScoresText                  db "High Scores", 0
     EasyModeText                    db "Easy Mode",0
     MediumModeText                  db "Medium Mode", 0
     HardModeText                    db "Hard Mode",0
 
 
-    PointsScoreFormat               db "%I64i",0
-    PointsScoreString               db 256 DUP(?)
-
-    HiScoreFormatString             db "%s - %I64u", 0
-    HiScoreString                   db "                                      ",0
-    
-    HiScoreLocationPtr              dq ?
 
     ;
     ; Menu Selection 
@@ -740,8 +1008,10 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
                                     dq GREAT_MACHINE_STATE_ABOUT
                                     dq GREAT_MACHINE_FAILURE_STATE  ; Quit
     MenuIntroTimer                  dq 0
-    PlayerLives                     dq 0
-    PlayerScore                     dq 0
+
+    ;
+    ; Player Information and Panel
+    ;
     PlayerOutputText                db 256 DUP(?)
     PlayerCurLevelText              db "Level: %I64u", 0
     PlayerLivesText                 db "Lives: %I64u",0
@@ -749,374 +1019,403 @@ LevelInformationHard LEVEL_INFORMATION   <1,1000 * 60 * 3,1000 * 60 * 3,OFFSET L
     PlayerParts                     db "%I64u of %I64u Parts", 0
     PlayerScoreFormat               db "%I64i", 0
     PlayerTimerFormat               db "%02I64u:%02I64u", 0
-    SpriteImageFileListAttributes   db 1, 2
     
-	;
-	; Game Over Data
-	;
-	GameOverCaptureScreen           dq ?
-	GameCaptureSize                 dq ?
-        WinnerText                      db "Winner!",0
-	GameOverText                    db "GAME OVER",0
-        HighScoreText                   db "HIGH SCORE!",0
-        EnterInitials                   db "Enter your initials!",0
-        InitialsConst                   db "A--", 0
-        InitialsEnter                   db "   ", 0
-        InitialsEnterPtr                dq ?
-  VirtualPallete   dq ?
-  StarEntryPtr     dq ?
-  Soft3D           dq ?
-  TwoDPlot         TD_POINT_2D <?>
-  WorldLocation    TD_POINT    <?>
-  View_Distance    mmword   1024.0
-  ConstantZero     mmword 0.0
-  CurrentVelocity  dq 1
-  CameraX          mmword 0.0
-  CameraY          mmword 0.0
-  CameraXVel       mmword -0.00872665
-  CameraYVel       mmword -0.00872665
-  ConstantNeg      mmword -1.0
-  DoubleBuffer     dq ?
     ;
-    ; Game Variable Structures
+    ; Game Over Data
     ;
-    LargeMemoryAllocation    dq ?
-    LargeMemoryAllocationEnd dq ?
-    CurrentMemoryPtr         dq ?
-    SpriteConvert      SPRITE_CONVERT     <?>
-    GameEngInit        GAME_ENGINE_INIT   <?>
-    RoadGraphic        IMAGE_INFORMATION  <?>
-    RoadScroll         SCROLLING_GIF      <?>
-    MountainGraphic    IMAGE_INFORMATION  <?>
-    MountainScroll     SCROLLING_GIF      <?>
-    SkyGraphic         IMAGE_INFORMATION  <?>
-    SkyScroll          SCROLLING_GIF      <?>
-    LoadingScreen      IMAGE_INFORMATION  <?>
-    IntroScreen        IMAGE_INFORMATION  <?>
-    MenuScreen         IMAGE_INFORMATION  <?>
-    TitleGraphic       IMAGE_INFORMATION  <?>
-    GeneralGraphic     IMAGE_INFORMATION  <?>
-    BoomGraphic        IMAGE_INFORMATION  <?>
-    PanelGraphic       IMAGE_INFORMATION  <?>
-    CarSpinGraphic     IMAGE_INFORMATION  <?>
-    CarSpinConvert     SPRITE_CONVERT     <?>
-    CarSpinSprite      SPRITE_BASIC_INFORMATION <?>
+    GameOverCaptureScreen           dq ?
+    GameCaptureSize                 dq ?
+    WinnerText                      db "Winner!",0
+    GameOverText                    db "GAME OVER",0
+    HighScoreText                   db "HIGH SCORE!",0
+    EnterInitials                   db "Enter your initials!",0
+    InitialsConst                   db "A--", 0
+    InitialsEnter                   db "   ", 0
+    InitialsEnterPtr                dq ?
 
-;
-; Active Points Strutures Shouldn't need more than 8
-;
-    DisplayPointsList DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
-                      DISPLAY_PLAYER_POINTS <?>
+    ;
+    ; Starfield Data
+    ;
+    VirtualPallete                  dq ?
+    StarEntryPtr                    dq ?
+    Soft3D                          dq ?
+    TwoDPlot                        TD_POINT_2D <?>
+    WorldLocation                   TD_POINT    <?>
+    View_Distance                   mmword   1024.0
+    ConstantZero                    mmword 0.0
+    CurrentVelocity                 dq 1
+    CameraX                         mmword 0.0
+    CameraY                         mmword 0.0
+    CameraXVel                      mmword -0.00872665
+    CameraYVel                      mmword -0.00872665
+    ConstantNeg                     mmword -1.0
+    DoubleBuffer                    dq ?
 
-;
-; Car Graphics
-;
-   GenericCarListPtr   dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-
-   GenericCarSpriteList      SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-
-   GenericCarScrollList      SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>                       
-                             SCROLLING_GIF      <?>                       
-                             SCROLLING_GIF      <?>                       
-
-   GenericCarImageList IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
+     ;
+     ; Game Variable Structures
+     ;
+     LargeMemoryAllocation          dq ?
+     LargeMemoryAllocationEnd       dq ?
+     CurrentMemoryPtr               dq ?
+     SpriteConvert                  SPRITE_CONVERT     <?>
+     GameEngInit                    GAME_ENGINE_INIT   <?>
+     RoadGraphic                    IMAGE_INFORMATION  <?>
+     RoadScroll                     SCROLLING_GIF      <?>
+     MountainGraphic                IMAGE_INFORMATION  <?>
+     MountainScroll                 SCROLLING_GIF      <?>
+     SkyGraphic                     IMAGE_INFORMATION  <?>
+     SkyScroll                      SCROLLING_GIF      <?>
+     LoadingScreen                  IMAGE_INFORMATION  <?>
+     IntroScreen                    IMAGE_INFORMATION  <?>
+     MenuScreen                     IMAGE_INFORMATION  <?>
+     TitleGraphic                   IMAGE_INFORMATION  <?>
+     GeneralGraphic                 IMAGE_INFORMATION  <?>
+     BoomGraphic                    IMAGE_INFORMATION  <?>
+     PanelGraphic                   IMAGE_INFORMATION  <?>
+     CarSpinGraphic                 IMAGE_INFORMATION  <?>
+     CarSpinConvert                 SPRITE_CONVERT     <?>
+     CarSpinSprite                  SPRITE_BASIC_INFORMATION <?>
+     PauseGame                      dq 0
 
 
-;
-; Person Graphics
-;
-   GenericPersonListPtr   dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
-                       dq ?
+    ;
+    ; Active Sprite lists
+    ;
+    DisplayPointsList               DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
+                                    DISPLAY_PLAYER_POINTS <?>
 
-   GenericPersonSpriteList   SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-                             SPECIAL_SPRITE_STRUCT      <?>                       
+   GenericCarListPtr                dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
 
-   GenericPersonScrollList   SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>
-                             SCROLLING_GIF      <?>                       
-                             SCROLLING_GIF      <?>                       
-                             SCROLLING_GIF      <?>                       
+   GenericCarSpriteList             SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                 
+   GenericCarScrollList             SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>                       
+                                    SCROLLING_GIF      <?>                       
+                                    SCROLLING_GIF      <?>                       
 
-   GenericPersonImageList IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-                       IMAGE_INFORMATION <?>
-
-
-
-   GenericItemsImagePtr  dq OFFSET FuelImage1
-                         dq OFFSET FuelImage2 
-                         dq OFFSET CarPart1Image
-                         dq OFFSET CarPart2Image
-                         dq OFFSET CarPart3Image
-                         dq OFFSET CarPart4Image 
-                         dq OFFSET CarPart5Image 
-                         dq OFFSET CarPart6Image 
-                         dq OFFSET Item1Image
-                         dq ? 
-                         dq ? 
-                         dq ? 
-                         dq ? 
-                         dq ? 
+   GenericCarImageList              IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
 
 
-   FuelItemsList         dq OFFSET GenericItemsList
-   CarPartsItemsList     dq OFFSET GenericItems_CarParts
-   ItemsItemsList        dq OFFSET GenericItems_Item      ; Currently, not a list.
+   GenericPersonListPtr             dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
+                                    dq ?
 
-   GenericItemsList          SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-   GenericItems_CarParts     SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-   GenericItems_Item         SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-                             SPECIAL_SPRITE_STRUCT      <?>                       
-                             SPECIAL_SPRITE_STRUCT      <?>                       
+   GenericPersonSpriteList          SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
 
-   GenericItemsScrollList      SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>
-                               SCROLLING_GIF      <?>                       
-                               SCROLLING_GIF      <?>                       
-                               SCROLLING_GIF      <?>                       
+   GenericPersonScrollList          SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>                       
+                                    SCROLLING_GIF      <?>                       
+                                    SCROLLING_GIF      <?>                       
 
-   GenericItemsImageList IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
-                         IMAGE_INFORMATION <?>
+   GenericPersonImageList           IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
 
 
-;
-;  Tree Graphics
-; 
-    Tree1Graphic       IMAGE_INFORMATION  <?>
-    Tree2Graphic       IMAGE_INFORMATION  <?>
-    Tree3Graphic       IMAGE_INFORMATION  <?>
-    Tree4Graphic       IMAGE_INFORMATION  <?>
 
-    TreeScrollList     dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
-                       dq  ?  ; TRUE if Active FALSE if not.
-                       dq  ?  ; Pointer to Scrolling Gif
+   GenericItemsImagePtr             dq OFFSET FuelImage1
+                                    dq OFFSET FuelImage2 
+                                    dq OFFSET CarPart1Image
+                                    dq OFFSET CarPart4Image
+                                    dq OFFSET CarPart2Image
+                                    dq OFFSET CarPart5Image 
+                                    dq OFFSET CarPart3Image 
+                                    dq OFFSET CarPart6Image 
+                                    dq OFFSET Item1Image
+                                    dq ? 
+                                    dq ? 
+                                    dq ? 
+                                    dq ? 
+                                    dq ? 
 
-   TreeScrollData      SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
-                       SCROLLING_GIF      <?>
 
-    PauseGame          dq 0
-    HiScoreListPtr     dq OFFSET HiScoreListConst
-    HiScoreListConst   db "TEO", 0  ; Easy Mode Scores
-	                   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-                       db "TEO", 0  ; Medium Mode Scores
-	                   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0					   
-                       db "TEO", 0  ; Hard Mode Scores
-	                   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0
-					   db "TEO", 0
-					   dq 0					   
+   FuelItemsList                    dq OFFSET GenericItemsList
+
+   GenericItemsList                 SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_CarPart1            SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_CarPart2            SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_CarPart3            SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_ExtraLife           SPECIAL_SPRITE_STRUCT      <?>
+   GenericItems_Hazards             SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+                                    SPECIAL_SPRITE_STRUCT      <?>                       
+
+   GenericItemsScrollList           SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>                       
+                                    SCROLLING_GIF      <?>                       
+                                    SCROLLING_GIF      <?>                       
+
+   GenericItemsImageList            IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+                                    IMAGE_INFORMATION <?>
+
+    ;
+    ; Generation of new items structure configuratino
+    ;
+    GenerateCarsStructure           GENERATE_STRUCT <GreatMachine_Cars_TickDebounceUpdate, GreatMachine_Cars_PreGenerateCheck, GreatMachine_Cars_LoopCheck, GreatMachine_Cars_ActivateSprite, OFFSET GenericCarSpriteList, NUMBER_OF_CARS>
+    GenerateFuelStructure           GENERATE_STRUCT <GreatMachine_Fuel_TickDebounceUpdate, GreatMachine_Fuel_PreGenerateCheck, GreatMachine_Fuel_LoopCheck, GreatMachine_Fuel_ActivateSprite, OFFSET GenericItemsList, NUMBER_OF_FUEL>
+    GeneratePart1Structure          GENERATE_STRUCT <GreatMachine_Part1_TickDebounceUpdate, GreatMachine_Part1_PreGenerateCheck, GreatMachine_Part1_LoopCheck, GreatMachine_Part1_ActivateSprite, OFFSET GenericItems_CarPart1, NUMBER_OF_PARTS1>
+    GeneratePart2Structure          GENERATE_STRUCT <GreatMachine_Part2_TickDebounceUpdate, GreatMachine_Part2_PreGenerateCheck, GreatMachine_Part2_LoopCheck, GreatMachine_Part2_ActivateSprite, OFFSET GenericItems_CarPart2, NUMBER_OF_PARTS2>
+    GeneratePart3Structure          GENERATE_STRUCT <GreatMachine_Part3_TickDebounceUpdate, GreatMachine_Part3_PreGenerateCheck, GreatMachine_Part3_LoopCheck, GreatMachine_Part3_ActivateSprite, OFFSET GenericItems_CarPart3, NUMBER_OF_PARTS3>
+    GeneratePedestriansStructure    GENERATE_STRUCT <GreatMachine_Pedestrians_TickDebounceUpdate, GreatMachine_Pedestrians_PreGenerateCheck, GreatMachine_Pedestrians_LoopCheck, GreatMachine_Pedestrians_ActivateSprite, OFFSET GenericPersonSpriteList, NUMBER_OF_PEOPLE>
+    GenerateExtraLifeStructure      GENERATE_STRUCT <GreatMachine_ExtraLife_TickDebounceUpdate, GreatMachine_ExtraLife_PreGenerateCheck, GreatMachine_ExtraLife_LoopCheck, GreatMachine_ExtraLife_ActivateSprite, OFFSET GenericItems_ExtraLife, NUMBER_OF_EXTRA_LIFE>
+    GenerateHazardsStructure        GENERATE_STRUCT <GreatMachine_Hazards_TickDebounceUpdate, GreatMachine_Hazards_PreGenerateCheck, GreatMachine_Hazards_LoopCheck, GreatMachine_Hazards_ActivateSprite, OFFSET GenericItems_Hazards, NUMBER_OF_HAZARDS>
+
+    ;
+    ;  Tree Graphics Data
+    ; 
+    Tree1Graphic                    IMAGE_INFORMATION  <?>
+    Tree2Graphic                    IMAGE_INFORMATION  <?>
+    Tree3Graphic                    IMAGE_INFORMATION  <?>
+    Tree4Graphic                    IMAGE_INFORMATION  <?>
+
+    TreeScrollList                  dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                    dq  ?  ; TRUE if Active FALSE if not.
+                                    dq  ?  ; Pointer to Scrolling Gif
+                                 
+   TreeScrollData                   SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                    SCROLLING_GIF      <?>
+                                 
+
+    ;
+    ; Hi Score File Name
+    ;
+    HiScoreAppData            db 1024 DUP(?)
+    HiScoreAppDataDirFormat   db "%s\\GreatMachinex64", 0
+    HiScoreAppDataFileFormat  db "%s\\GreatMachinex64\\GreatMachinex64.HS", 0
+    HiScoreAppDataFileFormat2 db "%s\\GreatMachinex64.HS", 0
+    ApplicationDataEnv        db "APPDATA",0
+
+    ;
+    ; High Score Data
+    ;
+
+    PointsScoreFormat               db "%I64i",0
+    PointsScoreString               db 256 DUP(?)
+
+    HiScoreFormatString             db "%s - %I64u", 0
+    HiScoreString                   db "                                      ",0
+    
+    HiScoreLocationPtr              dq ?
+    HiScoreListPtr                  dq OFFSET HiScoreListConst
+    HiScoreListConst                db "TEO", 0  ; Easy Mode Scores
+	                            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+			            dq 0
+			            db "TEO", 0
+		 	            dq 0
+                                    db "TEO", 0  ; Medium Mode Scores
+	                            dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0					   
+                                    db "TEO", 0  ; Hard Mode Scores
+	                            dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0
+				    db "TEO", 0
+				    dq 0					   
 
 					   
 .CODE

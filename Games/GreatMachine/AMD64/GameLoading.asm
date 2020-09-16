@@ -288,7 +288,7 @@ NESTED_ENTRY GreatMachine_InitializeTrees, _TEXT$00
   SUB RCX, IMAGE_INFORMATION.ImageHeight[RAX]
   MOV SCROLLING_GIF.CurrentY[RDX], RCX
 
-  ADD R10, 45
+;  ADD R10, 45
   JMP @SkipIncRdi
 @EndOfLoopUpdate:
   INC RDI
@@ -456,6 +456,14 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_LoadLevelNameGraphics
   CMP RAX, 0
   JE @FailureExit
+
+  ;
+  ; Load The Icon Graphics
+  ;
+  DEBUG_FUNCTION_CALL GreatMachine_LoadPanelIcons
+  CMP RAX, 0
+  JE @FailureExit
+
 
   ;
   ; Load the Tree Graphics and Initialize Trees
@@ -727,7 +735,7 @@ NESTED_ENTRY GreatMachine_LoadCarGraphics, _TEXT$00
   MOV R13, OFFSET GenericCarSpriteList
   MOV R12, OFFSET GenericCarListPtr
 @LoadCarGraphics:
-  CMP RBX, NUMBER_OF_CAR_GIFS   ; This way you can disable the cars by setting the equates to 0
+  CMP RBX, NUMBER_OF_CARS             ; This way you can disable the cars by setting the equates to 0
   JE @CarsComplete
   INC RBX
 
@@ -807,10 +815,16 @@ endif
   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], SPRITE_TYPE_CAR
   MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R13], 0
-  DEBUG_FUNCTION_CALL Math_Rand
-  AND RAX, 0Fh
-  SHL RAX, 7
-  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R13], RAX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R13], 0
+
+  LEA RAX, [GreatMachine_Car_CollisionNPC]
+  MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R13], RAX
+
+  LEA RAX, [GreatMachine_Car_Collision]
+  MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R13], RAX
+
+  LEA RAX, [GreateMachine_Car_OffScreen]
+  MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R13], RAX
 
   MOV QWORD PTR [R12], R13
 
@@ -852,7 +866,7 @@ NESTED_ENTRY GreatMachine_LoadPeopleGraphics, _TEXT$00
   MOV R13, OFFSET GenericPersonSpriteList
   MOV R12, OFFSET GenericPersonListPtr
 @LoadPeopleGraphics:
-  CMP RBX, NUMBER_OF_PEOPLE_GIFS   ; This way you can disable the cars by setting the equates to 0
+  CMP RBX, NUMBER_OF_PEOPLE       ; This way you can disable the cars by setting the equates to 0
   JE @PeopleComplete
   INC RBX
 
@@ -932,10 +946,15 @@ endif
   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R13], SPRITE_TYPE_PEDESTRIAN
   MOV SPECIAL_SPRITE_STRUCT.ListNextPtr[R13], 0
   MOV SPECIAL_SPRITE_STRUCT.ListBeforePtr[R13], 0
-  DEBUG_FUNCTION_CALL Math_Rand
-  AND RAX, 0Fh
-  SHL RAX, 7
-  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R13], RAX
+
+  LEA RAX, [GreatMachine_Pedestrian_CollisionNPC]
+  MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R13], RAX
+
+  LEA RAX, [GreatMachine_Pedestrian_Collision]
+  MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R13], RAX
+
+  LEA RAX, [GreateMachine_Pedestrian_OffScreen]
+  MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R13], RAX
 
   MOV QWORD PTR [R12], R13
 
@@ -953,6 +972,56 @@ endif
 
 NESTED_END GreatMachine_LoadPeopleGraphics, _TEXT$00
 
+
+
+
+
+;*********************************************************
+;   GreatMachine_LoadPanelIcons
+;
+;        Parameters: None
+;
+;        Return Value: TRUE/FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadPanelIcons, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDX, OFFSET PanelIcon1Graphic
+  MOV RCX, OFFSET PanelIcon1
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET PanelIcon2Graphic
+  MOV RCX, OFFSET PanelIcon2
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET PanelIcon3Graphic
+  MOV RCX, OFFSET PanelIcon3
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+  MOV RDX, OFFSET PanelIcon4Graphic
+  MOV RCX, OFFSET PanelIcon4
+  DEBUG_FUNCTION_CALL GreatMachine_LoadGraphicsImage
+  CMP RAX, 0
+  JE @FailureExit
+
+
+@FailureExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadPanelIcons, _TEXT$00
 
 
 ;*********************************************************
@@ -1325,32 +1394,96 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
    CMP RBX, NUMBER_OF_FUEL
    JE @FuelItemsComplete
 
-   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_TOXIC
-   AND RAX, 0Fh
-   SHL RAX, 7
-   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R15], RAX
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_FUEL
+   LEA RAX, [GreatMachine_Fuel_CollisionNPC]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R12], RAX
+
+   LEA RAX, [GreatMachine_Fuel_Collision]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R12], RAX
+
+   LEA RAX, [GreateMachine_Fuel_OffScreen]
+   MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R12], RAX
+
    ADD R12, SIZE SPECIAL_SPRITE_STRUCT
    INC RBX
    JMP @SetupFuelItems
 @FuelItemsComplete:
 
    XOR RBX, RBX
-   MOV R12, [CarPartsItemsList]
-@SetupPartsItems:
-   CMP RBX, NUMBER_OF_PARTS
-   JE @PartsItemsComplete
+   MOV R12, OFFSET GenericItems_CarPart1
+@SetupParts1:
+   CMP RBX, NUMBER_OF_PARTS1
+   JE @Parts1Complete
 
-   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART
-   AND RAX, 0Fh
-   SHL RAX, 9
-   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[R15], RAX
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART1
+   LEA RAX, [GreatMachine_Part1_CollisionNPC]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R12], RAX
+
+   LEA RAX, [GreatMachine_Part1_Collision]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R12], RAX
+
+   LEA RAX, [GreateMachine_Part1_OffScreen]
+   MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R12], RAX
+
+
    ADD R12, SIZE SPECIAL_SPRITE_STRUCT
    INC RBX
-   JMP @SetupPartsItems
-@PartsItemsComplete:
-   MOV [GenericItems_Item.SpriteType], SPRITE_TYPE_POINT_ITEM   
-   MOV [GenericItems_Item.SpriteDeBounceRefresh], 2000
-   
+   JMP @SetupParts1
+@Parts1Complete:
+
+   XOR RBX, RBX
+   MOV R12, OFFSET GenericItems_CarPart2
+@SetupParts2:
+   CMP RBX, NUMBER_OF_PARTS2
+   JE @Parts2Complete
+
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART2
+   LEA RAX, [GreatMachine_Part2_CollisionNPC]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R12], RAX
+
+   LEA RAX, [GreatMachine_Part2_Collision]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R12], RAX
+
+   LEA RAX, [GreateMachine_Part2_OffScreen]
+   MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R12], RAX
+
+
+   ADD R12, SIZE SPECIAL_SPRITE_STRUCT
+   INC RBX
+   JMP @SetupParts2
+@Parts2Complete:
+
+   XOR RBX, RBX
+   MOV R12, OFFSET GenericItems_CarPart3
+@SetupParts3:
+   CMP RBX, NUMBER_OF_PARTS3
+   JE @Parts3Complete
+
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART3
+   LEA RAX, [GreatMachine_Part3_CollisionNPC]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R12], RAX
+
+   LEA RAX, [GreatMachine_Part3_Collision]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R12], RAX
+
+   LEA RAX, [GreateMachine_Part3_OffScreen]
+   MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R12], RAX
+
+
+   ADD R12, SIZE SPECIAL_SPRITE_STRUCT
+   INC RBX
+   JMP @SetupParts3
+@Parts3Complete:
+
+   MOV [GenericItems_ExtraLife.SpriteType], SPRITE_TYPE_EXTRA_LIFE
+   LEA RAX, [GreatMachine_ExtraLife_CollisionNPC]
+   MOV [GenericItems_ExtraLife.pfnCollisionNpc], RAX
+
+   LEA RAX, [GreatMachine_ExtraLife_Collision]
+   MOV [GenericItems_ExtraLife.pfnCollisionPlayer], RAX
+
+   LEA RAX, [GreateMachine_ExtraLife_OffScreen]
+   MOV [GenericItems_ExtraLife.pfnSpriteOffScreen], RAX
       
    MOV EAX, 1
 @FailureExit:

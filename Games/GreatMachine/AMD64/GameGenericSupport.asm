@@ -162,12 +162,16 @@ NESTED_ENTRY GreatMachine_EmptyAllLists, _TEXT$00
   MOV [TopSideWalkPtr], 0
   DEBUG_FUNCTION_CALL GreatMachine_EmptyList
 
-  MOV RCX, [LaneZeroPtr]
-  MOV [LaneZeroPtr], 0
+  MOV RCX, [Lane0Ptr]
+  MOV [Lane0Ptr], 0
   DEBUG_FUNCTION_CALL GreatMachine_EmptyList
 
-  MOV RCX, [LaneOnePtr]
-  MOV [LaneOnePtr], 0
+  MOV RCX, [Lane1Ptr]
+  MOV [Lane1Ptr], 0
+  DEBUG_FUNCTION_CALL GreatMachine_EmptyList
+
+  MOV RCX, [Lane2Ptr]
+  MOV [Lane2Ptr], 0
   DEBUG_FUNCTION_CALL GreatMachine_EmptyList
 
   MOV RCX, [BottomSideWalkPtr]
@@ -276,7 +280,7 @@ NESTED_ENTRY GreatMachine_UpdateTimer, _TEXT$00
   DEBUG_FUNCTION_CALL GameEngine_GetElapsedMs
 
   MOV RCX, [LevelInformationPtr]
-  MOV RDX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
+  MOV RDX, LEVEL_INFO.LevelTimerRefresh[RCX]
   SUB RDX, RAX
   SUB RDX, [TimerAdjustMs]
   CMP RDX, 0
@@ -286,7 +290,7 @@ NESTED_ENTRY GreatMachine_UpdateTimer, _TEXT$00
   ; Do Level Timeout Stuff.
   ;
 @SkipUpdateToZero:
-  MOV LEVEL_INFORMATION.LevelTimer[RCX], RDX
+  MOV LEVEL_INFO.LevelTimer[RCX], RDX
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

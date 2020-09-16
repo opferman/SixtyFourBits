@@ -48,4 +48,8 @@ PERSON6_GIF       GIFFILE resources\person6.gif
 PERSON7_GIF       GIFFILE resources\person7.gif
 PERSON8_GIF       GIFFILE resources\person8.gif
 ITEM1_GIF         GIFFILE resources\item1.gif
+ICON1_GIF         GIFFILE resources\fuel_icon.gif
+ICON2_GIF         GIFFILE resources\CarPart1_icon.gif
+ICON3_GIF         GIFFILE resources\CarPart2_icon.gif
+ICON4_GIF         GIFFILE resources\CarPart3_icon.gif
 #endif

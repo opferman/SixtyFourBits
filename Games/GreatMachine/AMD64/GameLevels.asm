@@ -35,7 +35,7 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_AnimateBackground
 
   MOV RAX, [LevelInformationPtr]
-  CMP LEVEL_INFORMATION.LevelStartDelay[RAX], 0
+  CMP LEVEL_INFO.LevelStartDelay[RAX], 0
   JE @LevelPlay
 
   MOV R9, LEVEL_NAME_Y 
@@ -47,12 +47,12 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV R9, LEVEL_NUMBER_Y
   MOV R8, LEVEL_NUMBER_X
   MOV RAX, [LevelInformationPtr]
-  MOV RDX, LEVEL_INFORMATION.LevelNumberGraphic[RAX]
+  MOV RDX, LEVEL_INFO.LevelNumberGraphic[RAX]
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_DisplayTransparentImage
 
   MOV RAX, [LevelInformationPtr]
-  DEC LEVEL_INFORMATION.LevelStartDelay[RAX]
+  DEC LEVEL_INFO.LevelStartDelay[RAX]
   JMP @LevelDelay
 
 @LevelPlay:
@@ -68,8 +68,17 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
   MOV EAX, [NextPlayerRoadLane]
   CMP R12, RAX
   JE @NotBetweenLanes
-  MOV R12, 3                    ; Signal we are between lanes.
+  TEST EAX, EAX
+  JZ @UseLane1
+  TEST R12, R12
+  JZ @UseLane1
+@UseLane2:
+  MOV R12, 2                    ; Signal we are between lanes.
+  JMP @DeterminedPlayerLane
+@UseLane1:
+  MOV R12, 1
 @NotBetweenLanes:
+@DeterminedPlayerLane:
 
   ;**************************************************************
   ; Level Action - Section One - New Game Pieces
@@ -77,57 +86,75 @@ NESTED_ENTRY GreatMachine_Levels, _TEXT$00
 
   MOV RDX, RBX
   MOV RCX, RSI
-  DEBUG_FUNCTION_CALL GreatMachine_DispatchGamePieces 
+  DEBUG_FUNCTION_CALL GreatMachine_DispatchGamePieces
+   
 ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
+  MOV RCX, OFFSET Lane0Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
+  MOV RCX, OFFSET Lane1Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane2Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
 endif
 
   ;**************************************************************
   ; Level Action - Section Two - Detection
   ;**************************************************************
-  XOR R8, R8
-  CMP R12, 3
-  JE @NotInALane
-  MOV R8, [LaneZeroPtr] 
-  CMP R12, 0
-  JE @InLaneZero
-  MOV R8, [LaneOnePtr]
-@InLaneZero:
-@NotInALane:
+
+  MOV R8, [PlayerLanePtr]
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionPlayer
+
+
 ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
+  MOV RCX, OFFSET Lane0Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
+  MOV RCX, OFFSET Lane1Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane2Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
 endif
 
-  MOV R8, OFFSET LaneZeroPtr
+  MOV R8, OFFSET Lane0Ptr
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
 ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
+  MOV RCX, OFFSET Lane0Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
+  MOV RCX, OFFSET Lane1Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane2Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
 endif
 
-  MOV R8, OFFSET LaneOnePtr
+  MOV R8, OFFSET Lane1Ptr
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
 ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
+  MOV RCX, OFFSET Lane0Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
+  MOV RCX, OFFSET Lane1Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane2Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
 endif
+
+  MOV R8, OFFSET Lane2Ptr
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_CollisionNPC
+ifdef MACHINE_GAME_DEBUG
+  MOV RCX, OFFSET Lane0Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane1Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane2Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+endif
+
 
   ;**************************************************************
   ; Level Action - Section Three - Display Graphics and Sprites
@@ -151,22 +178,13 @@ endif
   DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
 @SkipPlayerUpdateForLane0:
 
-  MOV R8, [LaneZeroPtr]
+  MOV R8, [Lane0Ptr]
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
 
   ;
-  ; Character transition between lanes
-  ;
-  CMP R12, 3
-  JNE @SkipPlayerUpdateForBetweenLanes
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
-@SkipPlayerUpdateForBetweenLanes:
-
-  ;
-  ; Lane 1
+  ; Lane 1 or Between L1 and L0
   ;
   CMP R12, 1
   JNE @SkipPlayerUpdateForLane1
@@ -174,7 +192,21 @@ endif
   DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
 @SkipPlayerUpdateForLane1:
 
-  MOV R8, [LaneOnePtr]
+  MOV R8, [Lane1Ptr]
+  MOV RDX, RBX
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
+
+  ;
+  ; Lane 2 or Between L1 and L2
+  ;
+  CMP R12, 2
+  JNE @SkipPlayerUpdateForBetweenLane2
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_DisplayPlayer
+@SkipPlayerUpdateForBetweenLane2:
+
+  MOV R8, [Lane2Ptr]
   MOV RDX, RBX
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_DisplayLevelSprites
@@ -225,31 +257,45 @@ endif
   ; We need to adjust the timer so this dead time isn't counted towards the level.
   ;
   MOV RCX, [LevelInformationPtr]
-  MOV RAX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
-  SUB RAX, LEVEL_INFORMATION.LevelTimer[RCX]
+  MOV RAX, LEVEL_INFO.LevelTimerRefresh[RCX]
+  SUB RAX, LEVEL_INFO.LevelTimer[RCX]
   MOV [TimerAdjustMs], RAX
   MOV [LevelStartTimer], 0
   JMP @SkipPanelUpdate
 
 @BoomNotActive:
   MOV RDX, [LevelInformationPtr] 
-  CMP LEVEL_INFORMATION.LevelTimer[RDX], 0
+  CMP LEVEL_INFO.LevelTimer[RDX], 0
   JNE @StillTimeLeft
   MOV [BoomYLocation], 0
   MOV [BoomXLocation], 0
   JMP @UpdateState
 @StillTimeLeft:
   
-  MOV R9, LEVEL_INFORMATION.LevelCompleteBarrelCount[RDX]
-  MOV R8, LEVEL_INFORMATION.CurrentLevelBarrelCount[RDX]
-  CMP R9, R8
-  JNE @NotComplete
-  MOV R9, LEVEL_INFORMATION.LevelCompleteCarPartCount[RDX]
-  MOV R8, LEVEL_INFORMATION.CurrentCarPartCount[RDX]
+  ;
+  ; Check if we have completed the 
+  ;
+  MOV R9, LEVEL_INFO.RequiredFuelCollection[RDX]
+  MOV R8, LEVEL_INFO.CurrentFuelCollection[RDX]
   CMP R9, R8
   JNE @NotComplete
 
-  MOV RAX, LEVEL_INFORMATION.pfnNextLevel[RDX]
+  MOV R9, LEVEL_INFO.RequiredPartOneCollection[RDX]
+  MOV R8, LEVEL_INFO.CurrentPartOneCollection[RDX]
+  CMP R9, R8
+  JNE @NotComplete
+
+  MOV R9, LEVEL_INFO.RequiredPartTwoCollection[RDX]
+  MOV R8, LEVEL_INFO.CurrentPartTwoCollection[RDX]
+  CMP R9, R8
+  JNE @NotComplete
+
+  MOV R9, LEVEL_INFO.RequiredPartThreeCollection[RDX]
+  MOV R8, LEVEL_INFO.CurrentPartThreeCollection[RDX]
+  CMP R9, R8
+  JNE @NotComplete
+
+  MOV RAX, LEVEL_INFO.pfnNextLevel[RDX]
 
   MOV RDX, RDI
   MOV RCX, RSI
@@ -272,8 +318,8 @@ endif
   ; We need to adjust the timer so this pause time isn't counted towards the level.
   ;
   MOV RCX, [LevelInformationPtr]
-  MOV RAX, LEVEL_INFORMATION.LevelTimerRefresh[RCX]
-  SUB RAX, LEVEL_INFORMATION.LevelTimer[RCX]
+  MOV RAX, LEVEL_INFO.LevelTimerRefresh[RCX]
+  SUB RAX, LEVEL_INFO.LevelTimer[RCX]
   MOV [TimerAdjustMs], RAX
   MOV [LevelStartTimer], 0
         

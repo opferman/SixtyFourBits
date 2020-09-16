@@ -88,55 +88,9 @@ endif
    CMP R9, RAX                         ; Car_Rear > X_Front
    JG @IsNotCollision
 
-   CMP SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_PART
-   JNE @TryNextType_One
-
-          MOV RCX, [LevelInformationPtr]
-          MOV RDX,OFFSET LaneOnePtr   
-          CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R12], RDX
-          JE @DecrementLane1ForParts
-          DEC LEVEL_INFORMATION.CurrentCarPartCountL0[RCX]
-          MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RCX]
-          MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RCX], RAX
-          JMP @RemoveFromList
-@DecrementLane1ForParts:
-          DEC LEVEL_INFORMATION.CurrentCarPartCountL1[RCX]
-          MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RCX]
-          MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RCX], RAX
-
-
-   JMP @RemoveFromList
-@TryNextType_One:
-   CMP SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_TOXIC 
-   JNE @TryNextType_Two
-@ToxicCollision:
-
-          MOV RCX, [LevelInformationPtr]
-          MOV RDX,OFFSET LaneOnePtr   
-          CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R12], RDX
-          JE @DecrementLane1ForToxic
-          DEC LEVEL_INFORMATION.CurrentBarrelCountL0[RCX]
-          MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RCX]
-          MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RCX], RAX
-          JMP @RemoveFromList
-@DecrementLane1ForToxic:
-          DEC LEVEL_INFORMATION.CurrentBarrelCountL1[RCX]
-          MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RCX]
-          MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
-
-   JMP @RemoveFromList
-
-@TryNextType_Two:
-   CMP SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_TOXIC 
-   JNE @TryNextType_Three
-@ExtraLivesCollision:
-    MOV RCX, [LevelInformationPtr]
-    MOV RAX, LEVEL_INFORMATION.ItemGenerateTimerRefresh[RCX]
-    MOV LEVEL_INFORMATION.ItemGenerateTimer[RCX], RAX
-   
-   JMP @RemoveFromList 
-@TryNextType_Three:   
-   JMP @RemoveFromList
+   MOV RCX, R12
+   MOV RAX, SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R12]
+   DEBUG_FUNCTION_CALL RAX
 
 @RemoveFromList:   
    ;
@@ -145,15 +99,17 @@ endif
    MOV RCX, R12
    MOV R12, SPECIAL_SPRITE_STRUCT.ListNextPtr[R12] 
    DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithoutPoints
+
 ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
+  MOV RCX, OFFSET Lane0Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
+  MOV RCX, OFFSET Lane1Ptr
+  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+  MOV RCX, OFFSET Lane2Ptr
   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
 endif
+
    JMP @InnerLoopForCar  
-
-
 
 @IsNotCollision:
 @InnerLoopUpdate:
@@ -168,6 +124,222 @@ endif
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END GreatMachine_CollisionNPC, _TEXT$00
+
+
+
+
+
+
+;*********************************************************
+;   GreatMachine_Fuel_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Fuel_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfFuel[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForFuelRefresh[RCX]
+  MOV LEVEL_INFO.TimerForFuel[RCX], RAX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Fuel_CollisionNPC, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Part1_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Part1_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartOne[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForParts1Refresh[RCX]
+  MOV LEVEL_INFO.TimerForParts1[RCX], RAX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Part1_CollisionNPC, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_Part2_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Part2_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartTwo[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForParts2Refresh[RCX]
+  MOV LEVEL_INFO.TimerForParts2[RCX], RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Part2_CollisionNPC, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_Part3_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Part3_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartThree[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForParts3Refresh[RCX]
+  MOV LEVEL_INFO.TimerForParts3[RCX], RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Part3_CollisionNPC, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_ExtraLife_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_ExtraLife_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+
+  MOV RAX, LEVEL_INFO.TimerForExtraLivesRefresh[RCX]
+  MOV LEVEL_INFO.TimerForExtraLives[RCX], RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_ExtraLife_CollisionNPC, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_Hazard_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Hazard_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+
+  INT 3         ; A car should never hit a hazard
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Hazard_CollisionNPC, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Pedestrian_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Pedestrian_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+
+  INT 3         ; A car should never hit a pedestrian
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Pedestrian_CollisionNPC, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Car_CollisionNPC
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Car_CollisionNPC, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+
+  INT 3         ; Should never collide into a car.
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Car_CollisionNPC, _TEXT$00
+
+
+
+
 
 ;*********************************************************
 ;   GreatMachine_CollisionPlayer
@@ -192,10 +364,15 @@ NESTED_ENTRY GreatMachine_CollisionPlayer, _TEXT$00
    CMP EAX, [CurrentPlayerRoadLane]
    JNE @ChangingLanesIsProtected
    
-   MOV R15, [LaneZeroPtr]
+   MOV R15, [Lane0Ptr]
    CMP RAX, 0
    JE @CheckForCollisions
-   MOV R15, [LaneOnePtr]
+
+   MOV R15, [Lane1Ptr]
+   CMP RAX, 1
+   JE @CheckForCollisions
+
+   MOV R15, [Lane2Ptr] 
 
 @CheckForCollisions:
    CMP R15, 0
@@ -226,186 +403,31 @@ endif
    ADD RAX, RCX
    CMP [PlayerSprite.SpriteX], RAX       ; Player_Rear > X_Front
    JG @IsNotCollision
-   
-   ; Here we have a collision with "some" object.  We need to determine the object to see 
-   ; what we need to do.
-   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteType[R15]
 
-   CMP RAX, SPRITE_TYPE_CAR        
-   JE @CarCollision
+   MOV RDX, R15
+   MOV RCX, RSI
+   MOV RAX, SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R15]
+   DEBUG_FUNCTION_CALL RAX
+   CMP RAX, 0
+   JE @EndOfList
 
-   CMP RAX, SPRITE_TYPE_TOXIC      
-   JE @ToxicCollision
-
-   CMP RAX, SPRITE_TYPE_PART       
-   JE @PartCollision
-
-   CMP RAX, SPRITE_TYPE_PEDESTRIAN 
-   JE @PedesstrianCollision
-
-   CMP RAX, SPRITE_TYPE_POINT_ITEM
-   JE @PointsItem
-   ;
-   ; Unless we have a bug, we cannot get here because SpriteType cannot be set
-   ; to any other number.
-   ;
-   INT 3
-;
-; Car Collision is fatal, lose a life
-;
-@CarCollision:
-   MOV [BoomTimerActive], 1
-   MOV RAX, [BoomTimerRefresh]
-   MOV [BoomTimer], RAX
-   MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_BOOM
-   MOV RAX, [PlayerSprite.SpriteY]
-   MOV [BoomYLocation], RAX
-
-   CMP [PlayerSprite.SpriteX], RBX
-   JL @CrashAtFrontOfPlayer
-
-   MOV RAX, [BoomGraphic.ImageWidth]
-   SHR RAX, 1
-   MOV RCX, [PlayerSprite.SpriteX]
-   SUB RCX, RAX
-   CMP RCX, 0
-   JGE @SkipZeroing
-   XOR RCX, RCX
-@SkipZeroing:
-   MOV [BoomXLocation], RCX
-   JMP @EndOfList
-@SecondCheck:
-
-@CrashAtFrontOfPlayer:
-   MOV RAX, [BoomGraphic.ImageWidth]
-   SHR RAX, 1
-   MOV RCX, RBX
-   SUB RCX, RAX
-   MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-   MOV R9, RCX
-   ADD R9, [BoomGraphic.ImageWidth]
-   CMP R9, RDX
-   JL @SkipFixUp
-   SUB RDX, [BoomGraphic.ImageWidth]
-   DEC RDX
-   MOV RCX, RDX
-@SkipFixUp:
-   MOV [BoomXLocation], RCX
-JMP @EndOfList
-
-;
-; Collect the Fuel
-;
-@ToxicCollision:
-
-  MOV RCX, [LevelInformationPtr]
-  MOV RDX,OFFSET LaneOnePtr   
-  CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], RDX
-  JE @DecrementLane1ForToxic
-  DEC LEVEL_INFORMATION.CurrentBarrelCountL0[RCX]
-  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL0[RCX]
-  MOV LEVEL_INFORMATION.BarrelGenerateTimerL0[RCX], RAX
-  JMP @CreatePointsEntryForToxic
-@DecrementLane1ForToxic:
-  DEC LEVEL_INFORMATION.CurrentBarrelCountL1[RCX]
-  MOV RAX, LEVEL_INFORMATION.BarrelGenerateTimerRefreshL1[RCX]
-  MOV LEVEL_INFORMATION.BarrelGenerateTimerL1[RCX], RAX
-
-@CreatePointsEntryForToxic:
-  
-  MOV R8, LEVEL_INFORMATION.BarrelPoints[RCX]  
-  ADD [PlayerScore], R8
-  MOV RDX, LEVEL_INFORMATION.LevelCompleteBarrelCount[RCX]
-  CMP RDX, LEVEL_INFORMATION.CurrentLevelBarrelCount[RCX]
-  JE @AlreadyCompleteForToxic
-  INC LEVEL_INFORMATION.CurrentLevelBarrelCount[RCX]
-@AlreadyCompleteForToxic:
-
-  MOV RDX, R8
-  MOV RCX, R15
-  MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
-  DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
+   MOV RDX, RAX
+   MOV RCX, R15
+   MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
+   DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
 
 ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
-  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
-  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+   MOV RCX, OFFSET Lane0Ptr
+   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+   MOV RCX, OFFSET Lane1Ptr
+   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
+   MOV RCX, OFFSET Lane2Ptr
+   DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
 endif
 
-
-JMP @CheckForCollisions
-
-;
-; Collect the Part
-;
-@PartCollision:
-  MOV RCX, [LevelInformationPtr]
-  MOV RDX,OFFSET LaneOnePtr   
-  CMP SPECIAL_SPRITE_STRUCT.SpriteListPtr[R15], RDX
-  JE @DecrementLane1ForParts
-  DEC LEVEL_INFORMATION.CurrentCarPartCountL0[RCX]
-  MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL0[RCX]
-  MOV LEVEL_INFORMATION.CarPartGenerateTimerL0[RCX], RAX
-  JMP @CreatePointsEntryForParts
-@DecrementLane1ForParts:
-  DEC LEVEL_INFORMATION.CurrentCarPartCountL1[RCX]
-  MOV RAX, LEVEL_INFORMATION.CarPartGenerateTimerRefreshL1[RCX]
-  MOV LEVEL_INFORMATION.CarPartGenerateTimerL1[RCX], RAX
-
-@CreatePointsEntryForParts:
-  
-  MOV R8, LEVEL_INFORMATION.CarPartsPoints[RCX]  
-  ADD [PlayerScore], R8
-  MOV RDX, LEVEL_INFORMATION.LevelCompleteCarPartCount[RCX]
-  CMP RDX, LEVEL_INFORMATION.CurrentCarPartCount[RCX]
-  JE @AlreadyCompleteForParts
-  INC LEVEL_INFORMATION.CurrentCarPartCount[RCX]
-@AlreadyCompleteForParts:
-  
-  MOV RDX, R8
-  MOV RCX, R15
-  MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
-  DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
-
-ifdef MACHINE_GAME_DEBUG
-  MOV RCX, OFFSET LaneZeroPtr
-  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-  MOV RCX, OFFSET LaneOnePtr
-  DEBUG_FUNCTION_CALL GreatMachine_VerifyLinkedListIntegrity
-endif
-
-JMP @CheckForCollisions
-
-;
-; Cannot hit pedestrians
-;
-@PedesstrianCollision:
-  ; TBD
-  INT 3; Currently, should never be on the list.
-JMP @EndOfList
-
-;
-; Random items you get points for getting
-;
-@PointsItem:
-  ;
-  ; Only allowed to get 1 extra life per level.
-  ;
-  MOV RCX, [LevelInformationPtr]
-  LEA RAX, [POINT_EXTRA_LIFE]
-  MOV LEVEL_INFORMATION.ItemGenerateTimer[RCX], RAX
-
-  INC [PlayerLives]
-  LEA RDX, [POINT_EXTRA_LIFE]
-  MOV RCX, R15
-  MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
-  DEBUG_FUNCTION_CALL GreatMachine_RemoveItemFromListWithPoints
-JMP @CheckForCollisions
-
-@NextItemCheck:
+   JMP @CheckForCollisions
 @IsNotCollision:
-   MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]    
+   MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
    JMP @CheckForCollisions
 
 @EndOfList:
@@ -608,3 +630,323 @@ NESTED_END GreatMachine_VerifyLinkedListIntegrity, _TEXT$00
 
 
 
+
+;*********************************************************
+;   GreatMachine_Fuel_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Fuel_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfFuel[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForFuelRefresh[RCX]
+  MOV LEVEL_INFO.TimerForFuel[RCX], RAX
+
+  MOV RAX, LEVEL_INFO.CurrentFuelCollection[RCX]
+  CMP RAX, LEVEL_INFO.RequiredFuelCollection[RCX]
+  JAE @CollectedEnough
+  INC LEVEL_INFO.CurrentFuelCollection[RCX]
+@CollectedEnough:
+
+  MOV RAX, LEVEL_INFO.FuelPoints[RCX]
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Fuel_Collision, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Part1_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Part1_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartOne[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForParts1Refresh[RCX]
+  MOV LEVEL_INFO.TimerForParts1[RCX], RAX
+
+  MOV RAX, LEVEL_INFO.CurrentPartOneCollection[RCX]
+  CMP RAX, LEVEL_INFO.RequiredPartOneCollection[RCX]
+  JAE @CollectedEnough
+  INC LEVEL_INFO.CurrentPartOneCollection[RCX]
+@CollectedEnough:
+
+  MOV RAX, LEVEL_INFO.CarPartOnePoints[RCX]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Part1_Collision, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_Part2_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Part2_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartTwo[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForParts2Refresh[RCX]
+  MOV LEVEL_INFO.TimerForParts1[RCX], RAX
+
+  MOV RAX, LEVEL_INFO.CurrentPartTwoCollection[RCX]
+  CMP RAX, LEVEL_INFO.RequiredPartTwoCollection[RCX]
+  JAE @CollectedEnough
+  INC LEVEL_INFO.CurrentPartTwoCollection[RCX]
+@CollectedEnough:
+
+  MOV RAX, LEVEL_INFO.CarPartTwoPoints[RCX]
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Part2_Collision, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_Part3_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Part3_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartThree[RCX]
+
+  MOV RAX, LEVEL_INFO.TimerForParts3Refresh[RCX]
+  MOV LEVEL_INFO.TimerForParts3[RCX], RAX
+
+  MOV RAX, LEVEL_INFO.CurrentPartThreeCollection[RCX]
+  CMP RAX, LEVEL_INFO.RequiredPartThreeCollection[RCX]
+  JAE @CollectedEnough
+  INC LEVEL_INFO.CurrentPartThreeCollection[RCX]
+@CollectedEnough:
+
+  MOV RAX, LEVEL_INFO.CarPartThreePoints[RCX]
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Part3_Collision, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_ExtraLife_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_ExtraLife_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RDI, RCX
+
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+
+  MOV RCX, [LevelInformationPtr]
+
+  LEA RAX, [POINT_EXTRA_LIFE]
+  MOV LEVEL_INFO.TimerForExtraLives[RCX], RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_ExtraLife_Collision, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_Hazard_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Hazard_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_EnableBomb
+  
+  XOR RAX, RAX
+ 
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Hazard_Collision, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Pedestrian_Collision
+;
+;        Parameters: Sprite
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Pedestrian_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_EnableBomb
+  
+  XOR RAX, RAX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Pedestrian_Collision, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_Car_Collision
+;
+;        Parameters: master context, Sprite
+;
+;        Return Value: Points or 0 for crash.
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_Car_Collision, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV RDX, RDI
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_EnableBomb
+  
+  XOR RAX, RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_Car_Collision, _TEXT$00
+
+
+
+;*********************************************************
+;   GreatMachine_EnableBomb
+;
+;        Parameters: Master COntext, Sprite
+;
+;        Return Value: N/A
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_EnableBomb, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG
+  MOV RSI, RCX
+
+  MOV RDI, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDX]
+  MOV RBX, SCROLLING_GIF.CurrentX[RDI]
+
+  MOV [BoomTimerActive], 1
+  MOV RAX, [BoomTimerRefresh]
+  MOV [BoomTimer], RAX
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_BOOM
+  MOV RAX, [PlayerSprite.SpriteY]
+  MOV [BoomYLocation], RAX
+
+  CMP [PlayerSprite.SpriteX], RBX
+  JL @CrashAtFrontOfPlayer
+
+  MOV RAX, [BoomGraphic.ImageWidth]
+  SHR RAX, 1
+  MOV RCX, [PlayerSprite.SpriteX]
+  SUB RCX, RAX
+  CMP RCX, 0
+  JGE @SkipZeroing
+  XOR RCX, RCX
+@SkipZeroing:
+  MOV [BoomXLocation], RCX
+  JMP @DoneSetupBoom
+
+@CrashAtFrontOfPlayer:
+  MOV RAX, [BoomGraphic.ImageWidth]
+  SHR RAX, 1
+  MOV RCX, RBX
+  SUB RCX, RAX
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV R9, RCX
+  ADD R9, [BoomGraphic.ImageWidth]
+  CMP R9, RDX
+  JL @SkipFixUp
+  SUB RDX, [BoomGraphic.ImageWidth]
+  DEC RDX
+  MOV RCX, RDX
+@SkipFixUp:
+  MOV [BoomXLocation], RCX
+@DoneSetupBoom:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_EnableBomb, _TEXT$00

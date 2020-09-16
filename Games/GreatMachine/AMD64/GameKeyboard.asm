@@ -366,11 +366,6 @@ NESTED_ENTRY GreatMachine_LeftArrowPress, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
-  ;DEC [DeBounceMovement]       ; TBD if we want to implement debounce
-  ;CMP [DeBounceMovement], 0
-  ;JGE @SkipUpate
-  ;MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
-
   MOV RAX, [PlayerSprite.SpriteVelMaxX]
   NEG RAX
   MOV [PlayerSprite.SpriteVelX], RAX
@@ -406,11 +401,6 @@ NESTED_ENTRY GreatMachine_RightArrowPress, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
-  ;DEC [DeBounceMovement]       ; TBD if we want to implement debounce
-  ;CMP [DeBounceMovement], 0
-  ;JGE @SkipUpate
-  ;MOV [DeBounceMovement], MOVEMENT_DEBOUNCE
-
   MOV RAX, [PlayerSprite.SpriteVelMaxX]
   MOV [PlayerSprite.SpriteVelX], RAX
 
@@ -441,7 +431,6 @@ NESTED_ENTRY GreatMachine_LeftArrow, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
   MOV [PlayerSprite.SpriteVelX], 0
-  ; MOV [DeBounceMovement], 0
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -472,7 +461,6 @@ NESTED_ENTRY GreatMachine_RightArrow, _TEXT$00
   JE @PlayerIsDead
 
   MOV [PlayerSprite.SpriteVelX], 0
-; MOV [DeBounceMovement], 0
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -507,8 +495,18 @@ NESTED_ENTRY GreatMachine_DownArrowPress, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
   
-  MOV [NextPlayerRoadLane], 1  
+  MOV EAX, [NextPlayerRoadLane]
+  CMP EAX, [CurrentPlayerRoadLane]
+  JNE @AlreadyInProgress
+  
+  CMP [CurrentPlayerRoadLane], 2
+  JE @AlreadyAtLowestLane
 
+  MOV [MovingLanesDown], 1
+  INC [NextPlayerRoadLane]
+
+@AlreadyAtLowestLane:
+@AlreadyInProgress:
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -550,8 +548,18 @@ NESTED_ENTRY GreatMachine_UpArrowPress, _TEXT$00
   CMP [PlayerSprite.SpriteAlive], 0
   JE @PlayerIsDead
 
-  MOV [NextPlayerRoadLane], 0
+  MOV EAX, [NextPlayerRoadLane]
+  CMP EAX, [CurrentPlayerRoadLane]
+  JNE @AlreadyInProgress
+  
+  CMP [CurrentPlayerRoadLane], 0
+  JE @AlreadyAtLowestLane
 
+  MOV [MovingLanesDown], 0
+  DEC [NextPlayerRoadLane]
+  
+@AlreadyAtLowestLane:
+@AlreadyInProgress:
 @GameNotActive:
 @PlayerIsDead:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -587,7 +595,6 @@ NESTED_ENTRY GreatMachine_DownArrow, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
 
   MOV [PlayerSprite.SpriteVelY], 0
-  MOV [DeBounceMovement], 0
   
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_OPTIONS
   JE @OptionsMenu
@@ -635,7 +642,6 @@ NESTED_ENTRY GreatMachine_UpArrow, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV [PlayerSprite.SpriteVelY], 0
-  MOV [DeBounceMovement], 0
 
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_OPTIONS
   JE @GameOptions
