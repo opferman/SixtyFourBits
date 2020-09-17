@@ -77,6 +77,50 @@ NESTED_ENTRY GreatMachine_LoadGifResource, _TEXT$00
 NESTED_END GreatMachine_LoadGifResource, _TEXT$00
 endif
 
+ifndef USE_FILES
+;*********************************************************
+;   GreatMachine_LoadAudioResource
+;
+;        Parameters: Resource Name, Sound Data Structure
+;
+;        Return Value: Memory
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadAudioResource, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV R8, OFFSET AudioResourceType         ; Resource Type
+  MOV RDX, RSI                           ; Resource Name
+  XOR RCX, RCX                           ; Use process module
+  DEBUG_FUNCTION_CALL FindResourceA
+  MOV RDX, RAX
+  MOV R15, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL SizeofResource
+  MOV AUDIO_SOUND_DATA.PcmDataSize[RDI], RAX
+
+  MOV RDX, R15
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL LoadResource
+  
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL LockResource
+
+  MOV AUDIO_SOUND_DATA.PcmData[RDI], RAX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadAudioResource, _TEXT$00
+endif
+
 ;*********************************************************
 ;   GreatMachine_SetupHiScores
 ;
@@ -516,6 +560,14 @@ NESTED_ENTRY GreatMachine_LoadingThread, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_LoadItemsAndSupportGraphics
   CMP RAX, 0
   JE @FailureExit 
+
+  ;
+  ; Load the Audio components
+  ;
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAndStartAudio
+  CMP RAX, 0
+  JE @FailureExit
 
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_CreateStarField
@@ -1077,7 +1129,74 @@ NESTED_ENTRY GreatMachine_LoadLevelNameGraphics, _TEXT$00
 NESTED_END GreatMachine_LoadLevelNameGraphics, _TEXT$00
 
 
-       
+
+
+
+             
+;*********************************************************
+;   GreatMachine_LoadAndStartAudio
+;
+;        Parameters: Master Context
+;
+;        Return Value: TRUE or FALSE
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_LoadAndStartAudio, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  LEA RDX, [TitleMusicData]  
+  LEA RCX, [TitleMusic]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+
+  LEA RDX, [GameMusicData]
+  LEA RCX, [GameMusic]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+  LEA RDX, [TitleMusicData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddMusic
+  MOV [TitleMusicId], RAX
+  
+  LEA RDX, [GameMusicData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddMusic
+  MOV [GameMusicId], RAX
+
+  MOV RDX, [TitleMusicId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayMusic
+
+  MOV RAX, 1
+  JMP @SuccessExit
+@Failure:
+  XOR RAX, RAX
+@SuccessExit:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_LoadAndStartAudio, _TEXT$00         
+          
+
 ;*********************************************************
 ;   GreatMachine_LoadGraphicsImage
 ;

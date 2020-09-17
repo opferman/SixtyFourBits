@@ -35,7 +35,7 @@ include gameengine_public.inc
 include primatives_public.inc
 include vpal_public.inc
 include soft3d_public.inc
-
+include audio_public.inc
 
 ;*********************************************************
 ; External WIN32/C Functions
@@ -58,6 +58,7 @@ extern ReadFile:proc
 extern CloseHandle:proc
 extern VirtualAlloc:proc
 extern VirtualFree:proc
+extern SizeofResource:proc
 
 LMEM_ZEROINIT EQU <40h>
 
@@ -505,8 +506,11 @@ ifdef USE_FILES
     PanelIcon2                      db "CarPart1_icon.gif",0
     PanelIcon3                      db "CarPart2_icon.gif",0
     PanelIcon4                      db "CarPart3_icon.gif",0
+    TitleMusic                      db "title.audio", 0
+    GameMusic                       db "game.audio", 0
 else	
     GifResourceType                 db "GIFFILE", 0
+    AudioResourceType               db "AUDIOFILE", 0
     LoadingScreenImage              db "LOADING_GIF", 0
     IntroImage                      db "INTRO_GIF", 0
     MenuImage                       db "MENU_GIF", 0
@@ -543,6 +547,8 @@ else
     PanelIcon2                      db "ICON2_GIF", 0
     PanelIcon3                      db "ICON3_GIF", 0
     PanelIcon4                      db "ICON4_GIF", 0
+    TitleMusic                      db "TITLE_AUDIO_MUSIC", 0
+    GameMusic                       db "GAME_AUDIO_MUSIC", 0
 endif	
     HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
@@ -672,29 +678,29 @@ endif
   LevelInfo_Easy_1_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
   LevelInfo_Easy_1_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
   LevelInfo_Easy_1_TimerBetweenConCurrentCars        dq 0
-  LevelInfo_Easy_1_TimerBetweenConcurrentCarsRefresh dq 50
+  LevelInfo_Easy_1_TimerBetweenConcurrentCarsRefresh dq 150
   LevelInfo_Easy_1_TimerAfterCarExitsScreen          dq 0
-  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq 100
+  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq 200
   LevelInfo_Easy_1_TimerForPedestrians               dq 0
   LevelInfo_Easy_1_TimerForPedestriansRefresh        dq 50
   LevelInfo_Easy_1_TimerForFuel                      dq 0
-  LevelInfo_Easy_1_TimerForFuelRefresh               dq 50
+  LevelInfo_Easy_1_TimerForFuelRefresh               dq 300
   LevelInfo_Easy_1_TimerForExtraLives                dq 2000
   LevelInfo_Easy_1_TimerForExtraLivesRefresh         dq 2000
   LevelInfo_Easy_1_TimerForHazard                    dq 50
   LevelInfo_Easy_1_TimerForHazardRefresh             dq 50
   LevelInfo_Easy_1_TimerForParts1                    dq 100
   LevelInfo_Easy_1_TimerForParts1Refresh             dq 100
-  LevelInfo_Easy_1_TimerForParts2                    dq 100
-  LevelInfo_Easy_1_TimerForParts2Refresh             dq 100
-  LevelInfo_Easy_1_TimerForParts3                    dq 100
-  LevelInfo_Easy_1_TimerForParts3Refresh             dq 100
-  LevelInfo_Easy_1_TimerForLane0ItemSelection        dq 50
-  LevelInfo_Easy_1_TimerForLane0ItemSelectionRefresh dq 50
-  LevelInfo_Easy_1_TimerForLane1ItemSelection        dq 50
-  LevelInfo_Easy_1_TimerForLane1ItemSelectionRefresh dq 50
-  LevelInfo_Easy_1_TimerForLane2ItemSelection        dq 50
-  LevelInfo_Easy_1_TimerForLane2ItemSelectionRefresh dq 50
+  LevelInfo_Easy_1_TimerForParts2                    dq 500
+  LevelInfo_Easy_1_TimerForParts2Refresh             dq 500
+  LevelInfo_Easy_1_TimerForParts3                    dq 1000
+  LevelInfo_Easy_1_TimerForParts3Refresh             dq 1000
+  LevelInfo_Easy_1_TimerForLane0ItemSelection        dq 150
+  LevelInfo_Easy_1_TimerForLane0ItemSelectionRefresh dq 150
+  LevelInfo_Easy_1_TimerForLane1ItemSelection        dq 250
+  LevelInfo_Easy_1_TimerForLane1ItemSelectionRefresh dq 250
+  LevelInfo_Easy_1_TimerForLane2ItemSelection        dq 350
+  LevelInfo_Easy_1_TimerForLane2ItemSelectionRefresh dq 350
   LevelInfo_Easy_1_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_1_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
@@ -1417,7 +1423,16 @@ endif
 				    db "TEO", 0
 				    dq 0					   
 
-					   
+
+     ;
+     ; Include Audio Data
+     ;
+     AudioFormat    db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h
+     AudioHandle    dq ?
+     TitleMusicData AUDIO_SOUND_DATA <?>
+     GameMusicData  AUDIO_SOUND_DATA <?>
+     TitleMusicId   dq ?
+     GameMusicId    dq ?
 .CODE
 
 ;

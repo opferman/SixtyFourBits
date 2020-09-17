@@ -43,6 +43,11 @@ else
 endif
   CMP RAX, 0
   JE @FailureExit
+  LEA RCX, [AudioFormat]
+  DEBUG_FUNCTION_CALL Audio_Init
+  CMP RAX, 0
+  JE @FailureExit
+  MOV [AudioHandle], RAX
 
   MOV RCX, OFFSET GreatMachineStateFuncPtrs
   MOV RDX, OFFSET GameEngInit

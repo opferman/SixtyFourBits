@@ -21,6 +21,7 @@ TARGETLIBS = $(TARGETLIBS) \
              $(SDK_LIB_PATH)\user32.lib \
              $(SDK_LIB_PATH)\kernel32.lib \
              $(SDK_LIB_PATH)\ddraw.lib \
+             $(SDK_LIB_PATH)\ole32.lib \
              $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
              $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
              $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \
@@ -33,5 +34,5 @@ TARGETLIBS = $(TARGETLIBS) \
              $(OBJ_PATH)\..\..\Framework\GameEngine\$O\GameEnginex64.lib \
              $(OBJ_PATH)\..\..\Framework\Soft3D\$O\Soft3Dx64.lib \
              $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib \
-             $(OBJ_PATH)\..\..\Framework\primatives\$O\primativesx64.lib
-
+             $(OBJ_PATH)\..\..\Framework\primatives\$O\primativesx64.lib \
+             $(OBJ_PATH)\..\..\Framework\audio\$O\Audiox64.lib

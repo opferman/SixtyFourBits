@@ -56,6 +56,10 @@ NESTED_ENTRY GreatMachine_ResetGame, _TEXT$00
 
   DEBUG_FUNCTION_CALL GreatMachine_ResetPoints
 
+  MOV RDX, [GameMusicId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayMusic
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET

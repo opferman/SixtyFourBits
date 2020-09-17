@@ -52,4 +52,6 @@ ICON1_GIF         GIFFILE resources\fuel_icon.gif
 ICON2_GIF         GIFFILE resources\CarPart1_icon.gif
 ICON3_GIF         GIFFILE resources\CarPart2_icon.gif
 ICON4_GIF         GIFFILE resources\CarPart3_icon.gif
+GAME_AUDIO_MUSIC  AUDIOFILE resources\game.audio
+TITLE_AUDIO_MUSIC AUDIOFILE resources\title.audio
 #endif

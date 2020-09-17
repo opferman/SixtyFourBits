@@ -411,6 +411,8 @@ endif
    CMP RAX, 0
    JE @EndOfList
 
+   ADD [PlayerScore], RAX
+
    MOV RDX, RAX
    MOV RCX, R15
    MOV R15, SPECIAL_SPRITE_STRUCT.ListNextPtr[R15]
