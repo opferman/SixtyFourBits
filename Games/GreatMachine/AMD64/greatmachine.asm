@@ -15,7 +15,7 @@
 ; Code Switches
 ;*********************************************************
 ; USE_FILES              EQU <1>
-; MACHINE_GAME_DEBUG     EQU <1>
+ MACHINE_GAME_DEBUG     EQU <1>
 
 ;*********************************************************
 ; Assembly Options
@@ -123,6 +123,11 @@ NUMBER_OF_PARTS3         EQU <2>
 NUMBER_OF_EXTRA_LIFE     EQU <1>
 NUMBER_OF_HAZARDS        EQU <0>
 NUMBER_OF_TREE_SCROLLING EQU <12>
+
+;
+; Tick Rate Constants
+;
+ESTIMATED_TICKS_PER_SECOND EQU <66>             ; Will vary on different macines.
 
 ;
 ; Lane Information
@@ -648,24 +653,24 @@ endif
   LevelInfo_Easy_1_RequiredPartThreeCollection       dq 1
   LevelInfo_Easy_1_CurrentPartThreeCollection        dq 0
   LevelInfo_Easy_1_GenerateCarsPercentage            dq 15
-  LevelInfo_Easy_1_GenerateFuelPercentage            dq 35
-  LevelInfo_Easy_1_GenerateCarPartOnPercentage       dq 20
-  LevelInfo_Easy_1_GenerateCarPartTwoPercentage      dq 15
-  LevelInfo_Easy_1_GenerateCarPartThreePercentage    dq 10
+  LevelInfo_Easy_1_GenerateFuelPercentage            dq 20
+  LevelInfo_Easy_1_GenerateCarPartOnPercentage       dq 15
+  LevelInfo_Easy_1_GenerateCarPartTwoPercentage      dq 10
+  LevelInfo_Easy_1_GenerateCarPartThreePercentage    dq 2
   LevelInfo_Easy_1_GenerateHazardsPercentage         dq 10
   LevelInfo_Easy_1_GenerateExtraLifePercentage       dq 5
-  LevelInfo_Easy_1_GeneratePedestriansPercentage     dq 25
+  LevelInfo_Easy_1_GeneratePedestriansPercentage     dq 20
   LevelInfo_Easy_1_FuelPoints                        dq 150
-  LevelInfo_Easy_1_CarPartOnePoints                  dq 200
-  LevelInfo_Easy_1_CarPartTwoPoints                  dq 300
-  LevelInfo_Easy_1_CarPartThreePoints                dq 400
+  LevelInfo_Easy_1_CarPartOnePoints                  dq 300
+  LevelInfo_Easy_1_CarPartTwoPoints                  dq 450
+  LevelInfo_Easy_1_CarPartThreePoints                dq 600
   LevelInfo_Easy_1_CarDebounceRefresh                dq 500
-  LevelInfo_Easy_1_FuelDebounceRefresh               dq 50
-  LevelInfo_Easy_1_ExtraLifeDebounceRefresh          dq 2000
-  LevelInfo_Easy_1_Parts1DebounceRefresh             dq 100
-  LevelInfo_Easy_1_Parts2DebounceRefresh             dq 300
-  LevelInfo_Easy_1_Parts3DebounceRefresh             dq 500
-  LevelInfo_Easy_1_HazardDebounceRefresh             dq 50
+  LevelInfo_Easy_1_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND*3
+  LevelInfo_Easy_1_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3
+  LevelInfo_Easy_1_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8
+  LevelInfo_Easy_1_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16
+  LevelInfo_Easy_1_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25
+  LevelInfo_Easy_1_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*3
   LevelInfo_Easy_1_PedestrianDebounceRefresh         dq 20
   LevelInfo_Easy_1_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_1_BlockingItemCountLane1            dq 0
@@ -677,24 +682,24 @@ endif
   LevelInfo_Easy_1_LevelStartDelayRefresh            dq 200
   LevelInfo_Easy_1_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
   LevelInfo_Easy_1_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_1_TimerBetweenConCurrentCars        dq 0
+  LevelInfo_Easy_1_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_1_TimerBetweenConcurrentCarsRefresh dq 150
   LevelInfo_Easy_1_TimerAfterCarExitsScreen          dq 0
-  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq 200
+  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*5
   LevelInfo_Easy_1_TimerForPedestrians               dq 0
-  LevelInfo_Easy_1_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_1_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_1_TimerForFuel                      dq 0
-  LevelInfo_Easy_1_TimerForFuelRefresh               dq 300
-  LevelInfo_Easy_1_TimerForExtraLives                dq 2000
-  LevelInfo_Easy_1_TimerForExtraLivesRefresh         dq 2000
+  LevelInfo_Easy_1_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*10
+  LevelInfo_Easy_1_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*5
   LevelInfo_Easy_1_TimerForHazard                    dq 50
   LevelInfo_Easy_1_TimerForHazardRefresh             dq 50
-  LevelInfo_Easy_1_TimerForParts1                    dq 100
-  LevelInfo_Easy_1_TimerForParts1Refresh             dq 100
-  LevelInfo_Easy_1_TimerForParts2                    dq 500
-  LevelInfo_Easy_1_TimerForParts2Refresh             dq 500
-  LevelInfo_Easy_1_TimerForParts3                    dq 1000
-  LevelInfo_Easy_1_TimerForParts3Refresh             dq 1000
+  LevelInfo_Easy_1_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36
+  LevelInfo_Easy_1_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*56
   LevelInfo_Easy_1_TimerForLane0ItemSelection        dq 150
   LevelInfo_Easy_1_TimerForLane0ItemSelectionRefresh dq 150
   LevelInfo_Easy_1_TimerForLane1ItemSelection        dq 250
@@ -763,17 +768,17 @@ endif
   LevelInfo_Easy_2_TimerForPedestrians               dq 0
   LevelInfo_Easy_2_TimerForPedestriansRefresh        dq 50
   LevelInfo_Easy_2_TimerForFuel                      dq 0
-  LevelInfo_Easy_2_TimerForFuelRefresh               dq 50
+  LevelInfo_Easy_2_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_2_TimerForExtraLives                dq 2000
-  LevelInfo_Easy_2_TimerForExtraLivesRefresh         dq 2000
+  LevelInfo_Easy_2_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120
   LevelInfo_Easy_2_TimerForHazard                    dq 50
   LevelInfo_Easy_2_TimerForHazardRefresh             dq 50
-  LevelInfo_Easy_2_TimerForParts1                    dq 100
-  LevelInfo_Easy_2_TimerForParts1Refresh             dq 100
-  LevelInfo_Easy_2_TimerForParts2                    dq 100
-  LevelInfo_Easy_2_TimerForParts2Refresh             dq 100
-  LevelInfo_Easy_2_TimerForParts3                    dq 100
-  LevelInfo_Easy_2_TimerForParts3Refresh             dq 100
+  LevelInfo_Easy_2_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_2_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_2_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*7
+  LevelInfo_Easy_2_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*7
+  LevelInfo_Easy_2_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*25
+  LevelInfo_Easy_2_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*25
   LevelInfo_Easy_2_TimerForLane0ItemSelection        dq 50
   LevelInfo_Easy_2_TimerForLane0ItemSelectionRefresh dq 50
   LevelInfo_Easy_2_TimerForLane1ItemSelection        dq 50
@@ -783,6 +788,163 @@ endif
   LevelInfo_Easy_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
+  LevelInfo_Easy_3_LevelNumber                       dq 1
+  LevelInfo_Easy_3_LevelNumberGraphic                dq OFFSET LevelOneGraphic
+  LevelInfo_Easy_3_NumberOfConcurrentCars            dq 2
+  LevelInfo_Easy_3_CurrentNumberOfCars               dq 0
+  LevelInfo_Easy_3_NumberOfConcurrentFuel            dq 2
+  LevelInfo_Easy_3_CurrentNumberOfFuel               dq 0
+  LevelInfo_Easy_3_NumberOfConcurrentPartOne         dq 1
+  LevelInfo_Easy_3_CurrentNumberOfPartOne            dq 0
+  LevelInfo_Easy_3_NumberOfConcurrentPartTwo         dq 1
+  LevelInfo_Easy_3_CurrentNumberOfPartTwo            dq 0
+  LevelInfo_Easy_3_NumberOfConcurrentPartThree       dq 1
+  LevelInfo_Easy_3_CurrentNumberOfPartThree          dq 0
+  LevelInfo_Easy_3_NumberOfConcurrentBlockers        dq 1
+  LevelInfo_Easy_3_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_3_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_3_CurrentFuelCollection             dq 0
+  LevelInfo_Easy_3_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_3_CurrentPartOneCollection          dq 0
+  LevelInfo_Easy_3_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_3_CurrentPartTwoCollection          dq 0
+  LevelInfo_Easy_3_RequiredPartThreeCollection       dq 1
+  LevelInfo_Easy_3_CurrentPartThreeCollection        dq 0
+  LevelInfo_Easy_3_GenerateCarsPercentage            dq 15
+  LevelInfo_Easy_3_GenerateFuelPercentage            dq 35
+  LevelInfo_Easy_3_GenerateCarPartOnPercentage       dq 20
+  LevelInfo_Easy_3_GenerateCarPartTwoPercentage      dq 15
+  LevelInfo_Easy_3_GenerateCarPartThreePercentage    dq 10
+  LevelInfo_Easy_3_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_3_GenerateExtraLifePercentage       dq 5
+  LevelInfo_Easy_3_GeneratePedestriansPercentage     dq 25
+  LevelInfo_Easy_3_FuelPoints                        dq 150
+  LevelInfo_Easy_3_CarPartOnePoints                  dq 200
+  LevelInfo_Easy_3_CarPartTwoPoints                  dq 300
+  LevelInfo_Easy_3_CarPartThreePoints                dq 400
+  LevelInfo_Easy_3_CarDebounceRefresh                dq 500
+  LevelInfo_Easy_3_FuelDebounceRefresh               dq 50
+  LevelInfo_Easy_3_ExtraLifeDebounceRefresh          dq 2000
+  LevelInfo_Easy_3_Parts1DebounceRefresh             dq 100
+  LevelInfo_Easy_3_Parts2DebounceRefresh             dq 300
+  LevelInfo_Easy_3_Parts3DebounceRefresh             dq 500
+  LevelInfo_Easy_3_HazardDebounceRefresh             dq 50
+  LevelInfo_Easy_3_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_3_BlockingItemCountLane0            dq 0
+  LevelInfo_Easy_3_BlockingItemCountLane1            dq 0
+  LevelInfo_Easy_3_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_3_MinCarVelocity                    dq 3
+  LevelInfo_Easy_3_MaxCarVelocity                    dq 4
+  LevelInfo_Easy_3_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_3_LevelStartDelay                   dq 200
+  LevelInfo_Easy_3_LevelStartDelayRefresh            dq 200
+  LevelInfo_Easy_3_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_3_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_3_TimerBetweenConCurrentCars        dq 0
+  LevelInfo_Easy_3_TimerBetweenConcurrentCarsRefresh dq 150
+  LevelInfo_Easy_3_TimerAfterCarExitsScreen          dq 0
+  LevelInfo_Easy_3_TimerAfterCarExitsScreenRefresh   dq 200
+  LevelInfo_Easy_3_TimerForPedestrians               dq 0
+  LevelInfo_Easy_3_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_3_TimerForFuel                      dq 0
+  LevelInfo_Easy_3_TimerForFuelRefresh               dq 300
+  LevelInfo_Easy_3_TimerForExtraLives                dq 2000
+  LevelInfo_Easy_3_TimerForExtraLivesRefresh         dq 2000
+  LevelInfo_Easy_3_TimerForHazard                    dq 50
+  LevelInfo_Easy_3_TimerForHazardRefresh             dq 50
+  LevelInfo_Easy_3_TimerForParts1                    dq 100
+  LevelInfo_Easy_3_TimerForParts1Refresh             dq 100
+  LevelInfo_Easy_3_TimerForParts2                    dq 500
+  LevelInfo_Easy_3_TimerForParts2Refresh             dq 500
+  LevelInfo_Easy_3_TimerForParts3                    dq 1000
+  LevelInfo_Easy_3_TimerForParts3Refresh             dq 1000
+  LevelInfo_Easy_3_TimerForLane0ItemSelection        dq 150
+  LevelInfo_Easy_3_TimerForLane0ItemSelectionRefresh dq 150
+  LevelInfo_Easy_3_TimerForLane1ItemSelection        dq 250
+  LevelInfo_Easy_3_TimerForLane1ItemSelectionRefresh dq 250
+  LevelInfo_Easy_3_TimerForLane2ItemSelection        dq 350
+  LevelInfo_Easy_3_TimerForLane2ItemSelectionRefresh dq 350
+  LevelInfo_Easy_3_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Easy_3_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
+                 
+  LevelInfo_Easy_4_LevelNumber                       dq 1
+  LevelInfo_Easy_4_LevelNumberGraphic                dq OFFSET LevelOneGraphic
+  LevelInfo_Easy_4_NumberOfConcurrentCars            dq 2
+  LevelInfo_Easy_4_CurrentNumberOfCars               dq 0
+  LevelInfo_Easy_4_NumberOfConcurrentFuel            dq 2
+  LevelInfo_Easy_4_CurrentNumberOfFuel               dq 0
+  LevelInfo_Easy_4_NumberOfConcurrentPartOne         dq 1
+  LevelInfo_Easy_4_CurrentNumberOfPartOne            dq 0
+  LevelInfo_Easy_4_NumberOfConcurrentPartTwo         dq 1
+  LevelInfo_Easy_4_CurrentNumberOfPartTwo            dq 0
+  LevelInfo_Easy_4_NumberOfConcurrentPartThree       dq 1
+  LevelInfo_Easy_4_CurrentNumberOfPartThree          dq 0
+  LevelInfo_Easy_4_NumberOfConcurrentBlockers        dq 1
+  LevelInfo_Easy_4_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_4_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_4_CurrentFuelCollection             dq 0
+  LevelInfo_Easy_4_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_4_CurrentPartOneCollection          dq 0
+  LevelInfo_Easy_4_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_4_CurrentPartTwoCollection          dq 0
+  LevelInfo_Easy_4_RequiredPartThreeCollection       dq 1
+  LevelInfo_Easy_4_CurrentPartThreeCollection        dq 0
+  LevelInfo_Easy_4_GenerateCarsPercentage            dq 15
+  LevelInfo_Easy_4_GenerateFuelPercentage            dq 35
+  LevelInfo_Easy_4_GenerateCarPartOnPercentage       dq 20
+  LevelInfo_Easy_4_GenerateCarPartTwoPercentage      dq 15
+  LevelInfo_Easy_4_GenerateCarPartThreePercentage    dq 10
+  LevelInfo_Easy_4_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_4_GenerateExtraLifePercentage       dq 5
+  LevelInfo_Easy_4_GeneratePedestriansPercentage     dq 25
+  LevelInfo_Easy_4_FuelPoints                        dq 150
+  LevelInfo_Easy_4_CarPartOnePoints                  dq 200
+  LevelInfo_Easy_4_CarPartTwoPoints                  dq 300
+  LevelInfo_Easy_4_CarPartThreePoints                dq 400
+  LevelInfo_Easy_4_CarDebounceRefresh                dq 500
+  LevelInfo_Easy_4_FuelDebounceRefresh               dq 50
+  LevelInfo_Easy_4_ExtraLifeDebounceRefresh          dq 2000
+  LevelInfo_Easy_4_Parts1DebounceRefresh             dq 100
+  LevelInfo_Easy_4_Parts2DebounceRefresh             dq 300
+  LevelInfo_Easy_4_Parts3DebounceRefresh             dq 500
+  LevelInfo_Easy_4_HazardDebounceRefresh             dq 50
+  LevelInfo_Easy_4_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_4_BlockingItemCountLane0            dq 0
+  LevelInfo_Easy_4_BlockingItemCountLane1            dq 0
+  LevelInfo_Easy_4_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_4_MinCarVelocity                    dq 3
+  LevelInfo_Easy_4_MaxCarVelocity                    dq 4
+  LevelInfo_Easy_4_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_4_LevelStartDelay                   dq 200
+  LevelInfo_Easy_4_LevelStartDelayRefresh            dq 200
+  LevelInfo_Easy_4_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_4_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
+  LevelInfo_Easy_4_TimerBetweenConCurrentCars        dq 0
+  LevelInfo_Easy_4_TimerBetweenConcurrentCarsRefresh dq 150
+  LevelInfo_Easy_4_TimerAfterCarExitsScreen          dq 0
+  LevelInfo_Easy_4_TimerAfterCarExitsScreenRefresh   dq 200
+  LevelInfo_Easy_4_TimerForPedestrians               dq 0
+  LevelInfo_Easy_4_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_4_TimerForFuel                      dq 0
+  LevelInfo_Easy_4_TimerForFuelRefresh               dq 300
+  LevelInfo_Easy_4_TimerForExtraLives                dq 2000
+  LevelInfo_Easy_4_TimerForExtraLivesRefresh         dq 2000
+  LevelInfo_Easy_4_TimerForHazard                    dq 50
+  LevelInfo_Easy_4_TimerForHazardRefresh             dq 50
+  LevelInfo_Easy_4_TimerForParts1                    dq 100
+  LevelInfo_Easy_4_TimerForParts1Refresh             dq 100
+  LevelInfo_Easy_4_TimerForParts2                    dq 500
+  LevelInfo_Easy_4_TimerForParts2Refresh             dq 500
+  LevelInfo_Easy_4_TimerForParts3                    dq 1000
+  LevelInfo_Easy_4_TimerForParts3Refresh             dq 1000
+  LevelInfo_Easy_4_TimerForLane0ItemSelection        dq 150
+  LevelInfo_Easy_4_TimerForLane0ItemSelectionRefresh dq 150
+  LevelInfo_Easy_4_TimerForLane1ItemSelection        dq 250
+  LevelInfo_Easy_4_TimerForLane1ItemSelectionRefresh dq 250
+  LevelInfo_Easy_4_TimerForLane2ItemSelection        dq 350
+  LevelInfo_Easy_4_TimerForLane2ItemSelectionRefresh dq 350
+  LevelInfo_Easy_4_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Easy_4_pfnNextLevel                      dq OFFSET GreatMachine_Winner
 
     LevelNameGraphic     IMAGE_INFORMATION  <?>
     LevelOneGraphic      IMAGE_INFORMATION  <?>
@@ -1433,6 +1595,7 @@ endif
      GameMusicData  AUDIO_SOUND_DATA <?>
      TitleMusicId   dq ?
      GameMusicId    dq ?
+
 .CODE
 
 ;

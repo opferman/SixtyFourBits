@@ -351,6 +351,7 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
   MOV RCX, LEVEL_INFO.TimerForExtraLivesRefresh[RAX]
   MOV LEVEL_INFO.TimerForExtraLives[RAX], RCX
 
+@NewLevelAndInLevelCommonCode:
   MOV RSI, RAX
 
   MOV R8, LEVEL_INFO.GenerateCarsPercentage[RSI]
@@ -379,12 +380,12 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_UpdateLevelSettingsToSprite
 
   MOV R8, LEVEL_INFO.GeneratePedestriansPercentage[RSI]
-  MOV RDX, LEVEL_INFO.TimerForExtraLives[RSI]
+  MOV RDX, LEVEL_INFO.PedestrianDebounceRefresh[RSI]
   MOV RCX, OFFSET GeneratePedestriansStructure
   DEBUG_FUNCTION_CALL GreatMachine_UpdateLevelSettingsToSprite
 
   MOV R8, LEVEL_INFO.GenerateExtraLifePercentage[RSI]
-  MOV RDX, LEVEL_INFO.PedestrianDebounceRefresh[RSI]
+  MOV RDX, LEVEL_INFO.TimerForExtraLives[RSI]
   MOV RCX, OFFSET GenerateExtraLifeStructure
   DEBUG_FUNCTION_CALL GreatMachine_UpdateLevelSettingsToSprite
 
@@ -397,7 +398,7 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
  ;
  ; Any level reset
  ;
-@NewLevelAndInLevelCommonCode:
+
   ;
   ; Clear in-game timers
   ;
@@ -458,6 +459,7 @@ NESTED_ENTRY GreatMachine_UpdateLevelSettingsToSprite, _TEXT$00
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RSI], 0
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RSI], RDX
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RSI], RDX
   MOV SPECIAL_SPRITE_STRUCT.SpriteGenerationPercent[RSI], R8
   
   ADD RSI, SIZE SPECIAL_SPRITE_STRUCT

@@ -142,6 +142,7 @@ NESTED_ENTRY GreatMachine_SpaceBar, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
   
   CMP [GreatMachineCurrentState],GREAT_MACHINE_GAMEPLAY
   JNE @TryNextItem
@@ -183,7 +184,7 @@ NESTED_ENTRY GreatMachine_SpaceBar, _TEXT$00
   JNE @NotOnMenu
   MOV [MenuIntroTimer], 0
 
-  DEBUG_FUNCTION_CALL GreatMachine_ResetGame
+
 
   ;
   ; Implement Menu Selection
@@ -195,6 +196,12 @@ NESTED_ENTRY GreatMachine_SpaceBar, _TEXT$00
   MOV RCX, QWORD PTR [RCX]
   MOV [GreatMachineCurrentState], RCX
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
+  
+  CMP [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
+  JNE @NotOnMenu
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_ResetGame
 
 @NotOnMenu:
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_ENTER_HI_SCORE
@@ -256,7 +263,8 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  
+  MOV RSI, RCX
+
   CMP [GreatMachineCurrentState], GREAT_MACHINE_STATE_WINSCREEN
   JE @WinnerScreen
 
@@ -268,7 +276,7 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
 
   MOV [MenuIntroTimer], 0
 
-  DEBUG_FUNCTION_CALL GreatMachine_ResetGame
+
   ;
   ; Implement Menu Selection
   ;
@@ -281,6 +289,13 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
   MOV [GreatMachineCurrentState], RCX
   DEBUG_FUNCTION_CALL GameEngine_ChangeState
 
+  CMP [GreatMachineCurrentState], GREAT_MACHINE_LEVELS
+  JNE @SkipGameReset
+
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_ResetGame
+
+@SkipGameReset:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -295,6 +310,7 @@ NESTED_ENTRY GreatMachine_Enter, _TEXT$00
   ;
   ;  Let's reset the level here to remove the active list.
   ;
+
   DEBUG_FUNCTION_CALL GreatMachine_ResetLevel
 
   CMP [HiScoreLocationPtr], 0

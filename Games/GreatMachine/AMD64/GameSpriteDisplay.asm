@@ -785,16 +785,15 @@ NESTED_ENTRY GreateMachine_Car_OffScreen, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
-
+  
   MOV RDX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfCars[RDX]
   MOV RAX, LEVEL_INFO.TimerAfterCarExitsScreenRefresh[RDX]
   MOV LEVEL_INFO.TimerAfterCarExitsScreen[RDX], RAX
-  DEC LEVEL_INFO.CurrentNumberOfCars[RDX]
-
 
   MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RCX]
   DEBUG_FUNCTION_CALL GreatMachine_UnblockLane
- 
+   
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET

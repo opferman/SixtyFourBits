@@ -286,7 +286,6 @@ NESTED_ENTRY GreatMachine_Cars_TickDebounceUpdate, _TEXT$00
   DEC LEVEL_INFO.TimerAfterCarExitsScreen[RAX]
   XOR RDX, RDX
 
-
 @CheckConcurrentCars:
   CMP LEVEL_INFO.CurrentNumberOfCars[RAX], 0
   JE @ClearTimer
