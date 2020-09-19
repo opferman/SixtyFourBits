@@ -1171,6 +1171,66 @@ endif
   CMP RAX, 0
   JE @Failure
 
+  LEA RDX, [WinMusicData]
+  LEA RCX, [WinMusic]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+  LEA RDX, [CrashEffectData]
+  LEA RCX, [CrashEffect]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+  LEA RDX, [PickupEffectData]
+  LEA RCX, [PickupEffect]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+  LEA RDX, [CollectedEffectData]
+  LEA RCX, [CollectedEffect]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+  LEA RDX, [CaritemEffectData]
+  LEA RCX, [CaritemEffect]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
+  LEA RDX, [ExtralifeEffectData]
+  LEA RCX, [ExtralifeEffect]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
   LEA RDX, [TitleMusicData]
   MOV RCX, [AudioHandle]
   DEBUG_FUNCTION_CALL Audio_AddMusic
@@ -1181,12 +1241,43 @@ endif
   DEBUG_FUNCTION_CALL Audio_AddMusic
   MOV [GameMusicId], RAX
 
+  LEA RDX, [WinMusicData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddMusic
+  MOV [WinMusicId], RAX
+
+  LEA RDX, [CrashEffectData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddEffect
+  MOV [CrashEffectId], RAX
+
+  LEA RDX, [CollectedEffectData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddEffect
+  MOV [CollectEffectId], RAX
+
+  LEA RDX, [PickupEffectData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddEffect
+  MOV [PickupEffectId], RAX
+
+  LEA RDX, [ExtralifeEffectData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddEffect
+  MOV [ExtralifeEffectId], RAX
+
+  LEA RDX, [CaritemEffectData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddEffect
+  MOV [CaritemEffectId], RAX
+
   MOV RDX, [TitleMusicId]
   MOV RCX, [AudioHandle]
   DEBUG_FUNCTION_CALL Audio_PlayMusic
-
   MOV RAX, 1
   JMP @SuccessExit
+
+
 @Failure:
   XOR RAX, RAX
 @SuccessExit:

@@ -513,6 +513,12 @@ ifdef USE_FILES
     PanelIcon4                      db "CarPart3_icon.gif",0
     TitleMusic                      db "title.audio", 0
     GameMusic                       db "game.audio", 0
+    WinMusic                        db "winmusic.audio", 0
+    CrashEffect                     db "crash.audio", 0
+    PickupEffect                    db "pickup.audio", 0    
+    CollectedEffect                 db "collectall.audio", 0
+    ExtralifeEffect                 db "extralife.audio", 0
+    CaritemEffect                   db "caritem.audio", 0 
 else	
     GifResourceType                 db "GIFFILE", 0
     AudioResourceType               db "AUDIOFILE", 0
@@ -554,6 +560,12 @@ else
     PanelIcon4                      db "ICON4_GIF", 0
     TitleMusic                      db "TITLE_AUDIO_MUSIC", 0
     GameMusic                       db "GAME_AUDIO_MUSIC", 0
+    WinMusic                        db "WIN_AUDIO_MUSIC", 0
+    CrashEffect                     db "CRASH_AUDIO_EFFECT", 0
+    PickupEffect                    db "PICKUP_AUDIO_EFFECT", 0    
+    CollectedEffect                 db "COLLECTED_AUDIO_EFFECT", 0 
+    ExtralifeEffect                 db "EXTRALIFE_AUDIO_EFFECT", 0
+    CaritemEffect                   db "CARITEM_AUDIO_EFFECT", 0  
 endif	
     HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
@@ -788,8 +800,8 @@ endif
   LevelInfo_Easy_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
-  LevelInfo_Easy_3_LevelNumber                       dq 1
-  LevelInfo_Easy_3_LevelNumberGraphic                dq OFFSET LevelOneGraphic
+  LevelInfo_Easy_3_LevelNumber                       dq 3
+  LevelInfo_Easy_3_LevelNumberGraphic                dq OFFSET LevelThreeGraphic
   LevelInfo_Easy_3_NumberOfConcurrentCars            dq 2
   LevelInfo_Easy_3_CurrentNumberOfCars               dq 0
   LevelInfo_Easy_3_NumberOfConcurrentFuel            dq 2
@@ -867,8 +879,8 @@ endif
   LevelInfo_Easy_3_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_3_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
                  
-  LevelInfo_Easy_4_LevelNumber                       dq 1
-  LevelInfo_Easy_4_LevelNumberGraphic                dq OFFSET LevelOneGraphic
+  LevelInfo_Easy_4_LevelNumber                       dq 4
+  LevelInfo_Easy_4_LevelNumberGraphic                dq OFFSET LevelFourGraphic
   LevelInfo_Easy_4_NumberOfConcurrentCars            dq 2
   LevelInfo_Easy_4_CurrentNumberOfCars               dq 0
   LevelInfo_Easy_4_NumberOfConcurrentFuel            dq 2
@@ -944,7 +956,7 @@ endif
   LevelInfo_Easy_4_TimerForLane2ItemSelection        dq 350
   LevelInfo_Easy_4_TimerForLane2ItemSelectionRefresh dq 350
   LevelInfo_Easy_4_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
-  LevelInfo_Easy_4_pfnNextLevel                      dq OFFSET GreatMachine_Winner
+  LevelInfo_Easy_4_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel_Win
 
     LevelNameGraphic     IMAGE_INFORMATION  <?>
     LevelOneGraphic      IMAGE_INFORMATION  <?>
@@ -1589,13 +1601,26 @@ endif
      ;
      ; Include Audio Data
      ;
-     AudioFormat    db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h
-     AudioHandle    dq ?
-     TitleMusicData AUDIO_SOUND_DATA <?>
-     GameMusicData  AUDIO_SOUND_DATA <?>
-     TitleMusicId   dq ?
-     GameMusicId    dq ?
+     AudioFormat            db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h
+     AudioHandle            dq ?
+     TitleMusicData         AUDIO_SOUND_DATA <?>
+     GameMusicData          AUDIO_SOUND_DATA <?>
+     WinMusicData           AUDIO_SOUND_DATA <?>
+     CrashEffectData        AUDIO_SOUND_DATA <?>
+     CollectedEffectData    AUDIO_SOUND_DATA <?>
+     PickupEffectData       AUDIO_SOUND_DATA <?>
+     ExtralifeEffectData    AUDIO_SOUND_DATA <?> 
+     CaritemEffectData      AUDIO_SOUND_DATA <?> 
 
+
+     TitleMusicId           dq ?
+     GameMusicId            dq ?
+     WinMusicId             dq ?
+     CrashEffectId          dq ?
+     CollectEffectId        dq ?
+     PickupEffectId         dq ?
+     CaritemEffectId        dq ?
+     ExtralifeEffectId      dq ?
 .CODE
 
 ;

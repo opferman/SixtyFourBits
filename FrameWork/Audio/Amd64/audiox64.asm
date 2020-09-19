@@ -48,9 +48,9 @@ AUDCLNT_SHAREMODE_SHARED                   EQU <0>
 ;*********************************************************
 ; Audio Structures
 ;*********************************************************
-
-UNITS_PER_SECOND EQU <10000000>
-UNITS_PER_MILLISECOND EQU <10000>
+TOTAL_EFFECT_SLOTS     EQU <5>
+UNITS_PER_SECOND       EQU <150000>
+UNITS_PER_MILLISECOND  EQU <10000>
 
 
 AUDIO_SOUND_CONTEXT struct
@@ -131,6 +131,24 @@ IAUDIORENDERCLIENTVTBL ends
 AUDIO_INTERNAL_CONTEXT struct
    AudioIdCounter       dq ?
    CurrentMusic         dq ?
+
+   ;
+   ; Up to 5 concurrent effects
+   ;
+   CurrentEffect        dq ?
+                        dq ?
+                        dq ?
+                        dq ?
+                        dq ?
+   ;
+   ; Need to track 5 effect positions
+   ;
+   CurrentEffectPos     dq ?
+                        dq ?
+                        dq ?
+                        dq ?
+                        dq ?
+
    AudioMusicList       dq ?
    AudioEffectList      dq ?
    CriticalSection      CRITICAL_SECTION <?>
@@ -504,6 +522,34 @@ NESTED_ENTRY Audio_Thread, _TEXT$00
   MOV RCX, R15
   DEBUG_FUNCTION_CALL Audio_CopyAudioData
 
+  LEA R14, AUDIO_INTERNAL_CONTEXT.CurrentEffect[R15]
+  LEA R13, AUDIO_INTERNAL_CONTEXT.CurrentEffectPos[R15]
+  XOR R12, R12
+@MixAllEffects:
+
+  CMP R12, TOTAL_EFFECT_SLOTS
+  JE @MixingDone
+  MOV RSI, [R14]
+  CMP RSI, 0
+  JE @GoToNextSlot
+  
+  MOV R8, [R13]
+  MOV RDX, RSI
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL Audio_MixEffect
+  MOV [R13], RAX
+  CMP RAX, 0
+  JNE @GoToNextSlot
+  XOR R9, R9
+  MOV RAX, RSI
+  LOCK CMPXCHG [R14], R9
+@GoToNextSlot:
+  ADD R13, 8
+  ADD R14, 8
+  INC R12 
+  JMP @MixAllEffects
+  
+@MixingDone:
   XOR R8, R8
   MOV RDX, RBX
   MOV RCX, AUDIO_INTERNAL_CONTEXT.AudioRenderClientPtr[R15]
@@ -524,7 +570,92 @@ NESTED_ENTRY Audio_Thread, _TEXT$00
 NESTED_END Audio_Thread, _TEXT$00
 
 
+;*********************************************************
+;   Audio_MixEffect
+;
+;        Parameters: Audio Context, Effect Ptr, Current Effect Position
+;
+;        Return Value: Position (0 means done)
+;
+;
+;*********************************************************  
+NESTED_ENTRY Audio_MixEffect, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RDX
+  MOV R15, RCX
 
+ ; MOV R8, AUDIO_INTERNAL_CONTEXT.CurrentEffectPos[R15]  Passed in R8 now.
+  MOV RDI, AUDIO_INTERNAL_CONTEXT.pAudioBuffer[R15]
+
+  MOV R12D, AUDIO_INTERNAL_CONTEXT.AudioBufferSize[R15]
+  MOV R9, AUDIO_SOUND_CONTEXT.PcmData[RBX]
+  ADD R9, R8  ; Get to the correct position.
+  MOV R10, AUDIO_SOUND_CONTEXT.PcmDataSize[RBX]
+  SUB R10, R8  ; Adjust the length of the audio buffer.
+
+  XOR R12, R12
+@PerformMixing:
+  CMP R12, R10
+  JAE @EffectsComplete
+  CMP R12D, AUDIO_INTERNAL_CONTEXT.AudioBufferSize[R15]
+  JAE @DoneMixing
+  CMP WORD PTR [RDI], 0
+  JL @CheckIfEffectIsNegative  
+  CMP WORD PTR [R9], 0
+  JGE @BothArePositive
+  JMP @BothAreMixed
+@CheckIfEffectIsNegative:
+  CMP WORD PTR [R9], 0
+  JL @BothAreNegative    
+@BothAreMixed:
+  MOV AX, WORD PTR [R9]
+  ADD WORD PTR [RDI], AX
+  ADD RDI, 2
+  ADD R9, 2
+  ADD R12, 2
+  JMP @PerformMixing
+  
+  
+@BothArePositive:
+  MOV AX, WORD PTR [R9]
+  ADD WORD PTR [RDI], AX
+  CMP WORD PTR [RDI], 0
+  JGE @NoIssueWithPositive
+  MOV WORD PTR [RDI], 07FFFh    ; Need to truncate on overflow
+@NoIssueWithPositive:
+  ADD RDI, 2
+  ADD R9, 2
+  ADD R12, 2
+  JMP @PerformMixing
+
+
+@BothAreNegative:
+  MOV AX, WORD PTR [R9]
+  ADD WORD PTR [RDI], AX
+  CMP WORD PTR [RDI], 0
+  JL @NoIssueWithNegative
+  MOV WORD PTR [RDI], 08000h    ; Need to truncate on overflow
+@NoIssueWithNegative:
+  ADD RDI, 2
+  ADD R9, 2
+  ADD R12, 2
+  JMP @PerformMixing
+@DoneMixing:
+  ADD R12, R8       ; Returning new position
+  MOV RAX, R12
+  JMP @ExitFunction
+
+@EffectsComplete:
+  XOR RAX, RAX
+@ExitFunction:
+ 
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Audio_MixEffect, _TEXT$00
 
 
 ;*********************************************************
@@ -654,7 +785,39 @@ NESTED_ENTRY Audio_AddEffect, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RDI, RCX
+  MOV RSI, RDX
 
+  MOV RDX, sizeof AUDIO_SOUND_CONTEXT
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  TEST RAX, RAX
+  JZ @FailedToAllocate 
+  
+  MOV RDX, AUDIO_SOUND_DATA.PcmData[RSI]
+  MOV AUDIO_SOUND_CONTEXT.PcmData[RAX], RDX
+
+  MOV RDX, AUDIO_SOUND_DATA.PcmDataSize[RSI]
+  MOV AUDIO_SOUND_CONTEXT.PcmDataSize[RAX], RDX
+
+  MOV AUDIO_SOUND_CONTEXT.CurrentPosition[RAX], 0
+
+  LOCK INC AUDIO_INTERNAL_CONTEXT.AudioIdCounter[RDI]
+
+  MOV RDX, AUDIO_INTERNAL_CONTEXT.AudioIdCounter[RDI]
+  MOV AUDIO_SOUND_CONTEXT.AudioId[RAX], RDX
+
+  MOV RDX, AUDIO_INTERNAL_CONTEXT.AudioEffectList[RDI]
+  MOV AUDIO_SOUND_CONTEXT.pNext[RAX], RDX
+
+  MOV AUDIO_INTERNAL_CONTEXT.AudioEffectList[RDI], RAX
+  
+;
+; Return the Audio ID for reference in play selection.
+;
+  MOV RAX, AUDIO_SOUND_CONTEXT.AudioId[RAX]
+
+@FailedToAllocate:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -728,7 +891,7 @@ NESTED_END Audio_StopAudio, _TEXT$00
 ;
 ;        Parameters: Audio Handle, Effect Audio ID
 ;
-;        Return Value: Audio Handle
+;        Return Value: TRUE/FALSE
 ;
 ;
 ;*********************************************************  
@@ -737,7 +900,46 @@ NESTED_ENTRY Audio_PlayEffect, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+  XOR EAX, EAX
+  MOV R9, AUDIO_INTERNAL_CONTEXT.AudioEffectList[RSI]
+@FindAudioId:
+  CMP R9, 0
+  JE @FailureCondition
+
+  CMP AUDIO_SOUND_CONTEXT.AudioId[R9], RDI
+  JE @FoundEffect
+
+  MOV R9, AUDIO_SOUND_CONTEXT.pNext[R9]
+  JMP @FindAudioId
   
+@FoundEffect:  
+  XOR RDX, RDX
+  LEA RSI, AUDIO_INTERNAL_CONTEXT.CurrentEffect[RSI]
+  MOV RDI, RSI
+@TryToFindEffectSlot:
+  MOV RSI, RDI
+  CMP RDX, TOTAL_EFFECT_SLOTS
+  JAE @FailureCondition
+
+  ADD RDI, 8
+  INC RDX
+
+  ;
+  ; Right now we will have 1 slot.  If it is Zero, we can add the new slot,
+  ; otherwise for now it gets dropped.
+  ;
+  XOR RAX, RAX
+  LOCK CMPXCHG QWORD PTR [RSI], R9
+  JNZ @TryToFindEffectSlot
+
+  MOV EAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+@FailureCondition:  
+  XOR RAX, RAX
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET

@@ -304,7 +304,7 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
 
 @LevelWrapAround:
 
-  JMP @NewLevelCommonReset
+  JMP @GameReset
 
 @LevelReset:
   CMP LEVEL_INFO.TimerForExtraLives[RAX], 0
@@ -325,9 +325,7 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
   ;
   MOV RCX, LEVEL_INFO.LevelTimer[RAX]
   ADD [PlayerScore], RCX
-
-  JMP @NewLevelCommonReset
-
+  ; Fall Through
 @GameReset:
   ;
   ; Reset Current Level Stats
@@ -400,16 +398,21 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
  ;
 
   ;
-  ; Clear in-game timers
+  ; Set or Clear in-game timers
   ;
+  MOV RCX, LEVEL_INFO.TimerBetweenConCurrentCarsRefresh[RAX]
   MOV LEVEL_INFO.TimerBetweenConCurrentCars[RAX], 0        
   MOV LEVEL_INFO.TimerAfterCarExitsScreen[RAX], 0          
   MOV LEVEL_INFO.TimerForPedestrians[RAX], 0               
   MOV LEVEL_INFO.TimerForFuel[RAX], 0                      
-  MOV LEVEL_INFO.TimerForHazard[RAX], 0                    
-  MOV LEVEL_INFO.TimerForParts1[RAX], 0                    
-  MOV LEVEL_INFO.TimerForParts2[RAX], 0                    
-  MOV LEVEL_INFO.TimerForParts3[RAX], 0                    
+  MOV RCX, LEVEL_INFO.TimerForHazardRefresh[RAX]
+  MOV LEVEL_INFO.TimerForHazard[RAX], RCX                    
+  MOV RCX, LEVEL_INFO.TimerForParts1Refresh[RAX]
+  MOV LEVEL_INFO.TimerForParts1[RAX], RCX       
+  MOV RCX, LEVEL_INFO.TimerForParts2Refresh[RAX]             
+  MOV LEVEL_INFO.TimerForParts2[RAX], RCX       
+  MOV RCX, LEVEL_INFO.TimerForParts3Refresh[RAX]             
+  MOV LEVEL_INFO.TimerForParts3[RAX], RCX                    
   MOV LEVEL_INFO.TimerForLane0ItemSelection[RAX], 0        
   MOV LEVEL_INFO.TimerForLane1ItemSelection[RAX], 0        
   MOV LEVEL_INFO.TimerForLane2ItemSelection[RAX], 0  

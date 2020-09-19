@@ -196,6 +196,10 @@ NESTED_ENTRY GreatMachine_ResetLevelToOne, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_SetupGameGlobals
 
 
+  MOV RDX, [GameMusicId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayMusic
+
   ;
   ; Reset all game lists
   ;
@@ -311,7 +315,12 @@ NESTED_ENTRY GreatMachine_NextLevel_Win, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  
+
+  MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_WINSCREEN
+
+  MOV RDX, [WinMusicId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayMusic
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK

@@ -154,6 +154,10 @@ NESTED_ENTRY GreatMachine_Fuel_CollisionNPC, _TEXT$00
   MOV RAX, LEVEL_INFO.TimerForFuelRefresh[RCX]
   MOV LEVEL_INFO.TimerForFuel[RCX], RAX
 
+  MOV RDX, [CaritemEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -184,6 +188,10 @@ NESTED_ENTRY GreatMachine_Part1_CollisionNPC, _TEXT$00
   MOV RAX, LEVEL_INFO.TimerForParts1Refresh[RCX]
   MOV LEVEL_INFO.TimerForParts1[RCX], RAX
 
+  MOV RDX, [CaritemEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -212,6 +220,11 @@ NESTED_ENTRY GreatMachine_Part2_CollisionNPC, _TEXT$00
 
   MOV RAX, LEVEL_INFO.TimerForParts2Refresh[RCX]
   MOV LEVEL_INFO.TimerForParts2[RCX], RAX
+
+  MOV RDX, [CaritemEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -240,6 +253,11 @@ NESTED_ENTRY GreatMachine_Part3_CollisionNPC, _TEXT$00
 
   MOV RAX, LEVEL_INFO.TimerForParts3Refresh[RCX]
   MOV LEVEL_INFO.TimerForParts3[RCX], RAX
+
+  MOV RDX, [CaritemEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -259,6 +277,7 @@ NESTED_ENTRY GreatMachine_ExtraLife_CollisionNPC, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
+  MOV RDI, RCX
 
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
@@ -267,6 +286,11 @@ NESTED_ENTRY GreatMachine_ExtraLife_CollisionNPC, _TEXT$00
 
   MOV RAX, LEVEL_INFO.TimerForExtraLivesRefresh[RCX]
   MOV LEVEL_INFO.TimerForExtraLives[RCX], RAX
+
+  MOV RDX, [CaritemEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -651,19 +675,33 @@ NESTED_ENTRY GreatMachine_Fuel_Collision, _TEXT$00
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
 
-  MOV RCX, [LevelInformationPtr]
-  DEC LEVEL_INFO.CurrentNumberOfFuel[RCX]
+  MOV RBX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfFuel[RBX]
 
-  MOV RAX, LEVEL_INFO.TimerForFuelRefresh[RCX]
-  MOV LEVEL_INFO.TimerForFuel[RCX], RAX
+  MOV RAX, LEVEL_INFO.TimerForFuelRefresh[RBX]
+  MOV LEVEL_INFO.TimerForFuel[RBX], RAX
 
-  MOV RAX, LEVEL_INFO.CurrentFuelCollection[RCX]
-  CMP RAX, LEVEL_INFO.RequiredFuelCollection[RCX]
+  MOV RAX, LEVEL_INFO.CurrentFuelCollection[RBX]
+  CMP RAX, LEVEL_INFO.RequiredFuelCollection[RBX]
   JAE @CollectedEnough
-  INC LEVEL_INFO.CurrentFuelCollection[RCX]
-@CollectedEnough:
+  INC LEVEL_INFO.CurrentFuelCollection[RBX]
+  INC RAX
+  CMP RAX, LEVEL_INFO.RequiredFuelCollection[RBX]
+  JB @RegularSound
 
-  MOV RAX, LEVEL_INFO.FuelPoints[RCX]
+  MOV RDX, [CollectEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
+  JMP @SkipRegularSound
+@RegularSound:
+@CollectedEnough:
+  MOV RDX, [PickupEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+@SkipRegularSound:
+
+  MOV RAX, LEVEL_INFO.FuelPoints[RBX]
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -689,19 +727,33 @@ NESTED_ENTRY GreatMachine_Part1_Collision, _TEXT$00
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
 
-  MOV RCX, [LevelInformationPtr]
-  DEC LEVEL_INFO.CurrentNumberOfPartOne[RCX]
+  MOV RBX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartOne[RBX]
 
-  MOV RAX, LEVEL_INFO.TimerForParts1Refresh[RCX]
-  MOV LEVEL_INFO.TimerForParts1[RCX], RAX
+  MOV RAX, LEVEL_INFO.TimerForParts1Refresh[RBX]
+  MOV LEVEL_INFO.TimerForParts1[RBX], RAX
 
-  MOV RAX, LEVEL_INFO.CurrentPartOneCollection[RCX]
-  CMP RAX, LEVEL_INFO.RequiredPartOneCollection[RCX]
+  MOV RAX, LEVEL_INFO.CurrentPartOneCollection[RBX]
+  CMP RAX, LEVEL_INFO.RequiredPartOneCollection[RBX]
   JAE @CollectedEnough
-  INC LEVEL_INFO.CurrentPartOneCollection[RCX]
-@CollectedEnough:
+  INC LEVEL_INFO.CurrentPartOneCollection[RBX]
+  INC RAX
+  CMP RAX, LEVEL_INFO.RequiredPartOneCollection[RBX]
+  JB @RegularSound
 
-  MOV RAX, LEVEL_INFO.CarPartOnePoints[RCX]
+  MOV RDX, [CollectEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
+  JMP @SkipRegularSound
+@RegularSound:
+@CollectedEnough:
+  MOV RDX, [PickupEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+@SkipRegularSound:
+
+  MOV RAX, LEVEL_INFO.CarPartOnePoints[RBX]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -725,19 +777,33 @@ NESTED_ENTRY GreatMachine_Part2_Collision, _TEXT$00
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
 
-  MOV RCX, [LevelInformationPtr]
-  DEC LEVEL_INFO.CurrentNumberOfPartTwo[RCX]
+  MOV RBX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartTwo[RBX]
 
-  MOV RAX, LEVEL_INFO.TimerForParts2Refresh[RCX]
-  MOV LEVEL_INFO.TimerForParts1[RCX], RAX
+  MOV RAX, LEVEL_INFO.TimerForParts2Refresh[RBX]
+  MOV LEVEL_INFO.TimerForParts1[RBX], RAX
 
-  MOV RAX, LEVEL_INFO.CurrentPartTwoCollection[RCX]
-  CMP RAX, LEVEL_INFO.RequiredPartTwoCollection[RCX]
+  MOV RAX, LEVEL_INFO.CurrentPartTwoCollection[RBX]
+  CMP RAX, LEVEL_INFO.RequiredPartTwoCollection[RBX]
   JAE @CollectedEnough
-  INC LEVEL_INFO.CurrentPartTwoCollection[RCX]
-@CollectedEnough:
+  INC LEVEL_INFO.CurrentPartTwoCollection[RBX]
+  INC RAX
+  CMP RAX, LEVEL_INFO.RequiredPartTwoCollection[RBX]
+  JB @RegularSound
 
-  MOV RAX, LEVEL_INFO.CarPartTwoPoints[RCX]
+  MOV RDX, [CollectEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
+  JMP @SkipRegularSound
+@RegularSound:
+@CollectedEnough:
+  MOV RDX, [PickupEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+@SkipRegularSound:
+
+  MOV RAX, LEVEL_INFO.CarPartTwoPoints[RBX]
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -762,19 +828,33 @@ NESTED_ENTRY GreatMachine_Part3_Collision, _TEXT$00
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
 
-  MOV RCX, [LevelInformationPtr]
-  DEC LEVEL_INFO.CurrentNumberOfPartThree[RCX]
+  MOV RBX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfPartThree[RBX]
 
-  MOV RAX, LEVEL_INFO.TimerForParts3Refresh[RCX]
-  MOV LEVEL_INFO.TimerForParts3[RCX], RAX
+  MOV RAX, LEVEL_INFO.TimerForParts3Refresh[RBX]
+  MOV LEVEL_INFO.TimerForParts3[RBX], RAX
 
-  MOV RAX, LEVEL_INFO.CurrentPartThreeCollection[RCX]
-  CMP RAX, LEVEL_INFO.RequiredPartThreeCollection[RCX]
+  MOV RAX, LEVEL_INFO.CurrentPartThreeCollection[RBX]
+  CMP RAX, LEVEL_INFO.RequiredPartThreeCollection[RBX]
   JAE @CollectedEnough
-  INC LEVEL_INFO.CurrentPartThreeCollection[RCX]
-@CollectedEnough:
+  INC LEVEL_INFO.CurrentPartThreeCollection[RBX]
+  INC RAX
+  CMP RAX, LEVEL_INFO.RequiredPartThreeCollection[RBX]
+  JB @RegularSound
 
-  MOV RAX, LEVEL_INFO.CarPartThreePoints[RCX]
+  MOV RDX, [CollectEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
+  JMP @SkipRegularSound
+@RegularSound:
+@CollectedEnough:
+  MOV RDX, [PickupEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+@SkipRegularSound:
+
+  MOV RAX, LEVEL_INFO.CarPartThreePoints[RBX]
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -799,8 +879,13 @@ NESTED_ENTRY GreatMachine_ExtraLife_Collision, _TEXT$00
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
 
-  MOV RCX, [LevelInformationPtr]
+  MOV RDX, [ExtralifeEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
 
+  INC [PlayerLives]
+
+  MOV RCX, [LevelInformationPtr]
   LEA RAX, [POINT_EXTRA_LIFE]
   MOV LEVEL_INFO.TimerForExtraLives[RCX], RAX
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -884,6 +969,10 @@ NESTED_ENTRY GreatMachine_Car_Collision, _TEXT$00
   MOV RDX, RDI
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_EnableBomb
+
+  MOV RDX, [CrashEffectId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
   
   XOR RAX, RAX
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
