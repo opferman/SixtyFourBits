@@ -639,8 +639,14 @@ endif
                                     dq 50, 450
                                     db "`H' is 'hold' or 'pause'.", 0
                                     dq 50, 500
-                                    db "Those are the only controls.", 0
+                                    db "'M' Toggles Music on or off.", 0
+                                    dq 50, 550
+                                    db "'E' Toggles Effects on or off.", 0
+                                    dq 50, 600
+                                    db "'PgUp/PgDown' for volume control.", 0
                                     dq 0
+
+
     ExtraLife                       db "+1 Life", 0
   ;
   ; Level Support
@@ -1569,12 +1575,14 @@ endif
      ;
      ; Include Audio Data
      ;
+     AudioVolume            dq 150
      AudioFormat            db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h
      AudioHandle            dq ?
      TitleMusicData         AUDIO_SOUND_DATA <?>
      GameMusicData          AUDIO_SOUND_DATA <?>
      WinMusicData           AUDIO_SOUND_DATA <?>
      CrashEffectData        AUDIO_SOUND_DATA <?>
+     CrashPedestrianData    AUDIO_SOUND_DATA <?>
      CollectedEffectData    AUDIO_SOUND_DATA <?>
      PickupEffectData       AUDIO_SOUND_DATA <?>
      ExtralifeEffectData    AUDIO_SOUND_DATA <?> 
@@ -1585,6 +1593,7 @@ endif
      GameMusicId            dq ?
      WinMusicId             dq ?
      CrashEffectId          dq ?
+     CrashPedestrianId      dq ?
      CollectEffectId        dq ?
      PickupEffectId         dq ?
      CaritemEffectId        dq ?

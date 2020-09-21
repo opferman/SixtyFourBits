@@ -660,7 +660,7 @@ NESTED_END GreatMachine_VerifyLinkedListIntegrity, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_Fuel_Collision
 ;
-;        Parameters: Sprite
+;        Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -670,10 +670,11 @@ NESTED_ENTRY GreatMachine_Fuel_Collision, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
+  MOV RSI, RDX
   MOV RDI, RCX
 
-  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
-  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
+  MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RSI]
+  MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RSI], RAX
 
   MOV RBX, [LevelInformationPtr]
   DEC LEVEL_INFO.CurrentNumberOfFuel[RBX]
@@ -712,7 +713,7 @@ NESTED_END GreatMachine_Fuel_Collision, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_Part1_Collision
 ;
-;        Parameters: Sprite
+;         Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -722,7 +723,7 @@ NESTED_ENTRY GreatMachine_Part1_Collision, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
-  MOV RDI, RCX
+  MOV RDI, RDX
 
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
@@ -762,7 +763,7 @@ NESTED_END GreatMachine_Part1_Collision, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_Part2_Collision
 ;
-;        Parameters: Sprite
+;          Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -772,7 +773,7 @@ NESTED_ENTRY GreatMachine_Part2_Collision, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
-  MOV RDI, RCX
+  MOV RDI, RDX
 
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
@@ -813,7 +814,7 @@ NESTED_END GreatMachine_Part2_Collision, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_Part3_Collision
 ;
-;        Parameters: Sprite
+;        Parameters: Mater context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -823,7 +824,7 @@ NESTED_ENTRY GreatMachine_Part3_Collision, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
-  MOV RDI, RCX
+  MOV RDI, RDX
 
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
@@ -864,7 +865,7 @@ NESTED_END GreatMachine_Part3_Collision, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_ExtraLife_Collision
 ;
-;        Parameters: Sprite
+;        Parameters: master context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -874,7 +875,7 @@ NESTED_ENTRY GreatMachine_ExtraLife_Collision, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
-  MOV RDI, RCX
+  MOV RDI, RDX
 
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
@@ -896,7 +897,7 @@ NESTED_END GreatMachine_ExtraLife_Collision, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_Hazard_Collision
 ;
-;        Parameters: Sprite
+;        Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -908,13 +909,27 @@ NESTED_ENTRY GreatMachine_Hazard_Collision, _TEXT$00
 .ENDPROLOG
   MOV RSI, RCX
   MOV RDI, RDX
+  
+  MOV RAX, [LevelInformationPtr]
+  DEC LEVEL_INFO.CurrentNumberOfBlockers[RAX]
 
+  CMP SPECIAL_SPRITE_STRUCT.SpritePoints[RDI], SPRITE_KILLS
+  JE @KillThePlayer
+  MOV R12, SPECIAL_SPRITE_STRUCT.SpritePoints[RDI]
+  MOV RBX, [CaritemEffectId]
+  JMP @SkipKilling
+@KillThePlayer:
   MOV RDX, RDI
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_EnableBomb
-  
-  XOR RAX, RAX
- 
+  XOR R12, R12
+  MOV RBX, [CrashEffectId]
+@SkipKilling: 
+  MOV RDX, RBX
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+
+  MOV RAX, R12
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -925,7 +940,7 @@ NESTED_END GreatMachine_Hazard_Collision, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_Pedestrian_Collision
 ;
-;        Parameters: Sprite
+;        Parameters: Master Context, Sprite
 ;
 ;        Return Value: None
 ;
@@ -941,7 +956,11 @@ NESTED_ENTRY GreatMachine_Pedestrian_Collision, _TEXT$00
   MOV RDX, RDI
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_EnableBomb
-  
+
+  MOV RDX, [CrashPedestrianId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayEffect
+    
   XOR RAX, RAX
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1018,6 +1037,14 @@ NESTED_ENTRY GreatMachine_EnableBomb, _TEXT$00
   JGE @SkipZeroing
   XOR RCX, RCX
 @SkipZeroing:
+  MOV R9, RCX
+  ADD R9, [BoomGraphic.ImageWidth]
+  CMP R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  JL @SkipFrontFix
+  SUB RDX, [BoomGraphic.ImageWidth]
+  DEC RDX
+  MOV RCX, RDX
+@SkipFrontFix:
   MOV [BoomXLocation], RCX
   JMP @DoneSetupBoom
 
@@ -1035,6 +1062,10 @@ NESTED_ENTRY GreatMachine_EnableBomb, _TEXT$00
   DEC RDX
   MOV RCX, RDX
 @SkipFixUp:
+  CMP RCX, 0
+  JGE @SkipFixUpBack
+  XOR RCX, RCX
+@SkipFixUpBack:
   MOV [BoomXLocation], RCX
 @DoneSetupBoom:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

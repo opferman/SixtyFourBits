@@ -11,4 +11,5 @@ dirs=DDraw \
      Dbuffer \
      Primatives \
      Gif \
-     GameEngine
+     GameEngine \
+     Audio

@@ -755,11 +755,16 @@ NESTED_ENTRY GreatMachine_Fuel_ActivateSprite, _TEXT$00
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
   MOV RBX, RAX
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV R10, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R10]
+
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
 
   MOV RAX, [LevelInformationPtr]
   INC LEVEL_INFO.CurrentNumberOfFuel[RAX]
   MOV R8, LEVEL_INFO.TimerForFuelRefresh[RAX]
-  MOV LEVEL_INFO.TimerForFuel[RAX], R8
+  ADD LEVEL_INFO.TimerForFuel[RAX], R8
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
@@ -907,11 +912,16 @@ NESTED_ENTRY GreatMachine_Part1_ActivateSprite, _TEXT$00
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
   MOV RBX, RAX
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV R10, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R10]
+
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
 
   MOV RAX, [LevelInformationPtr]
   INC LEVEL_INFO.CurrentNumberOfPartOne[RAX]
   MOV R8, LEVEL_INFO.TimerForParts1Refresh[RAX]
-  MOV LEVEL_INFO.TimerForParts1[RAX], R8
+  ADD LEVEL_INFO.TimerForParts1[RAX], R8
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
@@ -1062,10 +1072,16 @@ NESTED_ENTRY GreatMachine_Part2_ActivateSprite, _TEXT$00
 
   MOV RBX, RAX
 
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV R10, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R10]
+
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
+
   MOV RAX, [LevelInformationPtr]
   INC LEVEL_INFO.CurrentNumberOfPartTwo[RAX]
   MOV R8, LEVEL_INFO.TimerForParts2Refresh[RAX]
-  MOV LEVEL_INFO.TimerForParts2[RAX], R8
+  ADD LEVEL_INFO.TimerForParts2[RAX], R8
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
@@ -1210,14 +1226,19 @@ NESTED_ENTRY GreatMachine_Part3_ActivateSprite, _TEXT$00
   JE @NoLanesAvailable
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-
   MOV RBX, RAX
+
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV R10, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R10]
+
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
 
   MOV RAX, [LevelInformationPtr]
 
   INC LEVEL_INFO.CurrentNumberOfPartThree[RAX]
   MOV R8, LEVEL_INFO.TimerForParts3Refresh[RAX]
-  MOV LEVEL_INFO.TimerForParts3[RAX], R8
+  ADD LEVEL_INFO.TimerForParts3[RAX], R8
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
@@ -1345,21 +1366,31 @@ NESTED_ENTRY GreatMachine_Pedestrians_ActivateSprite, _TEXT$00
   ;
   ; Generate lane choices and choose.
   ;
+  MOV RAX, [LevelInformationPtr]
   MOV RCX, LANE_TOP_SIDEWALK_BITMASK or LANE_BOTTOM_SIDEWALK_BITMASK  
+  CMP LEVEL_INFO.PedestriansCanBeInStreet[RAX], 0
+  JE @SkipTrafficLanes
+  OR RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2
+@SkipTrafficLanes:  
   MOV RDX, RDI                 ; Pass In The Sprite
   MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
-  XOR R9, R9
+  MOV R9, LANE_BLOCKING
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
   MOV RBX, RAX
 
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV R10, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R10]
+
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
+
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
 
   MOV RAX, [LevelInformationPtr]
   MOV R8, LEVEL_INFO.TimerForPedestriansRefresh[RAX]
-  MOV LEVEL_INFO.TimerForPedestrians[RAX], R8
-
+  ADD LEVEL_INFO.TimerForPedestrians[RAX], R8
   
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
@@ -1494,10 +1525,6 @@ NESTED_ENTRY GreatMachine_ExtraLife_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-
-
-
-  
   ;
   ; Generate lane choices and choose.
   ;
@@ -1509,12 +1536,20 @@ NESTED_ENTRY GreatMachine_ExtraLife_ActivateSprite, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
-
   MOV RBX, RAX
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+
+  MOV RAX, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[RAX]             ; We need to boost the timer beyond the size of the sprite.
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
+  
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
 
   MOV RAX, [LevelInformationPtr]
   MOV R8, LEVEL_INFO.TimerForExtraLivesRefresh[RAX]
-  MOV LEVEL_INFO.TimerForExtraLives[RAX], R8
+  ADD LEVEL_INFO.TimerForExtraLives[RAX], R8
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
 
@@ -1617,7 +1652,11 @@ NESTED_ENTRY GreatMachine_Hazards_LoopCheck, _TEXT$00
   JE @NoHazardTicks
   XOR RAX, RAX
 @NoHazardTicks:  
-
+  MOV R8, LEVEL_INFO.NumberOfConcurrentBlockers[RDX]
+  CMP LEVEL_INFO.CurrentNumberOfBlockers[RDX], R8
+  JB @NotAtHazardLimit
+  XOR RAX, RAX
+@NotAtHazardLimit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -1656,13 +1695,19 @@ NESTED_ENTRY GreatMachine_Hazards_ActivateSprite, _TEXT$00
 
   MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
 
-  MOV RAX, [LevelInformationPtr]
-  MOV R8, LEVEL_INFO.TimerForHazardRefresh[RAX]
-  MOV LEVEL_INFO.TimerForHazard[RAX], R8
-
-  
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+
+  MOV RAX, SCROLLING_GIF.ImageInformation[R10]
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[RAX]             ; We need to boost the timer beyond the size of the sprite.
+  DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
+
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV RAX, [LevelInformationPtr]
+  MOV R8, LEVEL_INFO.TimerForHazardRefresh[RAX]
+  ADD LEVEL_INFO.TimerForHazard[RAX], R8
+  INC LEVEL_INFO.CurrentNumberOfBlockers[RAX]
+
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
   MOV SCROLLING_GIF.CurrentX[R10], R9
@@ -1681,3 +1726,63 @@ NESTED_ENTRY GreatMachine_Hazards_ActivateSprite, _TEXT$00
 
 NESTED_END GreatMachine_Hazards_ActivateSprite, _TEXT$00
 
+
+
+
+
+;*********************************************************
+;   GreatMachine_DelayAllRightItemsByWidth
+;
+;        Parameters: Number of Ticks (Width)
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_DelayAllRightItemsByWidth, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RDX, [LevelInformationPtr]
+
+  CMP LEVEL_INFO.TimerForPedestrians[RDX], RCX
+  JA @SkipPedestrians
+  MOV LEVEL_INFO.TimerForPedestrians[RDX], RCX 
+
+@SkipPedestrians:
+  CMP LEVEL_INFO.TimerForFuel[RDX], RCX
+  JA @SkipFuel
+  MOV LEVEL_INFO.TimerForFuel[RDX], RCX        
+
+@SkipFuel:
+  CMP LEVEL_INFO.TimerForExtraLives[RDX], RCX
+  JA @SkipExtraLives
+  MOV LEVEL_INFO.TimerForExtraLives[RDX], RCX  
+
+@SkipExtraLives:  
+  CMP LEVEL_INFO.TimerForHazard[RDX], RCX
+  JA @SkipHazard
+  MOV LEVEL_INFO.TimerForHazard[RDX], RCX      
+
+@SkipHazard:
+  CMP LEVEL_INFO.TimerForParts1[RDX], RCX
+  JA @SkipParts1
+  MOV LEVEL_INFO.TimerForParts1[RDX], RCX      
+
+@SkipParts1:
+  CMP LEVEL_INFO.TimerForParts2[RDX], RCX
+  JA @SkipParts2
+  MOV LEVEL_INFO.TimerForParts2[RDX], RCX      
+
+@SkipParts2:
+  CMP LEVEL_INFO.TimerForParts2[RDX], RCX
+  JA @SkipParts3
+  MOV LEVEL_INFO.TimerForParts3[RDX], RCX      
+@SkipParts3:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END GreatMachine_DelayAllRightItemsByWidth, _TEXT$00

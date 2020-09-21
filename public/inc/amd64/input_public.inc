@@ -51,8 +51,8 @@ VK_RETURN EQU <0Dh> ;  ENTER key
 ;VK_ACCEPT 0x1E IME accept
 ;VK_MODECHANGE 0x1F IME mode change request
 VK_SPACE EQU <020h>  ;  SPACEBAR
-;VK_PRIOR 0x21 PAGE UP key
-;VK_NEXT 0x22 PAGE DOWN key
+VK_PRIOR EQU <021h> ;  PAGE UP key
+VK_NEXT  EQU <022h> ;  PAGE DOWN key
 ;VK_END 0x23 END key
 ;VK_HOME 0x24 HOME key
 VK_LEFT EQU <025h> ; LEFT ARROW key
@@ -90,7 +90,7 @@ VK_H   EQU <048h> ; H key
 ;0x4A J key
 ;0x4B K key
 ;0x4C L key
-;0x4D M key
+VK_M EQU <04Dh> ; M key
 VK_N EQU <04Eh>  ; N key
 ;0x4F O key
 VK_P EQU <050h>  ; P key
@@ -180,7 +180,7 @@ VK_T EQU <054h> ;  T key
 ;VK_LAUNCH_APP2 0xB7 Start Application 2 key
 ;-0xB8-B9 Reserved
 ;VK_OEM_1 0xBA Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the ';:' key 
-;VK_OEM_PLUS 0xBB For any country/region, the '+' key
+;VK_OEM_PLUS EQU 0xBB For any country/region, the '+' key
 ;VK_OEM_COMMA 0xBC For any country/region, the ',' key
 ;VK_OEM_MINUS 0xBD For any country/region, the '-' key
 ;VK_OEM_PERIOD 0xBE For any country/region, the '.' key

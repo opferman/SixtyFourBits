@@ -116,6 +116,20 @@ IAUDIOCLIENTVTBL struct
    pfnGetService            dq ?
 IAUDIOCLIENTVTBL ends
 
+ISIMPLEAUDIOVOLUME struct
+   lpVtbl        dq ?
+ISIMPLEAUDIOVOLUME ends
+
+ISIMPLEAUDIOVOLUMEVTBL struct
+    pfnQueryInterface    dq ?
+    pfnAddRef            dq ?
+    pfnRelease           dq ?
+    pfnSetMasterVolume   dq ?
+    pfnGetMasterVolume   dq ?
+    pfnSetMute           dq ?
+    pfnGetMute           dq ?
+ISIMPLEAUDIOVOLUMEVTBL ends
+
 IAUDIORENDERCLIENT struct
    lpVtbl        dq ?
 IAUDIORENDERCLIENT ends
@@ -128,10 +142,12 @@ IAUDIORENDERCLIENTVTBL struct
     pfnReleaseBuffer     dq ?
 IAUDIORENDERCLIENTVTBL ends
 
+
+
 AUDIO_INTERNAL_CONTEXT struct
    AudioIdCounter       dq ?
    CurrentMusic         dq ?
-
+  
    ;
    ; Up to 5 concurrent effects
    ;
@@ -148,6 +164,9 @@ AUDIO_INTERNAL_CONTEXT struct
                         dq ?
                         dq ?
                         dq ?
+
+   MusicState           dq ?
+   EffectState          dq ?
 
    AudioMusicList       dq ?
    AudioEffectList      dq ?
@@ -167,6 +186,7 @@ AUDIO_INTERNAL_CONTEXT struct
    DefaultDevicePtr     dq ?
    AudioClientPtr       dq ?
    AudioRenderClientPtr dq ?
+   AudioSimpleVolumePtr dq ?
 AUDIO_INTERNAL_CONTEXT ends
 
 
@@ -187,9 +207,11 @@ WAVEFORMATEX  ends
 public Audio_Init
 public Audio_AddMusic
 public Audio_AddEffect
-public Audio_StopAudio
+public Audio_TogglePauseEffects
+public Audio_TogglePauseMusic
 public Audio_PlayEffect
 public Audio_PlayMusic
+public Audio_SetVolume
 
 .DATA
    ; {bcde0395-e52f-467c-8e3d-c4579291692e} 95 03 de bc 2f e5 7c 46 8e 3d c4 57 92 91 69 2e
@@ -215,7 +237,11 @@ public Audio_PlayMusic
                               dw 03146h
                               dw 04483h
                               db 0a7h, 0bfh, 0adh, 0dch, 0a7h, 0c2h, 060h, 0e2h
-  
+   ; {87ce5498-68d6-44e5-9215-6da47ef883d8}
+   IID__ISimpleAudioVolume    dd 087ce5498h
+                              dw 068d6h
+                              dw 044e5h
+                              db 092h, 015h, 06dh, 0a4h, 07eh, 0f8h, 083h, 0d8h
 
 .CODE
 
@@ -242,6 +268,9 @@ NESTED_ENTRY Audio_Init, _TEXT$00
   MOV R15, RAX 
 
   MOV AUDIO_INTERNAL_CONTEXT.WaveFormatHeader[R15], RSI
+
+  MOV AUDIO_INTERNAL_CONTEXT.MusicState[R15], 1
+  MOV AUDIO_INTERNAL_CONTEXT.EffectState[R15], 1
 
   LEA RCX, AUDIO_INTERNAL_CONTEXT.CriticalSection[R15]
   DEBUG_FUNCTION_CALL InitializeCriticalSection
@@ -377,6 +406,18 @@ NESTED_ENTRY Audio_InitializeWasapi, _TEXT$00
   ;
   LEA R8, AUDIO_INTERNAL_CONTEXT.AudioRenderClientPtr[RSI]
   LEA RDX, [IID__IAudioRenderClient]
+  MOV RCX, AUDIO_INTERNAL_CONTEXT.AudioClientPtr[RSI]
+  MOV RAX, IAUDIOCLIENT.lpVtbl[RCX]
+  MOV RAX, IAUDIOCLIENTVTBL.pfnGetService[RAX]
+  DEBUG_FUNCTION_CALL RAX
+  CMP RAX, 0
+  JNE @Failure
+
+  ;
+  ; Get the Session Volume Control
+  ;
+  LEA R8, AUDIO_INTERNAL_CONTEXT.AudioSimpleVolumePtr[RSI]
+  LEA RDX, [IID__ISimpleAudioVolume]
   MOV RCX, AUDIO_INTERNAL_CONTEXT.AudioClientPtr[RSI]
   MOV RAX, IAUDIOCLIENT.lpVtbl[RCX]
   MOV RAX, IAUDIOCLIENTVTBL.pfnGetService[RAX]
@@ -673,6 +714,9 @@ NESTED_ENTRY Audio_CopyAudioData, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV R15, RCX
+  CMP AUDIO_INTERNAL_CONTEXT.MusicState[RCX], 0
+  JE @ZeroBuffer
+
   MOV RBX, AUDIO_INTERNAL_CONTEXT.CurrentMusic[R15]
   CMP RBX, 0
   JE @ZeroBuffer
@@ -866,7 +910,7 @@ NESTED_ENTRY Audio_PlayMusic, _TEXT$00
 NESTED_END Audio_PlayMusic, _TEXT$00
 
 ;*********************************************************
-;   Audio_StopAudio
+;   Audio_TogglePauseMusic
 ;
 ;        Parameters: Audio Handle
 ;
@@ -874,16 +918,80 @@ NESTED_END Audio_PlayMusic, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY Audio_StopAudio, _TEXT$00
+NESTED_ENTRY Audio_TogglePauseMusic, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO 
+
+  LOCK XOR AUDIO_INTERNAL_CONTEXT.MusicState[RCX], 1
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Audio_TogglePauseMusic, _TEXT$00
+
+;*********************************************************
+;   Audio_TogglePauseEffects
+;
+;        Parameters: Audio Handle
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Audio_TogglePauseEffects, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   
+  LOCK XOR AUDIO_INTERNAL_CONTEXT.EffectState[RCX], 1  
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-NESTED_END Audio_StopAudio, _TEXT$00
+NESTED_END Audio_TogglePauseEffects, _TEXT$00
+
+
+
+;*********************************************************
+;   Audio_SetVolume
+;
+;        Parameters: Audio Handle, 0-1000
+;
+;        Return Value: Error
+;
+;
+;*********************************************************  
+NESTED_ENTRY Audio_SetVolume, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  CMP EDX, 1000
+  JA @NumberOutOfRange
+
+  MOV EAX, 1000
+  CVTSI2SS  xmm0, EAX
+  CVTSI2SS  xmm1, EDX
+  DIVSS xmm1, xmm0
+
+
+  XOR R8, R8
+  MOV RCX, AUDIO_INTERNAL_CONTEXT.AudioSimpleVolumePtr[RSI]
+  MOV RAX, ISIMPLEAUDIOVOLUME.lpVtbl[RCX]
+  MOV RAX, ISIMPLEAUDIOVOLUMEVTBL.pfnSetMasterVolume[RAX]
+  DEBUG_FUNCTION_CALL RAX
+@NumberOutOfRange:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Audio_SetVolume, _TEXT$00
+
+
 
 
 ;*********************************************************
@@ -903,6 +1011,10 @@ NESTED_ENTRY Audio_PlayEffect, _TEXT$00
   MOV RSI, RCX
   MOV RDI, RDX
   XOR EAX, EAX
+
+  CMP AUDIO_INTERNAL_CONTEXT.EffectState[RCX], 0
+  JE @NoEffects
+
   MOV R9, AUDIO_INTERNAL_CONTEXT.AudioEffectList[RSI]
 @FindAudioId:
   CMP R9, 0
@@ -934,6 +1046,7 @@ NESTED_ENTRY Audio_PlayEffect, _TEXT$00
   LOCK CMPXCHG QWORD PTR [RSI], R9
   JNZ @TryToFindEffectSlot
 
+@NoEffects:
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -947,142 +1060,7 @@ NESTED_END Audio_PlayEffect, _TEXT$00
 
 
 
-;
-;;*********************************************************
-;;   Audio_LoadWaveFileInMemory
-;;
-;;        Parameters: Wave File In Memory, Size
-;;
-;;        Return Value: Wave File Handle
-;;
-;;
-;;*********************************************************  
-;NESTED_ENTRY Audio_LoadWaveFileInMemory, _TEXT$00
-;  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-;  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-;.ENDPROLOG 
-;  DEBUG_RSP_CHECK_MACRO
-;  MOV RSI, RCX
-;  MOV RDI, RDX
-;
-;  CMP WAVE_FILE_INFORMATION.ChunkId_R[RCX], 'R'
-;  JNE @InvalidWaveFile
-;
-;  CMP WAVE_FILE_INFORMATION.ChunkId_I[RCX], 'I'
-;  JNE @InvalidWaveFile
-;
-;  CMP WAVE_FILE_INFORMATION.ChunkId_F1[RCX], 'F'
-;  JNE @InvalidWaveFile
-;
-;  CMP WAVE_FILE_INFORMATION.ChunkId_F2[RCX], 'F'
-;  JNE @InvalidWaveFile
-;
-;  MOV RDX, sizeof WAVEFILE_INTERNAL_CONTEXT
-;  MOV RCX, LMEM_ZEROINIT
-;  DEBUG_FUNCTION_CALL LocalAlloc
-;  TEST RAX, RAX
-;  JZ @FailedToAllocate
-;
-;  MOV WAVEFILE_INTERNAL_CONTEXT.RawBuffer[RAX], RSI
-;  MOV WAVEFILE_INTERNAL_CONTEXT.DataBufferSize[RAX], RDI
-;
-;  LEA RCX, WAVE_FILE_INFORMATION.AudioFormat[RSI]
-;  MOV WAVEFILE_INTERNAL_CONTEXT.WaveFileFormat[RAX], RCX
-;
-;  LEA RCX, WAVE_FILE_INFORMATION.AudioData[RSI]
-;  MOV WAVEFILE_INTERNAL_CONTEXT.WaveFileData[RAX], RCX
-;
-;  LEA RCX, WAVE_FILE_INFORMATION.SubChunk2Size[RSI]
-;  MOV WAVEFILE_INTERNAL_CONTEXT.WaveFileDataSize[RAX], RCX
-;
-;@InvalidWaveFile:
-;@FailedToAllocate:  
-;  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-;  ADD RSP, SIZE STD_FUNCTION_STACK
-;  RET
-;NESTED_END Audio_LoadWaveFileInMemory, _TEXT$00
-;
-;
-;;*********************************************************
-;;   Audio_LoadWaveFile
-;;
-;;        Parameters: Master Context, File String
-;;
-;;        Return Value: Wave File Handle
-;;
-;;
-;;*********************************************************  
-;NESTED_ENTRY Audio_LoadWaveFile, _TEXT$00
-;  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-;  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-;.ENDPROLOG 
-;  DEBUG_RSP_CHECK_MACRO
-;  ; Not Yet Implemented - TBD
-;  XOR RAX, RAX
-;  
-;  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-;  ADD RSP, SIZE STD_FUNCTION_STACK
-;  RET
-;NESTED_END Audio_LoadWaveFile, _TEXT$00
-;
-;
-;;*********************************************************
-;;   Audio_LoadWaveFileByResourceId
-;;
-;;        Parameters: hInstance, Resource ID, Resource Type
-;;
-;;        Return Value: Wave File Handle
-;;
-;;
-;;*********************************************************  
-;NESTED_ENTRY Audio_LoadWaveFileByResourceId, _TEXT$00
-;  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-;  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-;.ENDPROLOG 
-;  DEBUG_RSP_CHECK_MACRO
-;  ; Resource Type (R8)
-;
-;  MOV RSI, RCX  ; hIntance (RCX)
-;  MOV RDI, RDX  ; Resource Name (RDX)
-;  DEBUG_FUNCTION_CALL FindResourceA
-;  
-;  TEST RAX, RAX
-;  JZ @NotFound
-;  MOV R12, RAX
-;
-;  MOV RDX, RAX
-;  MOV RCX, RSI
-;  DEBUG_FUNCTION_CALL LoadResource
-;  MOV R13, RAX
-;
-;  MOV RCX, RAX
-;  DEBUG_FUNCTION_CALL LockResource  
-;  MOV R14, RAX
-;
-;  MOV RDX, R12
-;  MOV RCX, RSI
-;  DEBUG_FUNCTION_CALL SizeofResource  
-;  
-;  MOV RDX, RAX
-;  MOV RCX, R14
-;  DEBUG_FUNCTION_CALL Audio_LoadWaveFileInMemory
-;  TEST RAX, RAX
-;  JZ @FailedToCreateHandle
-;  
-;  MOV WAVEFILE_INTERNAL_CONTEXT.IsResource[RAX], 1
-;  MOV WAVEFILE_INTERNAL_CONTEXT.HRSRC[RAX], R12
-;  MOV WAVEFILE_INTERNAL_CONTEXT.HGLOBAL[RAX], R13
-;  
-;  JMP @Success
-;@FailedToCreateHandle:
-;  ; Perform Any Cleanup -- TBD
-;@NotFound:  
-;@Success:
-;  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-;  ADD RSP, SIZE STD_FUNCTION_STACK
-;  RET
-;NESTED_END Audio_LoadWaveFileByResourceId, _TEXT$00
-;
 
 
 END
+

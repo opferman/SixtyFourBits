@@ -396,6 +396,9 @@ NESTED_ENTRY GreatMachine_CheckHiScores, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+
+  CMP [PlayerScore], 0
+  JL @NoHighScore
   ;
   ;   Reset High Scores
   ;
@@ -434,6 +437,7 @@ NESTED_ENTRY GreatMachine_CheckHiScores, _TEXT$00
 
 @NewHighScore:
   MOV [HiScoreLocationPtr], RDX                 ; Update New High Score Location!
+@NoHighScore:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET

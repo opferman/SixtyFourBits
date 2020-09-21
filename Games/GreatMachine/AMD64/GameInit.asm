@@ -111,6 +111,29 @@ endif
   MOV RDX, GreatMachine_H_Press
   MOV RCX, VK_H
   DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
+
+  ;
+  ; Toggle Music
+  ;
+  MOV RDX, GreatMachine_M_Press
+  MOV RCX, VK_M
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
+
+  MOV RDX, GreatMachine_VolumeUp_Press
+  MOV RCX, VK_PRIOR
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
+
+  MOV RDX, GreatMachine_VolumeDown_Press
+  MOV RCX, VK_NEXT
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
+
+
+  ;
+  ; Toggle Effects
+  ;
+  MOV RDX, GreatMachine_E_Press
+  MOV RCX, VK_E
+  DEBUG_FUNCTION_CALL Inputx64_RegisterKeyPress
  
 ifdef MACHINE_GAME_DEBUG 
 ;

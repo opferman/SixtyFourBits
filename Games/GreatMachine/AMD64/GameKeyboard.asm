@@ -102,6 +102,115 @@ NESTED_ENTRY GreatMachine_H_Press, _TEXT$00
   RET
 NESTED_END GreatMachine_H_Press, _TEXT$00
 
+
+
+
+;*********************************************************
+;   GreatMachine_M_Press (Toggle Music}
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_M_Press, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_TogglePauseMusic
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_M_Press, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_VolumeDown_Press (Toggle Music}
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_VolumeDown_Press, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  CMP [AudioVolume], 0
+  JE @NoMoreDown
+  SUB [AudioVolume], 5
+
+  MOV RDX, [AudioVolume]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_SetVolume
+@NoMoreDown:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_VolumeDown_Press, _TEXT$00
+
+
+;*********************************************************
+;   GreatMachine_VolumeUp_Press (Toggle Music}
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_VolumeUp_Press, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  CMP [AudioVolume], 1000
+  JE @NoMoreUp
+  ADD [AudioVolume], 5
+
+  MOV RDX, [AudioVolume]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_SetVolume
+@NoMoreUp:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_VolumeUp_Press, _TEXT$00
+
+;*********************************************************
+;   GreatMachine_E_Press (Toggle Effect}
+;
+;        Parameters: Master Context
+;
+;        Return Value: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY GreatMachine_E_Press, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_TogglePauseEffects
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END GreatMachine_E_Press, _TEXT$00
+
 ifdef MACHINE_GAME_DEBUG
 
 ;*********************************************************

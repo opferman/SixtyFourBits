@@ -1181,6 +1181,16 @@ endif
   CMP RAX, 0
   JE @Failure
 
+  LEA RDX, [CrashPedestrianData]
+  LEA RCX, [PedestrianHitEffect]
+ifdef USE_FILES
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioFile
+else
+  DEBUG_FUNCTION_CALL GreatMachine_LoadAudioResource
+endif
+  CMP RAX, 0
+  JE @Failure
+
   LEA RDX, [CrashEffectData]
   LEA RCX, [CrashEffect]
 ifdef USE_FILES
@@ -1266,10 +1276,19 @@ endif
   DEBUG_FUNCTION_CALL Audio_AddEffect
   MOV [ExtralifeEffectId], RAX
 
+  LEA RDX, [CrashPedestrianData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddEffect
+  MOV [CrashPedestrianId], RAX
+
   LEA RDX, [CaritemEffectData]
   MOV RCX, [AudioHandle]
   DEBUG_FUNCTION_CALL Audio_AddEffect
   MOV [CaritemEffectId], RAX
+
+  MOV RDX, [AudioVolume]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_SetVolume
 
   MOV RDX, [TitleMusicId]
   MOV RCX, [AudioHandle]
@@ -1720,6 +1739,7 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
    INC RBX
    JMP @HazardsLoop
 @HazardsComplete:
+   
          
    MOV EAX, 1
 @FailureExit:

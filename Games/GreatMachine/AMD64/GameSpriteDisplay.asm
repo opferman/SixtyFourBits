@@ -600,10 +600,7 @@ NESTED_ENTRY GreateMachine_Pedestrian_OffScreen, _TEXT$00
   
   MOV RDX, RCX
   MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RDI]
-  TEST RCX, 07h
-  JZ @CorrectLanePicked
-  INT 3
-@CorrectLanePicked:
+
   DEBUG_FUNCTION_CALL GreatMachine_UnblockLane
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
