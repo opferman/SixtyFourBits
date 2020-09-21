@@ -65,9 +65,9 @@ NESTED_ENTRY GreatMachine_DispatchGamePieces, _TEXT$00
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GreatMachine_GenericGenerate
 
- ; MOV RDX, OFFSET GenerateHazardsStructure
- ; MOV RCX, RSI
- ; DEBUG_FUNCTION_CALL GreatMachine_GenericGenerate
+  MOV RDX, OFFSET GenerateHazardsStructure
+  MOV RCX, RSI
+  DEBUG_FUNCTION_CALL GreatMachine_GenericGenerate
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -381,35 +381,20 @@ NESTED_ENTRY GreatMachine_Cars_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-  
-  ;
-  ; Generate lane choices and choose.
-  ;
-  MOV RAX, [LevelInformationPtr]
-  MOV RCX, LEVEL_INFO.BlockingItemCountLane2[RAX]
-  XOR RCX, 1
-  SHL RCX, 1
-  MOV RDX, LEVEL_INFO.BlockingItemCountLane1[RAX]
-  XOR RDX, 1
-  OR RCX, RDX
-  SHL RCX, 1
-  MOV RDX, LEVEL_INFO.BlockingItemCountLane0[RAX]
-  XOR RDX, 1
-  OR RCX, RDX
-  CMP RCX, 0
-  JE @NoLanesAvailable
-
-  INC LEVEL_INFO.CurrentNumberOfCars[RAX]
-  MOV R8, LEVEL_INFO.TimerBetweenConcurrentCarsRefresh[RAX]
-  MOV LEVEL_INFO.TimerBetweenConCurrentCars[RAX], R8
-  
-  MOV RDX, RDI                ; Pass In The Sprite
+  MOV R9, LANE_BLOCKING
   MOV R8, LANE_GENERATE_LEFT  ; Pass In The Side to Generate For.
-  MOV R9, 1
+  MOV RDX, RDI                ; Pass In The Sprite
+  MOV RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2  
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
+
+  MOV RCX, [LevelInformationPtr]
+  INC LEVEL_INFO.CurrentNumberOfCars[RCX]
+  MOV R8, LEVEL_INFO.TimerBetweenConcurrentCarsRefresh[RCX]
+  MOV LEVEL_INFO.TimerBetweenConCurrentCars[RCX], R8
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
 
   MOV RBX, RAX
   MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
@@ -474,7 +459,31 @@ NESTED_ENTRY GreatMachine_SelectLane, _TEXT$00
   MOV R12, R9
   XOR R15, R15
 
+;
+; If blocking is enabled, we need to massage the lanes.
+;
+  CMP R12, LANE_NOT_BLOCKING
+  JE @SkipMassageBlockingLanes
+
+  MOV RAX, [LevelInformationPtr]
+  CMP LEVEL_INFO.BlockingItemCountLane2[RAX], 0
+  JE @TryLane1
+  AND RSI, NOT LANE_BITMASK_2
+@TryLane1:
+  CMP LEVEL_INFO.BlockingItemCountLane1[RAX], 0
+  JE @TryLane0
+  AND RSI, NOT LANE_BITMASK_1
+@TryLane0:
+  CMP LEVEL_INFO.BlockingItemCountLane0[RAX], 0
+  JE @SkipMassageBlockingLanes
+  AND RSI, NOT LANE_BITMASK_0
+@SkipMassageBlockingLanes:
+
   MOV R14, OFFSET LaneSelectionSpace
+
+  XOR RAX, RAX
+  CMP RSI, 0
+  JE @NoLanes
 
   TEST RSI, LANE_BITMASK_0
   JZ @TryNext_1
@@ -541,8 +550,6 @@ NESTED_ENTRY GreatMachine_SelectLane, _TEXT$00
   MOV R8, PLAYER_Y_DIM
   SUB R8, R9
   MOV SCROLLING_GIF.YIncrement[R10], 0
-
-
 
   CMP R12, 0
   JE @DoesNotBlockLane
@@ -619,6 +626,7 @@ NESTED_ENTRY GreatMachine_SelectLane, _TEXT$00
   JL @Skip
   ADD SCROLLING_GIF.CurrentY[R10], R8
 @Skip:
+@NoLanes:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -733,18 +741,10 @@ NESTED_ENTRY GreatMachine_Fuel_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-
-  MOV RAX, [LevelInformationPtr]
-  
   ;
   ; Generate lane choices and choose.
   ;
   MOV RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2  
-
-  INC LEVEL_INFO.CurrentNumberOfFuel[RAX]
-  MOV R8, LEVEL_INFO.TimerForFuelRefresh[RAX]
-  MOV LEVEL_INFO.TimerForFuel[RAX], R8
   
   MOV RDX, RDI                 ; Pass In The Sprite
   MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
@@ -752,8 +752,16 @@ NESTED_ENTRY GreatMachine_Fuel_ActivateSprite, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
   MOV RBX, RAX
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
+
+  MOV RAX, [LevelInformationPtr]
+  INC LEVEL_INFO.CurrentNumberOfFuel[RAX]
+  MOV R8, LEVEL_INFO.TimerForFuelRefresh[RAX]
+  MOV LEVEL_INFO.TimerForFuel[RAX], R8
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
@@ -885,18 +893,10 @@ NESTED_ENTRY GreatMachine_Part1_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-
-  MOV RAX, [LevelInformationPtr]
-  
   ;
   ; Generate lane choices and choose.
   ;
   MOV RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2  
-
-  INC LEVEL_INFO.CurrentNumberOfPartOne[RAX]
-  MOV R8, LEVEL_INFO.TimerForParts1Refresh[RAX]
-  MOV LEVEL_INFO.TimerForParts1[RAX], R8
   
   MOV RDX, RDI                 ; Pass In The Sprite
   MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
@@ -904,8 +904,16 @@ NESTED_ENTRY GreatMachine_Part1_ActivateSprite, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
   MOV RBX, RAX
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
+
+  MOV RAX, [LevelInformationPtr]
+  INC LEVEL_INFO.CurrentNumberOfPartOne[RAX]
+  MOV R8, LEVEL_INFO.TimerForParts1Refresh[RAX]
+  MOV LEVEL_INFO.TimerForParts1[RAX], R8
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
@@ -1034,8 +1042,6 @@ NESTED_ENTRY GreatMachine_Part2_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-
   MOV RAX, [LevelInformationPtr]
   
   ;
@@ -1043,9 +1049,7 @@ NESTED_ENTRY GreatMachine_Part2_ActivateSprite, _TEXT$00
   ;
   MOV RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2  
 
-  INC LEVEL_INFO.CurrentNumberOfPartTwo[RAX]
-  MOV R8, LEVEL_INFO.TimerForParts2Refresh[RAX]
-  MOV LEVEL_INFO.TimerForParts2[RAX], R8
+
   
   MOV RDX, RDI                 ; Pass In The Sprite
   MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
@@ -1053,8 +1057,17 @@ NESTED_ENTRY GreatMachine_Part2_ActivateSprite, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
+
   MOV RBX, RAX
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
+
+  MOV RAX, [LevelInformationPtr]
+  INC LEVEL_INFO.CurrentNumberOfPartTwo[RAX]
+  MOV R8, LEVEL_INFO.TimerForParts2Refresh[RAX]
+  MOV LEVEL_INFO.TimerForParts2[RAX], R8
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
@@ -1185,27 +1198,28 @@ NESTED_ENTRY GreatMachine_Part3_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-
-  MOV RAX, [LevelInformationPtr]
-  
   ;
   ; Generate lane choices and choose.
   ;
   MOV RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2  
-
-  INC LEVEL_INFO.CurrentNumberOfPartThree[RAX]
-  MOV R8, LEVEL_INFO.TimerForParts3Refresh[RAX]
-  MOV LEVEL_INFO.TimerForParts3[RAX], R8
-  
   MOV RDX, RDI                 ; Pass In The Sprite
   MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
   XOR R9, R9
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
+
   MOV RBX, RAX
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
+
+  MOV RAX, [LevelInformationPtr]
+
+  INC LEVEL_INFO.CurrentNumberOfPartThree[RAX]
+  MOV R8, LEVEL_INFO.TimerForParts3Refresh[RAX]
+  MOV LEVEL_INFO.TimerForParts3[RAX], R8
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
@@ -1328,18 +1342,10 @@ NESTED_ENTRY GreatMachine_Pedestrians_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
-
-  MOV RAX, [LevelInformationPtr]
-  
   ;
   ; Generate lane choices and choose.
   ;
   MOV RCX, LANE_TOP_SIDEWALK_BITMASK or LANE_BOTTOM_SIDEWALK_BITMASK  
-
-  MOV R8, LEVEL_INFO.TimerForPedestriansRefresh[RAX]
-  MOV LEVEL_INFO.TimerForPedestrians[RAX], R8
-  
   MOV RDX, RDI                 ; Pass In The Sprite
   MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
   XOR R9, R9
@@ -1347,7 +1353,15 @@ NESTED_ENTRY GreatMachine_Pedestrians_ActivateSprite, _TEXT$00
   CMP RAX, 0
   JE @NoLanesAvailable
   MOV RBX, RAX
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
+
+  MOV RAX, [LevelInformationPtr]
+  MOV R8, LEVEL_INFO.TimerForPedestriansRefresh[RAX]
+  MOV LEVEL_INFO.TimerForPedestrians[RAX], R8
+
+  
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
@@ -1480,9 +1494,9 @@ NESTED_ENTRY GreatMachine_ExtraLife_ActivateSprite, _TEXT$00
   MOV RDI, RDX
   MOV RSI, R8
 
-  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
 
-  MOV RAX, [LevelInformationPtr]
+
+
   
   ;
   ; Generate lane choices and choose.
@@ -1495,8 +1509,16 @@ NESTED_ENTRY GreatMachine_ExtraLife_ActivateSprite, _TEXT$00
   DEBUG_FUNCTION_CALL GreatMachine_SelectLane
   CMP RAX, 0
   JE @NoLanesAvailable
+
   MOV RBX, RAX
-  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RAX   
+
+  MOV RAX, [LevelInformationPtr]
+  MOV R8, LEVEL_INFO.TimerForExtraLivesRefresh[RAX]
+  MOV LEVEL_INFO.TimerForExtraLives[RAX], R8
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   DEC R9
@@ -1536,12 +1558,18 @@ NESTED_ENTRY GreatMachine_Hazards_TickDebounceUpdate, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  
+  MOV RAX, 1
+  MOV RDX, [LevelInformationPtr]
 
+  CMP LEVEL_INFO.TimerForHazard[RDX], 0
+  JE @NoHazardTicks
+  DEC LEVEL_INFO.TimerForHazard[RDX]
+  XOR RAX, RAX
+@NoHazardTicks:
+  
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-
 NESTED_END GreatMachine_Hazards_TickDebounceUpdate, _TEXT$00
 
 ;*********************************************************
@@ -1559,6 +1587,7 @@ NESTED_ENTRY GreatMachine_Hazards_PreGenerateCheck, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   
+  MOV EAX, 1
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -1581,7 +1610,13 @@ NESTED_ENTRY GreatMachine_Hazards_LoopCheck, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  
+  MOV RAX, 1
+  MOV RDX, [LevelInformationPtr]
+
+  CMP LEVEL_INFO.TimerForHazard[RDX], 0
+  JE @NoHazardTicks
+  XOR RAX, RAX
+@NoHazardTicks:  
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -1604,8 +1639,42 @@ NESTED_ENTRY GreatMachine_Hazards_ActivateSprite, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  
+  MOV RDI, RDX
+  MOV RSI, R8
 
+  ;
+  ; Generate lane choices and choose.
+  ;
+  MOV RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2  
+  MOV RDX, RDI                 ; Pass In The Sprite
+  MOV R8, LANE_GENERATE_RIGHT  ; Pass In The Side to Generate For.
+  MOV R9, LANE_BLOCKING
+  DEBUG_FUNCTION_CALL GreatMachine_SelectLane
+  CMP RAX, 0
+  JE @NoLanesAvailable
+  MOV RBX, RAX
+
+  MOV SPECIAL_SPRITE_STRUCT.SpriteIsActive[RDI], 1
+
+  MOV RAX, [LevelInformationPtr]
+  MOV R8, LEVEL_INFO.TimerForHazardRefresh[RAX]
+  MOV LEVEL_INFO.TimerForHazard[RAX], R8
+
+  
+  MOV SPECIAL_SPRITE_STRUCT.SpriteListPtr[RDI], RBX   
+  MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
+  MOV R9, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  DEC R9
+  MOV SCROLLING_GIF.CurrentX[R10], R9
+  MOV SCROLLING_GIF.XIncrement[R10], ROAD_SCROLL_X_INC
+  MOV SCROLLING_GIF.YIncrement[R10], ROAD_SCROLL_Y_INC
+
+  MOV RAX, RBX
+  JMP @LanesAvailable
+
+@NoLanesAvailable:  
+  XOR RAX, RAX
+@LanesAvailable:    
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET

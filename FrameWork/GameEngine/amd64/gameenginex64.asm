@@ -866,7 +866,7 @@ NESTED_ENTRY GameEngine_DisplaySideScrollingSprite, _TEXT$00
   MOV RAX, IMAGE_INFORMATION.ImageWidth[R11]
   ADD RAX, SCROLLING_GIF.CurrentX[RDI]
   CMP RAX, 0
-  JL @NotVisible
+  JLE @NotVisible
 
 
   MOV R12, [DoubleBuffer]

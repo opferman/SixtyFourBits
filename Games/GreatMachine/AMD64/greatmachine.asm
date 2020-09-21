@@ -110,18 +110,24 @@ SPRITE_TYPE_EXTRA_LIFE EQU <7>
 SPRITE_TYPE_HAZARD     EQU <8>
 
 ;
+; Sprite Kill Points
+;
+SPRITE_KILLS            EQU <0FFFFFFFFFFFFFFFEh>
+SPRITE_NEGATIVE_POINTS  EQU <-10000>
+
+;
 ; Item and Array Counts
 ;
 NUMBER_OF_CARS           EQU <7>  ; Maximum can only be 19 due to conversion algorithm hard coding '1' when generating the gif name.
 NUMBER_OF_PEOPLE         EQU <8>
 NUMBER_OF_LEVELS         EQU <4> ; If this is changed you need to update the level structure array 
-NUMBER_OF_GENERIC_ITEMS  EQU <9> ; NUMBER_OF_PARTS + NUMBER_OF_FUEL + NUMBER_OF_ITEMS
+NUMBER_OF_GENERIC_ITEMS  EQU <12> ; NUMBER_OF_PARTS + NUMBER_OF_FUEL + NUMBER_OF_EXTRA_LIFE + NUMBER_OF_HAZARDS
 NUMBER_OF_FUEL           EQU <2>
 NUMBER_OF_PARTS1         EQU <2>
 NUMBER_OF_PARTS2         EQU <2>
 NUMBER_OF_PARTS3         EQU <2>
 NUMBER_OF_EXTRA_LIFE     EQU <1>
-NUMBER_OF_HAZARDS        EQU <0>
+NUMBER_OF_HAZARDS        EQU <3>
 NUMBER_OF_TREE_SCROLLING EQU <12>
 
 ;
@@ -139,6 +145,8 @@ LANE_BITMASK_1                  EQU <02h>
 LANE_BITMASK_2                  EQU <04h>
 LANE_TOP_SIDEWALK_BITMASK       EQU <08h>
 LANE_BOTTOM_SIDEWALK_BITMASK    EQU <010h>
+LANE_BLOCKING                   EQU <1>
+LANE_NOT_BLOCKING               EQU <0>
 
 ;
 ; Constants for Points
@@ -511,6 +519,10 @@ ifdef USE_FILES
     PanelIcon2                      db "CarPart1_icon.gif",0
     PanelIcon3                      db "CarPart2_icon.gif",0
     PanelIcon4                      db "CarPart3_icon.gif",0
+    CarbrokeImage                   db "brokendown.gif", 0
+    DeathbarrelImage                db "deathbarrel.gif", 0
+    DumpsterImage                   db "dumpster.gif", 0
+
     TitleMusic                      db "title.audio", 0
     GameMusic                       db "game.audio", 0
     WinMusic                        db "winmusic.audio", 0
@@ -519,6 +531,7 @@ ifdef USE_FILES
     CollectedEffect                 db "collectall.audio", 0
     ExtralifeEffect                 db "extralife.audio", 0
     CaritemEffect                   db "caritem.audio", 0 
+    PedestrianHitEffect             db "pedestrianhit.audio", 0  
 else	
     GifResourceType                 db "GIFFILE", 0
     AudioResourceType               db "AUDIOFILE", 0
@@ -558,6 +571,10 @@ else
     PanelIcon2                      db "ICON2_GIF", 0
     PanelIcon3                      db "ICON3_GIF", 0
     PanelIcon4                      db "ICON4_GIF", 0
+    CarbrokeImage                   db "CARBROKE_GIF", 0    
+    DeathbarrelImage                db "DEATHBARREL_GIF", 0 
+    DumpsterImage                   db "DUMPSTER_GIF", 0    
+
     TitleMusic                      db "TITLE_AUDIO_MUSIC", 0
     GameMusic                       db "GAME_AUDIO_MUSIC", 0
     WinMusic                        db "WIN_AUDIO_MUSIC", 0
@@ -566,6 +583,7 @@ else
     CollectedEffect                 db "COLLECTED_AUDIO_EFFECT", 0 
     ExtralifeEffect                 db "EXTRALIFE_AUDIO_EFFECT", 0
     CaritemEffect                   db "CARITEM_AUDIO_EFFECT", 0  
+    PedestrianHitEffect             db "PEDESTRIAN_AUDIO_EFFECT", 0  
 endif	
     HoldText                        db "Hold/Pause", 0
     GamePlayPage                    dq 0
@@ -689,7 +707,7 @@ endif
   LevelInfo_Easy_1_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
   LevelInfo_Easy_1_MinCarVelocity                    dq 3
   LevelInfo_Easy_1_MaxCarVelocity                    dq 4
-  LevelInfo_Easy_1_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_1_PedestriansCanBeInStreet          dq 1
   LevelInfo_Easy_1_LevelStartDelay                   dq 200
   LevelInfo_Easy_1_LevelStartDelayRefresh            dq 200
   LevelInfo_Easy_1_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
@@ -1278,12 +1296,6 @@ endif
                                     dq ?
                                     dq ?
                                     dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
 
    GenericCarSpriteList             SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>
@@ -1292,14 +1304,8 @@ endif
                                     SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
-                                 
+                                    SPECIAL_SPRITE_STRUCT      <?>                             
+
    GenericCarScrollList             SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
@@ -1308,12 +1314,6 @@ endif
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>                       
-                                    SCROLLING_GIF      <?>                       
-                                    SCROLLING_GIF      <?>                       
 
    GenericCarImageList              IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
@@ -1323,20 +1323,8 @@ endif
                                     IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-
 
    GenericPersonListPtr             dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
-                                    dq ?
                                     dq ?
                                     dq ?
                                     dq ?
@@ -1355,11 +1343,6 @@ endif
                                     SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
 
    GenericPersonScrollList          SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
@@ -1370,18 +1353,8 @@ endif
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>                       
-                                    SCROLLING_GIF      <?>                       
-                                    SCROLLING_GIF      <?>                       
 
    GenericPersonImageList           IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
@@ -1402,11 +1375,9 @@ endif
                                     dq OFFSET CarPart3Image 
                                     dq OFFSET CarPart6Image 
                                     dq OFFSET Item1Image
-                                    dq ? 
-                                    dq ? 
-                                    dq ? 
-                                    dq ? 
-                                    dq ? 
+                                    dq OFFSET CarbrokeImage
+                                    dq OFFSET DeathbarrelImage
+                                    dq OFFSET DumpsterImage
 
 
    FuelItemsList                    dq OFFSET GenericItemsList
@@ -1423,8 +1394,6 @@ endif
    GenericItems_Hazards             SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>
                                     SPECIAL_SPRITE_STRUCT      <?>                       
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
-                                    SPECIAL_SPRITE_STRUCT      <?>                       
 
    GenericItemsScrollList           SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
@@ -1437,8 +1406,6 @@ endif
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
                                     SCROLLING_GIF      <?>
-                                    SCROLLING_GIF      <?>                       
-                                    SCROLLING_GIF      <?>                       
                                     SCROLLING_GIF      <?>                       
 
    GenericItemsImageList            IMAGE_INFORMATION <?>
@@ -1453,9 +1420,10 @@ endif
                                     IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
                                     IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
-                                    IMAGE_INFORMATION <?>
 
+    HazardPoints                    dq SPRITE_KILLS
+                                    dq SPRITE_NEGATIVE_POINTS
+                                    dq SPRITE_KILLS
     ;
     ; Generation of new items structure configuratino
     ;

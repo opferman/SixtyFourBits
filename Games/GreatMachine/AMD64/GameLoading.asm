@@ -1694,7 +1694,33 @@ NESTED_ENTRY GreatMachine_LoadItemsAndSupportGraphics, _TEXT$00
 
    LEA RAX, [GreateMachine_ExtraLife_OffScreen]
    MOV [GenericItems_ExtraLife.pfnSpriteOffScreen], RAX
-      
+
+   XOR RBX, RBX
+   MOV R12, OFFSET GenericItems_Hazards
+   MOV R13, OFFSET HazardPoints
+@HazardsLoop:      
+   CMP RBX, NUMBER_OF_HAZARDS
+   JE @HazardsComplete
+
+   MOV SPECIAL_SPRITE_STRUCT.SpriteType[R12], SPRITE_TYPE_HAZARD
+   MOV RAX, QWORD PTR [R13]
+   MOV SPECIAL_SPRITE_STRUCT.SpritePoints[R12], RAX
+
+   LEA RAX, [GreatMachine_Hazard_CollisionNPC]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionNpc[R12], RAX
+
+   LEA RAX, [GreatMachine_Hazard_Collision]
+   MOV SPECIAL_SPRITE_STRUCT.pfnCollisionPlayer[R12], RAX
+
+   LEA RAX, [GreateMachine_Hazard_OffScreen]
+   MOV SPECIAL_SPRITE_STRUCT.pfnSpriteOffScreen[R12], RAX
+
+   ADD R13, SIZE QWORD
+   ADD R12, SIZE SPECIAL_SPRITE_STRUCT
+   INC RBX
+   JMP @HazardsLoop
+@HazardsComplete:
+         
    MOV EAX, 1
 @FailureExit:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK

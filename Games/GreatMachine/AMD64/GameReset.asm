@@ -387,10 +387,10 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
   MOV RCX, OFFSET GenerateExtraLifeStructure
   DEBUG_FUNCTION_CALL GreatMachine_UpdateLevelSettingsToSprite
 
- ; MOV R8, LEVEL_INFO.GenerateHazardsPercentage[RSI]
- ; MOV RDX, LEVEL_INFO.HazardDebounceRefresh[RSI]
- ; MOV RCX, OFFSET GenerateHazardsStructure
- ; DEBUG_FUNCTION_CALL GreatMachine_UpdateLevelSettingsToSprite
+  MOV R8, LEVEL_INFO.GenerateHazardsPercentage[RSI]
+  MOV RDX, LEVEL_INFO.HazardDebounceRefresh[RSI]
+  MOV RCX, OFFSET GenerateHazardsStructure
+  DEBUG_FUNCTION_CALL GreatMachine_UpdateLevelSettingsToSprite
 
 
  ;
