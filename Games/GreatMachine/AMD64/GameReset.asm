@@ -455,7 +455,7 @@ NESTED_ENTRY GreatMachine_UpdateLevelSettingsToSprite, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV R15, RCX
   MOV RSI, GENERATE_STRUCT.ItemListPtr[R15]
-
+  XOR RBX, RBX
 @UpdateSpritesLoop:
   CMP RBX, GENERATE_STRUCT.NumberOfItemsOnList[R15]
   JE @CompletedList

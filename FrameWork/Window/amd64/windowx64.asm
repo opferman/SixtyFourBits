@@ -28,6 +28,7 @@ include ksamd64.inc
 include windowsx64.inc
 include init_vars.inc
 include debug_public.inc
+include paramhelp_public.inc
 
 WM_TIMER EQU <0113h>
 TIMER_EMULATE_VRTRACE EQU <1>
@@ -36,6 +37,12 @@ extern AdjustWindowRectEx:proc
 extern ValidateRect:proc
 extern SetTimer:proc
 
+
+HKEY_LOCAL_MACHINE EQU <080000002h>
+KEY_READ EQU <020019h>
+extern RegOpenKeyExA:proc
+extern RegCloseKey:proc
+extern RegQueryValueExA:proc
 ;*********************************************************
 ; Assembly Options
 ;*********************************************************
@@ -83,12 +90,18 @@ W_SETUP_PARAMS struct
     SaveRegsStruct       SAVEREGS <?>
 W_SETUP_PARAMS ends
 
+FRAME_DELAY_VALUE  EQU <10>
+
 .DATA
  pszWindowClass  dq ?
  pszWindowTitle  dq ?
  FullScreenMode  dq ?
  EmulateVRTrace  dq ?
  EscapeDisabled  dq ?
+ StartValue      dq ?
+ CpuMhz                      dq 0
+ RegistryCpuKey              db "HARDWARE\DESCRIPTION\System\CentralProcessor\0", 0
+ RegistryMhzValue            db "~MHz", 0
 .CODE
 
 ;*********************************************************
@@ -200,13 +213,15 @@ NESTED_ENTRY Windowx64_Setup, _TEXT$00
   CMP INIT_DEMO_STRUCT.EmulateVRTrace[RdI], 0
   JE @SkipVRTraceEmulate
   MOV [EmulateVRTrace], 1
-
-  XOR R9, R9
-  MOV R8, INIT_DEMO_STRUCT.EmulateVRTrace[RdI]
-  MOV RDX, TIMER_EMULATE_VRTRACE
   MOV RDI, RAX
-  MOV RCX, RAX
-  DEBUG_FUNCTION_CALL SetTimer
+
+  DEBUG_FUNCTION_CALL Windowx64_ReadCpuMhz
+;  XOR R9, R9
+;  MOV R8, INIT_DEMO_STRUCT.EmulateVRTrace[RdI]
+;  MOV RDX, TIMER_EMULATE_VRTRACE
+;  MOV RCX, RAX
+;  DEBUG_FUNCTION_CALL SetTimer
+
   MOV RAX, RDI
 
 @SkipVRTraceEmulate:
@@ -231,7 +246,12 @@ NESTED_END Windowx64_Setup, _TEXT$00
 NESTED_ENTRY Windowx64_Loop, _TEXT$00
    alloc_stack(SIZEOF LOOP_STACK_FRAME)
 .ENDPROLOG 
+   CMP [EmulateVRTrace], 0
+   JE @Windowx64_MessageLoop
 
+   DEBUG_FUNCTION_CALL Windowx64_StartTimerValue
+   MOV [StartValue], RAX
+   
 @Windowx64_MessageLoop:
 
         MOV LOOP_STACK_FRAME.Param5[RSP], PM_REMOVE
@@ -244,8 +264,13 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
         TEST RAX, RAX
         JNZ SHORT @Windowx64_DeliverMessage
 
-		CMP [EmulateVRTrace], 0
-		JNE @Windowx64_MessageLoop
+	CMP [EmulateVRTrace], 0
+	JE @Windowx64_EngineDrawFrame
+  
+        MOV RCX, [StartValue]
+        DEBUG_FUNCTION_CALL Windowx64_GetElapsedMs
+        CMP RAX, FRAME_DELAY_VALUE
+        JB @Windowx64_MessageLoop
 
  @Windowx64_EngineDrawFrame:        
         ADD RSP, SIZEOF LOOP_STACK_FRAME
@@ -257,18 +282,18 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
   CMP LOOP_STACK_FRAME.Message.message[RSP], WM_QUIT
   JE SHORT @Windowx64_ReturnExitCode
 
-  CMP [EmulateVRTrace], 0
-  JE @SkipEmulateVRTrace
+;  CMP [EmulateVRTrace], 0
+;  JE @SkipEmulateVRTrace
 
-  CMP LOOP_STACK_FRAME.Message.message[RSP], WM_TIMER
-  JNE SHORT @SkipEmulateVRTrace
+;  CMP LOOP_STACK_FRAME.Message.message[RSP], WM_TIMER
+;  JNE SHORT @SkipEmulateVRTrace
 
-  LEA RCX, LOOP_STACK_FRAME.Message[RSP]
-  DEBUG_FUNCTION_CALL TranslateMessage
+;  LEA RCX, LOOP_STACK_FRAME.Message[RSP]
+;  DEBUG_FUNCTION_CALL TranslateMessage
   
-  LEA RCX, LOOP_STACK_FRAME.Message[RSP]
-  CALL DispatchMessageA
-  JMP @Windowx64_EngineDrawFrame
+;  LEA RCX, LOOP_STACK_FRAME.Message[RSP]
+;  CALL DispatchMessageA
+;  JMP @Windowx64_EngineDrawFrame
 
 @SkipEmulateVRTrace:
   LEA RCX, LOOP_STACK_FRAME.Message[RSP]
@@ -394,6 +419,121 @@ NESTED_ENTRY Windowx64_WinProc, _TEXT$00
   RET
 
 NESTED_END Windowx64_WinProc, _TEXT$00
+
+
+
+
+;*********************************************************
+;  Windowx64_ReadCpuMhz
+;     
+;        Parameters: None
+;
+;        Return: None
+;
+;
+;*********************************************************  
+NESTED_ENTRY Windowx64_ReadCpuMhz, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK_LV)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK_LV
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  ;
+  ; Default CPU MHz to 2GHz if we cannot open the key or query the value
+  ;
+  MOV [CpuMhz], 2000
+  LEA R8, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar1[RSP]
+  MOV STD_FUNCTION_STACK_LV.Parameters.Param5[RSP], R8
+  MOV R9, KEY_READ 
+  XOR R8, R8
+  MOV RDX, OFFSET RegistryCpuKey
+  MOV RCX, HKEY_LOCAL_MACHINE
+  DEBUG_FUNCTION_CALL RegOpenKeyExA 
+  CMP RAX, 0
+  JNE @OpenKeyFailed
+
+  MOV STD_FUNCTION_STACK_LV.LocalVariables.LocalVar2[RSP], 4
+  LEA RAX, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar2[RSP]
+  MOV STD_FUNCTION_STACK_LV.Parameters.Param6[RSP], RAX
+  MOV RAX, OFFSET CpuMhz
+  MOV STD_FUNCTION_STACK_LV.Parameters.Param5[RSP], RAX
+  XOR R9, R9 
+  XOR R8, R8
+  MOV RDX, OFFSET RegistryMhzValue
+  MOV RCX, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL RegQueryValueExA
+  ;
+  ;  Don't care about success or failure, we have to close the handle anyway.
+  ;
+
+  MOV RCX, STD_FUNCTION_STACK_LV.LocalVariables.LocalVar1[RSP]
+  DEBUG_FUNCTION_CALL RegCloseKey
+
+
+@OpenKeyFailed:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK_LV
+  ADD RSP, SIZE STD_FUNCTION_STACK_LV
+  RET
+NESTED_END Windowx64_ReadCpuMhz, _TEXT$00
+
+
+;*********************************************************
+;  Windowx64_StartTimerValue
+;     
+;        Parameters: None
+;
+;        Return: Start Value
+;
+;
+;*********************************************************  
+NESTED_ENTRY Windowx64_StartTimerValue, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  RDTSC
+  SHL RDX, 32
+  OR RAX, RDX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Windowx64_StartTimerValue, _TEXT$00
+
+
+;*********************************************************
+;  Windowx64_GetElapsedMs
+;     
+;        Parameters: Start Value
+;
+;        Return: Milliseconds
+;
+;
+;*********************************************************  
+NESTED_ENTRY Windowx64_GetElapsedMs, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  RDTSC
+  SHL RDX, 32
+  OR RAX, RDX
+
+  SUB RAX, RCX
+
+  XOR RDX, RDX
+  DIV [CpuMhz]
+  ; RAX is now microseconds (us)
+  XOR RDX, RDX
+  MOV RCX, 1000
+  DIV RCX
+  ; RAX should now be milliseconds (ms)
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END Windowx64_GetElapsedMs, _TEXT$00
 
 
 

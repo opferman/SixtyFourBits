@@ -331,7 +331,11 @@ NESTED_ENTRY GreatMachine_DisplayGamePanel, _TEXT$00
   MOV STD_FUNCTION_STACK.Parameters.Param5[RSP], PLAYER_SIDE_PANEL_FONT_SIZE
   MOV R9, 22
   MOV R8, 2
-  MOV RDX, [GameModeText]
+  LEA RDX, [GameModeText]
+  MOV RCX, [GameModeSelect]
+  SHL RCX, 3
+  ADD RDX, RCX
+  MOV RDX, [RDX]
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL GameEngine_PrintWord
 

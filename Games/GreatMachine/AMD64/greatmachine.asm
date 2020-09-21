@@ -662,8 +662,8 @@ endif
   ; Options Short Cuts
   ;
   LevelInformationEasy       EQU <LevelInfo_Easy_1_LevelNumber>
-  LevelInformationMedium     EQU <LevelInfo_Easy_1_LevelNumber>  
-  LevelInformationHard       EQU <LevelInfo_Easy_1_LevelNumber>
+  LevelInformationMedium     EQU <LevelInfo_Med_1_LevelNumber>  
+  LevelInformationHard       EQU <LevelInfo_Hard_1_LevelNumber>
    
   ;
   ; Level Data.  Structure too big to initialize directly.
@@ -759,72 +759,72 @@ endif
   LevelInfo_Easy_2_CurrentNumberOfPartThree          dq 0
   LevelInfo_Easy_2_NumberOfConcurrentBlockers        dq 1
   LevelInfo_Easy_2_CurrentNumberOfBlockers           dq 0
-  LevelInfo_Easy_2_NumberOfConcurrentStreetPeds      dq 1
+  LevelInfo_Easy_2_NumberOfConcurrentStreetPeds      dq 0
   LevelInfo_Easy_2_CurrentNumberOfStreetPeds         dq 0
-  LevelInfo_Easy_2_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_2_RequiredFuelCollection            dq 15
   LevelInfo_Easy_2_CurrentFuelCollection             dq 0
-  LevelInfo_Easy_2_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_2_RequiredPartOneCollection         dq 8
   LevelInfo_Easy_2_CurrentPartOneCollection          dq 0
-  LevelInfo_Easy_2_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_2_RequiredPartTwoCollection         dq 4
   LevelInfo_Easy_2_CurrentPartTwoCollection          dq 0
   LevelInfo_Easy_2_RequiredPartThreeCollection       dq 1
   LevelInfo_Easy_2_CurrentPartThreeCollection        dq 0
-  LevelInfo_Easy_2_GenerateCarsPercentage            dq 15
-  LevelInfo_Easy_2_GenerateFuelPercentage            dq 35
-  LevelInfo_Easy_2_GenerateCarPartOnPercentage       dq 20
-  LevelInfo_Easy_2_GenerateCarPartTwoPercentage      dq 15
-  LevelInfo_Easy_2_GenerateCarPartThreePercentage    dq 10
+  LevelInfo_Easy_2_GenerateCarsPercentage            dq 20
+  LevelInfo_Easy_2_GenerateFuelPercentage            dq 40
+  LevelInfo_Easy_2_GenerateCarPartOnPercentage       dq 15
+  LevelInfo_Easy_2_GenerateCarPartTwoPercentage      dq 10
+  LevelInfo_Easy_2_GenerateCarPartThreePercentage    dq 2
   LevelInfo_Easy_2_GenerateHazardsPercentage         dq 10
   LevelInfo_Easy_2_GenerateExtraLifePercentage       dq 5
-  LevelInfo_Easy_2_GeneratePedestriansPercentage     dq 25
-  LevelInfo_Easy_2_FuelPoints                        dq 150
-  LevelInfo_Easy_2_CarPartOnePoints                  dq 200
-  LevelInfo_Easy_2_CarPartTwoPoints                  dq 300
-  LevelInfo_Easy_2_CarPartThreePoints                dq 400
-  LevelInfo_Easy_2_CarDebounceRefresh                dq 500
-  LevelInfo_Easy_2_FuelDebounceRefresh               dq 50
-  LevelInfo_Easy_2_ExtraLifeDebounceRefresh          dq 2000
-  LevelInfo_Easy_2_Parts1DebounceRefresh             dq 100
-  LevelInfo_Easy_2_Parts2DebounceRefresh             dq 300
-  LevelInfo_Easy_2_Parts3DebounceRefresh             dq 500
-  LevelInfo_Easy_2_HazardDebounceRefresh             dq 50
-  LevelInfo_Easy_2_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_2_GeneratePedestriansPercentage     dq 60
+  LevelInfo_Easy_2_FuelPoints                        dq 250
+  LevelInfo_Easy_2_CarPartOnePoints                  dq 350
+  LevelInfo_Easy_2_CarPartTwoPoints                  dq 450
+  LevelInfo_Easy_2_CarPartThreePoints                dq 650
+  LevelInfo_Easy_2_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_2_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_2_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3
+  LevelInfo_Easy_2_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_2_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*10
+  LevelInfo_Easy_2_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25
+  LevelInfo_Easy_2_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_2_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2
   LevelInfo_Easy_2_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_2_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_2_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
-  LevelInfo_Easy_2_NumberBlockingItemCountRight      dq 2
+  LevelInfo_Easy_2_NumberBlockingItemCountRight      dq 1
   LevelInfo_Easy_2_BlockingItemCountRight            dq 0
-  LevelInfo_Easy_2_MinCarVelocity                    dq 3
+  LevelInfo_Easy_2_MinCarVelocity                    dq 2
   LevelInfo_Easy_2_MaxCarVelocity                    dq 4
   LevelInfo_Easy_2_PedestriansCanBeInStreet          dq 0
   LevelInfo_Easy_2_LevelStartDelay                   dq 200
   LevelInfo_Easy_2_LevelStartDelayRefresh            dq 200
-  LevelInfo_Easy_2_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_2_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_2_TimerBetweenConCurrentCars        dq 0
-  LevelInfo_Easy_2_TimerBetweenConcurrentCarsRefresh dq 50
+  LevelInfo_Easy_2_LevelTimer                        dq 1000 * 60 * 5  ; 5 Minutes
+  LevelInfo_Easy_2_LevelTimerRefresh                 dq 1000 * 60 * 5  ; 5 Minutes
+  LevelInfo_Easy_2_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_2_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_2_TimerAfterCarExitsScreen          dq 0
-  LevelInfo_Easy_2_TimerAfterCarExitsScreenRefresh   dq 100
+  LevelInfo_Easy_2_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_2_TimerForPedestrians               dq 0
-  LevelInfo_Easy_2_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_2_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_2_TimerForFuel                      dq 0
-  LevelInfo_Easy_2_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND
-  LevelInfo_Easy_2_TimerForExtraLives                dq 2000
+  LevelInfo_Easy_2_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_2_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120
   LevelInfo_Easy_2_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120
-  LevelInfo_Easy_2_TimerForHazard                    dq 50
-  LevelInfo_Easy_2_TimerForHazardRefresh             dq 50
-  LevelInfo_Easy_2_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5
-  LevelInfo_Easy_2_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
-  LevelInfo_Easy_2_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*7
-  LevelInfo_Easy_2_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*7
-  LevelInfo_Easy_2_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*25
-  LevelInfo_Easy_2_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*25
+  LevelInfo_Easy_2_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_2_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_2_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_2_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_2_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_2_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_2_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36
+  LevelInfo_Easy_2_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36
   LevelInfo_Easy_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
   LevelInfo_Easy_3_LevelNumber                       dq 3
   LevelInfo_Easy_3_LevelNumberGraphic                dq OFFSET LevelThreeGraphic
-  LevelInfo_Easy_3_NumberOfConcurrentCars            dq 2
+  LevelInfo_Easy_3_NumberOfConcurrentCars            dq 1
   LevelInfo_Easy_3_CurrentNumberOfCars               dq 0
   LevelInfo_Easy_3_NumberOfConcurrentFuel            dq 2
   LevelInfo_Easy_3_CurrentNumberOfFuel               dq 0
@@ -834,74 +834,74 @@ endif
   LevelInfo_Easy_3_CurrentNumberOfPartTwo            dq 0
   LevelInfo_Easy_3_NumberOfConcurrentPartThree       dq 1
   LevelInfo_Easy_3_CurrentNumberOfPartThree          dq 0
-  LevelInfo_Easy_3_NumberOfConcurrentBlockers        dq 1
+  LevelInfo_Easy_3_NumberOfConcurrentBlockers        dq 0
   LevelInfo_Easy_3_CurrentNumberOfBlockers           dq 0
   LevelInfo_Easy_3_NumberOfConcurrentStreetPeds      dq 1
   LevelInfo_Easy_3_CurrentNumberOfStreetPeds         dq 0
-  LevelInfo_Easy_3_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_3_RequiredFuelCollection            dq 20
   LevelInfo_Easy_3_CurrentFuelCollection             dq 0
-  LevelInfo_Easy_3_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_3_RequiredPartOneCollection         dq 10
   LevelInfo_Easy_3_CurrentPartOneCollection          dq 0
-  LevelInfo_Easy_3_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_3_RequiredPartTwoCollection         dq 5
   LevelInfo_Easy_3_CurrentPartTwoCollection          dq 0
-  LevelInfo_Easy_3_RequiredPartThreeCollection       dq 1
+  LevelInfo_Easy_3_RequiredPartThreeCollection       dq 2
   LevelInfo_Easy_3_CurrentPartThreeCollection        dq 0
-  LevelInfo_Easy_3_GenerateCarsPercentage            dq 15
-  LevelInfo_Easy_3_GenerateFuelPercentage            dq 35
-  LevelInfo_Easy_3_GenerateCarPartOnPercentage       dq 20
-  LevelInfo_Easy_3_GenerateCarPartTwoPercentage      dq 15
-  LevelInfo_Easy_3_GenerateCarPartThreePercentage    dq 10
-  LevelInfo_Easy_3_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_3_GenerateCarsPercentage            dq 20
+  LevelInfo_Easy_3_GenerateFuelPercentage            dq 40
+  LevelInfo_Easy_3_GenerateCarPartOnPercentage       dq 15
+  LevelInfo_Easy_3_GenerateCarPartTwoPercentage      dq 10
+  LevelInfo_Easy_3_GenerateCarPartThreePercentage    dq 2
+  LevelInfo_Easy_3_GenerateHazardsPercentage         dq 0
   LevelInfo_Easy_3_GenerateExtraLifePercentage       dq 5
-  LevelInfo_Easy_3_GeneratePedestriansPercentage     dq 25
-  LevelInfo_Easy_3_FuelPoints                        dq 150
-  LevelInfo_Easy_3_CarPartOnePoints                  dq 200
-  LevelInfo_Easy_3_CarPartTwoPoints                  dq 300
-  LevelInfo_Easy_3_CarPartThreePoints                dq 400
-  LevelInfo_Easy_3_CarDebounceRefresh                dq 500
-  LevelInfo_Easy_3_FuelDebounceRefresh               dq 50
-  LevelInfo_Easy_3_ExtraLifeDebounceRefresh          dq 2000
-  LevelInfo_Easy_3_Parts1DebounceRefresh             dq 100
-  LevelInfo_Easy_3_Parts2DebounceRefresh             dq 300
-  LevelInfo_Easy_3_Parts3DebounceRefresh             dq 500
-  LevelInfo_Easy_3_HazardDebounceRefresh             dq 50
-  LevelInfo_Easy_3_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_3_GeneratePedestriansPercentage     dq 60
+  LevelInfo_Easy_3_FuelPoints                        dq 400
+  LevelInfo_Easy_3_CarPartOnePoints                  dq 500
+  LevelInfo_Easy_3_CarPartTwoPoints                  dq 800
+  LevelInfo_Easy_3_CarPartThreePoints                dq 1000
+  LevelInfo_Easy_3_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_3_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_3_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3
+  LevelInfo_Easy_3_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_3_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*10
+  LevelInfo_Easy_3_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25
+  LevelInfo_Easy_3_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_3_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2
   LevelInfo_Easy_3_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_3_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_3_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
-  LevelInfo_Easy_3_NumberBlockingItemCountRight      dq 2
+  LevelInfo_Easy_3_NumberBlockingItemCountRight      dq 1
   LevelInfo_Easy_3_BlockingItemCountRight            dq 0
   LevelInfo_Easy_3_MinCarVelocity                    dq 3
   LevelInfo_Easy_3_MaxCarVelocity                    dq 4
-  LevelInfo_Easy_3_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_3_PedestriansCanBeInStreet          dq 1
   LevelInfo_Easy_3_LevelStartDelay                   dq 200
   LevelInfo_Easy_3_LevelStartDelayRefresh            dq 200
-  LevelInfo_Easy_3_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_3_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_3_TimerBetweenConCurrentCars        dq 0
-  LevelInfo_Easy_3_TimerBetweenConcurrentCarsRefresh dq 150
+  LevelInfo_Easy_3_LevelTimer                        dq 1000 * 60 * 5  ; 5 Minutes
+  LevelInfo_Easy_3_LevelTimerRefresh                 dq 1000 * 60 * 5  ; 5 Minutes
+  LevelInfo_Easy_3_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_3_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_3_TimerAfterCarExitsScreen          dq 0
-  LevelInfo_Easy_3_TimerAfterCarExitsScreenRefresh   dq 200
+  LevelInfo_Easy_3_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_3_TimerForPedestrians               dq 0
-  LevelInfo_Easy_3_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_3_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_3_TimerForFuel                      dq 0
-  LevelInfo_Easy_3_TimerForFuelRefresh               dq 300
-  LevelInfo_Easy_3_TimerForExtraLives                dq 2000
-  LevelInfo_Easy_3_TimerForExtraLivesRefresh         dq 2000
-  LevelInfo_Easy_3_TimerForHazard                    dq 50
-  LevelInfo_Easy_3_TimerForHazardRefresh             dq 50
-  LevelInfo_Easy_3_TimerForParts1                    dq 100
-  LevelInfo_Easy_3_TimerForParts1Refresh             dq 100
-  LevelInfo_Easy_3_TimerForParts2                    dq 500
-  LevelInfo_Easy_3_TimerForParts2Refresh             dq 500
-  LevelInfo_Easy_3_TimerForParts3                    dq 1000
-  LevelInfo_Easy_3_TimerForParts3Refresh             dq 1000
+  LevelInfo_Easy_3_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_3_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Easy_3_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Easy_3_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_3_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_3_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_3_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_3_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_3_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_3_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36
+  LevelInfo_Easy_3_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36
   LevelInfo_Easy_3_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_3_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
                  
   LevelInfo_Easy_4_LevelNumber                       dq 4
   LevelInfo_Easy_4_LevelNumberGraphic                dq OFFSET LevelFourGraphic
-  LevelInfo_Easy_4_NumberOfConcurrentCars            dq 2
+  LevelInfo_Easy_4_NumberOfConcurrentCars            dq 1
   LevelInfo_Easy_4_CurrentNumberOfCars               dq 0
   LevelInfo_Easy_4_NumberOfConcurrentFuel            dq 2
   LevelInfo_Easy_4_CurrentNumberOfFuel               dq 0
@@ -915,72 +915,700 @@ endif
   LevelInfo_Easy_4_CurrentNumberOfBlockers           dq 0
   LevelInfo_Easy_4_NumberOfConcurrentStreetPeds      dq 1
   LevelInfo_Easy_4_CurrentNumberOfStreetPeds         dq 0
-  LevelInfo_Easy_4_RequiredFuelCollection            dq 10
+  LevelInfo_Easy_4_RequiredFuelCollection            dq 25
   LevelInfo_Easy_4_CurrentFuelCollection             dq 0
-  LevelInfo_Easy_4_RequiredPartOneCollection         dq 5
+  LevelInfo_Easy_4_RequiredPartOneCollection         dq 15
   LevelInfo_Easy_4_CurrentPartOneCollection          dq 0
-  LevelInfo_Easy_4_RequiredPartTwoCollection         dq 2
+  LevelInfo_Easy_4_RequiredPartTwoCollection         dq 10
   LevelInfo_Easy_4_CurrentPartTwoCollection          dq 0
-  LevelInfo_Easy_4_RequiredPartThreeCollection       dq 1
+  LevelInfo_Easy_4_RequiredPartThreeCollection       dq 2
   LevelInfo_Easy_4_CurrentPartThreeCollection        dq 0
-  LevelInfo_Easy_4_GenerateCarsPercentage            dq 15
-  LevelInfo_Easy_4_GenerateFuelPercentage            dq 35
-  LevelInfo_Easy_4_GenerateCarPartOnPercentage       dq 20
-  LevelInfo_Easy_4_GenerateCarPartTwoPercentage      dq 15
-  LevelInfo_Easy_4_GenerateCarPartThreePercentage    dq 10
-  LevelInfo_Easy_4_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_4_GenerateCarsPercentage            dq 20
+  LevelInfo_Easy_4_GenerateFuelPercentage            dq 40
+  LevelInfo_Easy_4_GenerateCarPartOnPercentage       dq 15
+  LevelInfo_Easy_4_GenerateCarPartTwoPercentage      dq 10
+  LevelInfo_Easy_4_GenerateCarPartThreePercentage    dq 1
+  LevelInfo_Easy_4_GenerateHazardsPercentage         dq 5
   LevelInfo_Easy_4_GenerateExtraLifePercentage       dq 5
-  LevelInfo_Easy_4_GeneratePedestriansPercentage     dq 25
-  LevelInfo_Easy_4_FuelPoints                        dq 150
-  LevelInfo_Easy_4_CarPartOnePoints                  dq 200
-  LevelInfo_Easy_4_CarPartTwoPoints                  dq 300
-  LevelInfo_Easy_4_CarPartThreePoints                dq 400
-  LevelInfo_Easy_4_CarDebounceRefresh                dq 500
-  LevelInfo_Easy_4_FuelDebounceRefresh               dq 50
-  LevelInfo_Easy_4_ExtraLifeDebounceRefresh          dq 2000
-  LevelInfo_Easy_4_Parts1DebounceRefresh             dq 100
-  LevelInfo_Easy_4_Parts2DebounceRefresh             dq 300
-  LevelInfo_Easy_4_Parts3DebounceRefresh             dq 500
-  LevelInfo_Easy_4_HazardDebounceRefresh             dq 50
-  LevelInfo_Easy_4_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_4_GeneratePedestriansPercentage     dq 60
+  LevelInfo_Easy_4_FuelPoints                        dq 500
+  LevelInfo_Easy_4_CarPartOnePoints                  dq 600
+  LevelInfo_Easy_4_CarPartTwoPoints                  dq 900
+  LevelInfo_Easy_4_CarPartThreePoints                dq 2000
+  LevelInfo_Easy_4_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_4_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND*3
+  LevelInfo_Easy_4_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3
+  LevelInfo_Easy_4_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_4_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*10
+  LevelInfo_Easy_4_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*35
+  LevelInfo_Easy_4_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_4_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2
   LevelInfo_Easy_4_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_4_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_4_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
-  LevelInfo_Easy_4_NumberBlockingItemCountRight      dq 2
+  LevelInfo_Easy_4_NumberBlockingItemCountRight      dq 1
   LevelInfo_Easy_4_BlockingItemCountRight            dq 0
   LevelInfo_Easy_4_MinCarVelocity                    dq 3
-  LevelInfo_Easy_4_MaxCarVelocity                    dq 4
-  LevelInfo_Easy_4_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Easy_4_MaxCarVelocity                    dq 5
+  LevelInfo_Easy_4_PedestriansCanBeInStreet          dq 1
   LevelInfo_Easy_4_LevelStartDelay                   dq 200
   LevelInfo_Easy_4_LevelStartDelayRefresh            dq 200
-  LevelInfo_Easy_4_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_4_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_4_TimerBetweenConCurrentCars        dq 0
-  LevelInfo_Easy_4_TimerBetweenConcurrentCarsRefresh dq 150
+  LevelInfo_Easy_4_LevelTimer                        dq 1000 * 60 * 4  ; 4 Minutes
+  LevelInfo_Easy_4_LevelTimerRefresh                 dq 1000 * 60 * 4  ; 4 Minutes
+  LevelInfo_Easy_4_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_4_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_4_TimerAfterCarExitsScreen          dq 0
-  LevelInfo_Easy_4_TimerAfterCarExitsScreenRefresh   dq 200
+  LevelInfo_Easy_4_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_4_TimerForPedestrians               dq 0
-  LevelInfo_Easy_4_TimerForPedestriansRefresh        dq 50
+  LevelInfo_Easy_4_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_4_TimerForFuel                      dq 0
-  LevelInfo_Easy_4_TimerForFuelRefresh               dq 300
-  LevelInfo_Easy_4_TimerForExtraLives                dq 2000
-  LevelInfo_Easy_4_TimerForExtraLivesRefresh         dq 2000
-  LevelInfo_Easy_4_TimerForHazard                    dq 50
-  LevelInfo_Easy_4_TimerForHazardRefresh             dq 50
-  LevelInfo_Easy_4_TimerForParts1                    dq 100
-  LevelInfo_Easy_4_TimerForParts1Refresh             dq 100
-  LevelInfo_Easy_4_TimerForParts2                    dq 500
-  LevelInfo_Easy_4_TimerForParts2Refresh             dq 500
-  LevelInfo_Easy_4_TimerForParts3                    dq 1000
-  LevelInfo_Easy_4_TimerForParts3Refresh             dq 1000
+  LevelInfo_Easy_4_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_4_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Easy_4_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Easy_4_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_4_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Easy_4_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_4_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_4_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_4_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_4_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36
+  LevelInfo_Easy_4_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36
   LevelInfo_Easy_4_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_4_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel_Win
 
-    LevelNameGraphic     IMAGE_INFORMATION  <?>
-    LevelOneGraphic      IMAGE_INFORMATION  <?>
-    LevelTwoGraphic      IMAGE_INFORMATION  <?>
-    LevelThreeGraphic    IMAGE_INFORMATION  <?>
-    LevelFourGraphic     IMAGE_INFORMATION  <?>
+
+  LevelInfo_Med_1_LevelNumber                       dq 1
+  LevelInfo_Med_1_LevelNumberGraphic                dq OFFSET LevelOneGraphic
+  LevelInfo_Med_1_NumberOfConcurrentCars            dq 2
+  LevelInfo_Med_1_CurrentNumberOfCars               dq 0
+  LevelInfo_Med_1_NumberOfConcurrentFuel            dq 2
+  LevelInfo_Med_1_CurrentNumberOfFuel               dq 0
+  LevelInfo_Med_1_NumberOfConcurrentPartOne         dq 1
+  LevelInfo_Med_1_CurrentNumberOfPartOne            dq 0
+  LevelInfo_Med_1_NumberOfConcurrentPartTwo         dq 1
+  LevelInfo_Med_1_CurrentNumberOfPartTwo            dq 0
+  LevelInfo_Med_1_NumberOfConcurrentPartThree       dq 1
+  LevelInfo_Med_1_CurrentNumberOfPartThree          dq 0
+  LevelInfo_Med_1_NumberOfConcurrentBlockers        dq 0
+  LevelInfo_Med_1_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Med_1_NumberOfConcurrentStreetPeds      dq 0
+  LevelInfo_Med_1_CurrentNumberOfStreetPeds         dq 0
+  LevelInfo_Med_1_RequiredFuelCollection            dq 20
+  LevelInfo_Med_1_CurrentFuelCollection             dq 0
+  LevelInfo_Med_1_RequiredPartOneCollection         dq 15
+  LevelInfo_Med_1_CurrentPartOneCollection          dq 0
+  LevelInfo_Med_1_RequiredPartTwoCollection         dq 5
+  LevelInfo_Med_1_CurrentPartTwoCollection          dq 0
+  LevelInfo_Med_1_RequiredPartThreeCollection       dq 4
+  LevelInfo_Med_1_CurrentPartThreeCollection        dq 0
+  LevelInfo_Med_1_GenerateCarsPercentage            dq 30
+  LevelInfo_Med_1_GenerateFuelPercentage            dq 30
+  LevelInfo_Med_1_GenerateCarPartOnPercentage       dq 15
+  LevelInfo_Med_1_GenerateCarPartTwoPercentage      dq 10
+  LevelInfo_Med_1_GenerateCarPartThreePercentage    dq 2
+  LevelInfo_Med_1_GenerateHazardsPercentage         dq 0
+  LevelInfo_Med_1_GenerateExtraLifePercentage       dq 5
+  LevelInfo_Med_1_GeneratePedestriansPercentage     dq 50
+  LevelInfo_Med_1_FuelPoints                        dq 200
+  LevelInfo_Med_1_CarPartOnePoints                  dq 300
+  LevelInfo_Med_1_CarPartTwoPoints                  dq 400
+  LevelInfo_Med_1_CarPartThreePoints                dq 600
+  LevelInfo_Med_1_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Med_1_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Med_1_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3
+  LevelInfo_Med_1_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8
+  LevelInfo_Med_1_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16
+  LevelInfo_Med_1_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25
+  LevelInfo_Med_1_HazardDebounceRefresh             dq 0
+  LevelInfo_Med_1_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2
+  LevelInfo_Med_1_BlockingItemCountLane0            dq 0
+  LevelInfo_Med_1_BlockingItemCountLane1            dq 0
+  LevelInfo_Med_1_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Med_1_NumberBlockingItemCountRight      dq 0
+  LevelInfo_Med_1_BlockingItemCountRight            dq 0
+  LevelInfo_Med_1_MinCarVelocity                    dq 2
+  LevelInfo_Med_1_MaxCarVelocity                    dq 4
+  LevelInfo_Med_1_PedestriansCanBeInStreet          dq 0
+  LevelInfo_Med_1_LevelStartDelay                   dq 200
+  LevelInfo_Med_1_LevelStartDelayRefresh            dq 200
+  LevelInfo_Med_1_LevelTimer                        dq 1000 * 60 * 5  ; 5 Minutes
+  LevelInfo_Med_1_LevelTimerRefresh                 dq 1000 * 60 * 5  ; 5 Minutes
+  LevelInfo_Med_1_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Med_1_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Med_1_TimerAfterCarExitsScreen          dq 0
+  LevelInfo_Med_1_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3
+  LevelInfo_Med_1_TimerForPedestrians               dq 0
+  LevelInfo_Med_1_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND
+  LevelInfo_Med_1_TimerForFuel                      dq 0
+  LevelInfo_Med_1_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Med_1_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Med_1_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Med_1_TimerForHazard                    dq 0
+  LevelInfo_Med_1_TimerForHazardRefresh             dq 0
+  LevelInfo_Med_1_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Med_1_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Med_1_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Med_1_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Med_1_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36
+  LevelInfo_Med_1_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36
+  LevelInfo_Med_1_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Med_1_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
+
+  LevelInfo_Med_2_LevelNumber                       dq 2                                                                                                                                                       
+  LevelInfo_Med_2_LevelNumberGraphic                dq OFFSET LevelTwoGraphic                                                                                                                                  
+  LevelInfo_Med_2_NumberOfConcurrentCars            dq 2                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfCars               dq 0                                                                                                                                                       
+  LevelInfo_Med_2_NumberOfConcurrentFuel            dq 2                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfFuel               dq 0                                                                                                                                                       
+  LevelInfo_Med_2_NumberOfConcurrentPartOne         dq 1                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfPartOne            dq 0                                                                                                                                                       
+  LevelInfo_Med_2_NumberOfConcurrentPartTwo         dq 1                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfPartTwo            dq 0                                                                                                                                                       
+  LevelInfo_Med_2_NumberOfConcurrentPartThree       dq 1                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfPartThree          dq 0                                                                                                                                                       
+  LevelInfo_Med_2_NumberOfConcurrentBlockers        dq 1                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfBlockers           dq 0                                                                                                                                                       
+  LevelInfo_Med_2_NumberOfConcurrentStreetPeds      dq 0                                                                                                                                                       
+  LevelInfo_Med_2_CurrentNumberOfStreetPeds         dq 0                                                                                                                                                       
+  LevelInfo_Med_2_RequiredFuelCollection            dq 25                                                                                                                                                      
+  LevelInfo_Med_2_CurrentFuelCollection             dq 0                                                                                                                                                       
+  LevelInfo_Med_2_RequiredPartOneCollection         dq 20                                                                                                                                                      
+  LevelInfo_Med_2_CurrentPartOneCollection          dq 0                                                                                                                                                       
+  LevelInfo_Med_2_RequiredPartTwoCollection         dq 10                                                                                                                                                       
+  LevelInfo_Med_2_CurrentPartTwoCollection          dq 0                                                                                                                                                       
+  LevelInfo_Med_2_RequiredPartThreeCollection       dq 8                                                                                                                                                       
+  LevelInfo_Med_2_CurrentPartThreeCollection        dq 0                                                                                                                                                       
+  LevelInfo_Med_2_GenerateCarsPercentage            dq 30                                                                                                                                                      
+  LevelInfo_Med_2_GenerateFuelPercentage            dq 30                                                                                                                                                      
+  LevelInfo_Med_2_GenerateCarPartOnPercentage       dq 15                                                                                                                                                      
+  LevelInfo_Med_2_GenerateCarPartTwoPercentage      dq 10                                                                                                                                                      
+  LevelInfo_Med_2_GenerateCarPartThreePercentage    dq 2                                                                                                                                                       
+  LevelInfo_Med_2_GenerateHazardsPercentage         dq 5                                                                                                                                                       
+  LevelInfo_Med_2_GenerateExtraLifePercentage       dq 5                                                                                                                                                       
+  LevelInfo_Med_2_GeneratePedestriansPercentage     dq 50                                                                                                                                                      
+  LevelInfo_Med_2_FuelPoints                        dq 550                                                                                                                                                     
+  LevelInfo_Med_2_CarPartOnePoints                  dq 850                                                                                                                                                     
+  LevelInfo_Med_2_CarPartTwoPoints                  dq 950                                                                                                                                                     
+  LevelInfo_Med_2_CarPartThreePoints                dq 1150                                                                                                                                                     
+  LevelInfo_Med_2_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                                              
+  LevelInfo_Med_2_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                                              
+  LevelInfo_Med_2_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                                         
+  LevelInfo_Med_2_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                                            
+  LevelInfo_Med_2_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                                           
+  LevelInfo_Med_2_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                                           
+  LevelInfo_Med_2_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                                                                                                                                                     
+  LevelInfo_Med_2_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                                          
+  LevelInfo_Med_2_BlockingItemCountLane0            dq 0                                                                                                                                                       
+  LevelInfo_Med_2_BlockingItemCountLane1            dq 0                                                                                                                                                       
+  LevelInfo_Med_2_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                                               
+  LevelInfo_Med_2_NumberBlockingItemCountRight      dq 1                                                                                                                                                       
+  LevelInfo_Med_2_BlockingItemCountRight            dq 0                                                                                                                                                       
+  LevelInfo_Med_2_MinCarVelocity                    dq 3                                                                                                                                                       
+  LevelInfo_Med_2_MaxCarVelocity                    dq 5                                                                                                                                                       
+  LevelInfo_Med_2_PedestriansCanBeInStreet          dq 0                                                                                                                                                       
+  LevelInfo_Med_2_LevelStartDelay                   dq 200                                                                                                                                                     
+  LevelInfo_Med_2_LevelStartDelayRefresh            dq 200                                                                                                                                                     
+  LevelInfo_Med_2_LevelTimer                        dq 1000 * 60 * 5  ; 5 Minutes                                                                                                                              
+  LevelInfo_Med_2_LevelTimerRefresh                 dq 1000 * 60 * 5  ; 5 Minutes                                                                                                                              
+  LevelInfo_Med_2_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                            
+  LevelInfo_Med_2_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                            
+  LevelInfo_Med_2_TimerAfterCarExitsScreen          dq 0                                                                                                                                                       
+  LevelInfo_Med_2_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                                            
+  LevelInfo_Med_2_TimerForPedestrians               dq 0                                                                                                                                                       
+  LevelInfo_Med_2_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                                              
+  LevelInfo_Med_2_TimerForFuel                      dq 0                                                                                                                                                       
+  LevelInfo_Med_2_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Med_2_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                          
+  LevelInfo_Med_2_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                          
+  LevelInfo_Med_2_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                                                                                                                                                                   
+  LevelInfo_Med_2_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                                                                                                                                                                   
+  LevelInfo_Med_2_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Med_2_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Med_2_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Med_2_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Med_2_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                           
+  LevelInfo_Med_2_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                           
+  LevelInfo_Med_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel                                                                                                                          
+  LevelInfo_Med_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel                                                                                                                           
+            
+  LevelInfo_Med_3_LevelNumber                       dq 3
+  LevelInfo_Med_3_LevelNumberGraphic                dq OFFSET LevelThreeGraphic
+  LevelInfo_Med_3_NumberOfConcurrentCars            dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfCars               dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_NumberOfConcurrentFuel            dq 2                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfFuel               dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_NumberOfConcurrentPartOne         dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfPartOne            dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_NumberOfConcurrentPartTwo         dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfPartTwo            dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_NumberOfConcurrentPartThree       dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfPartThree          dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_NumberOfConcurrentBlockers        dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfBlockers           dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_NumberOfConcurrentStreetPeds      dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentNumberOfStreetPeds         dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_RequiredFuelCollection            dq 25                                                                                                                                                                         
+  LevelInfo_Med_3_CurrentFuelCollection             dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_RequiredPartOneCollection         dq 20                                                                                                                                                                         
+  LevelInfo_Med_3_CurrentPartOneCollection          dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_RequiredPartTwoCollection         dq 10                                                                                                                                                                         
+  LevelInfo_Med_3_CurrentPartTwoCollection          dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_RequiredPartThreeCollection       dq 8                                                                                                                                                                          
+  LevelInfo_Med_3_CurrentPartThreeCollection        dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_GenerateCarsPercentage            dq 30                                                                                                                                                                         
+  LevelInfo_Med_3_GenerateFuelPercentage            dq 30                                                                                                                                                                         
+  LevelInfo_Med_3_GenerateCarPartOnPercentage       dq 15                                                                                                                                                                         
+  LevelInfo_Med_3_GenerateCarPartTwoPercentage      dq 10                                                                                                                                                                         
+  LevelInfo_Med_3_GenerateCarPartThreePercentage    dq 2                                                                                                                                                                          
+  LevelInfo_Med_3_GenerateHazardsPercentage         dq 5                                                                                                                                                                          
+  LevelInfo_Med_3_GenerateExtraLifePercentage       dq 5                                                                                                                                                                          
+  LevelInfo_Med_3_GeneratePedestriansPercentage     dq 50                                                                                                                                                                         
+  LevelInfo_Med_3_FuelPoints                        dq 550                                                                                                                                                                        
+  LevelInfo_Med_3_CarPartOnePoints                  dq 850                                                                                                                                                                        
+  LevelInfo_Med_3_CarPartTwoPoints                  dq 950                                                                                                                                                                        
+  LevelInfo_Med_3_CarPartThreePoints                dq 1150                                                                                                                                                                       
+  LevelInfo_Med_3_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Med_3_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Med_3_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                                                            
+  LevelInfo_Med_3_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                                                               
+  LevelInfo_Med_3_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                                                              
+  LevelInfo_Med_3_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                                                              
+  LevelInfo_Med_3_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Med_3_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                                                             
+  LevelInfo_Med_3_BlockingItemCountLane0            dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_BlockingItemCountLane1            dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                                                                  
+  LevelInfo_Med_3_NumberBlockingItemCountRight      dq 2                                                                                                                                                                          
+  LevelInfo_Med_3_BlockingItemCountRight            dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_MinCarVelocity                    dq 4                                                                                                                                                                          
+  LevelInfo_Med_3_MaxCarVelocity                    dq 5                                                                                                                                                                          
+  LevelInfo_Med_3_PedestriansCanBeInStreet          dq 1                                                                                                                                                                          
+  LevelInfo_Med_3_LevelStartDelay                   dq 200                                                                                                                                                                        
+  LevelInfo_Med_3_LevelStartDelayRefresh            dq 200                                                                                                                                                                        
+  LevelInfo_Med_3_LevelTimer                        dq 1000 * 60 * 4  ; 4 Minutes                                                                                                                                                 
+  LevelInfo_Med_3_LevelTimerRefresh                 dq 1000 * 60 * 4  ; 4 Minutes                                                                                                                                                 
+  LevelInfo_Med_3_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Med_3_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Med_3_TimerAfterCarExitsScreen          dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                                                               
+  LevelInfo_Med_3_TimerForPedestrians               dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Med_3_TimerForFuel                      dq 0                                                                                                                                                                          
+  LevelInfo_Med_3_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Med_3_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                                             
+  LevelInfo_Med_3_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                                             
+  LevelInfo_Med_3_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Med_3_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Med_3_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Med_3_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Med_3_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Med_3_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Med_3_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                                              
+  LevelInfo_Med_3_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                                              
+  LevelInfo_Med_3_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Med_3_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
+                 
+  LevelInfo_Med_4_LevelNumber                       dq 4
+  LevelInfo_Med_4_LevelNumberGraphic                dq OFFSET LevelFourGraphic
+  LevelInfo_Med_4_NumberOfConcurrentCars            dq 2                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfCars               dq 0                                                                                                                                     
+  LevelInfo_Med_4_NumberOfConcurrentFuel            dq 2                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfFuel               dq 0                                                                                                                                     
+  LevelInfo_Med_4_NumberOfConcurrentPartOne         dq 1                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfPartOne            dq 0                                                                                                                                     
+  LevelInfo_Med_4_NumberOfConcurrentPartTwo         dq 1                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfPartTwo            dq 0                                                                                                                                     
+  LevelInfo_Med_4_NumberOfConcurrentPartThree       dq 1                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfPartThree          dq 0                                                                                                                                     
+  LevelInfo_Med_4_NumberOfConcurrentBlockers        dq 2                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfBlockers           dq 0                                                                                                                                     
+  LevelInfo_Med_4_NumberOfConcurrentStreetPeds      dq 1                                                                                                                                     
+  LevelInfo_Med_4_CurrentNumberOfStreetPeds         dq 0                                                                                                                                     
+  LevelInfo_Med_4_RequiredFuelCollection            dq 25                                                                                                                                    
+  LevelInfo_Med_4_CurrentFuelCollection             dq 0                                                                                                                                     
+  LevelInfo_Med_4_RequiredPartOneCollection         dq 20                                                                                                                                    
+  LevelInfo_Med_4_CurrentPartOneCollection          dq 0                                                                                                                                     
+  LevelInfo_Med_4_RequiredPartTwoCollection         dq 10                                                                                                                                    
+  LevelInfo_Med_4_CurrentPartTwoCollection          dq 0                                                                                                                                     
+  LevelInfo_Med_4_RequiredPartThreeCollection       dq 8                                                                                                                                     
+  LevelInfo_Med_4_CurrentPartThreeCollection        dq 0                                                                                                                                     
+  LevelInfo_Med_4_GenerateCarsPercentage            dq 30                                                                                                                                    
+  LevelInfo_Med_4_GenerateFuelPercentage            dq 30                                                                                                                                    
+  LevelInfo_Med_4_GenerateCarPartOnPercentage       dq 15                                                                                                                                    
+  LevelInfo_Med_4_GenerateCarPartTwoPercentage      dq 10                                                                                                                                    
+  LevelInfo_Med_4_GenerateCarPartThreePercentage    dq 2                                                                                                                                     
+  LevelInfo_Med_4_GenerateHazardsPercentage         dq 5                                                                                                                                     
+  LevelInfo_Med_4_GenerateExtraLifePercentage       dq 5                                                                                                                                     
+  LevelInfo_Med_4_GeneratePedestriansPercentage     dq 50                                                                                                                                    
+  LevelInfo_Med_4_FuelPoints                        dq 550                                                                                                                                   
+  LevelInfo_Med_4_CarPartOnePoints                  dq 850                                                                                                                                   
+  LevelInfo_Med_4_CarPartTwoPoints                  dq 950                                                                                                                                   
+  LevelInfo_Med_4_CarPartThreePoints                dq 1150                                                                                                                                  
+  LevelInfo_Med_4_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Med_4_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Med_4_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                       
+  LevelInfo_Med_4_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                          
+  LevelInfo_Med_4_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                         
+  LevelInfo_Med_4_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                         
+  LevelInfo_Med_4_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Med_4_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                        
+  LevelInfo_Med_4_BlockingItemCountLane0            dq 0                                                                                                                                     
+  LevelInfo_Med_4_BlockingItemCountLane1            dq 0                                                                                                                                     
+  LevelInfo_Med_4_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                             
+  LevelInfo_Med_4_NumberBlockingItemCountRight      dq 2                                                                                                                                     
+  LevelInfo_Med_4_BlockingItemCountRight            dq 0                                                                                                                                     
+  LevelInfo_Med_4_MinCarVelocity                    dq 4                                                                                                                                     
+  LevelInfo_Med_4_MaxCarVelocity                    dq 5                                                                                                                                     
+  LevelInfo_Med_4_PedestriansCanBeInStreet          dq 1                                                                                                                                     
+  LevelInfo_Med_4_LevelStartDelay                   dq 200                                                                                                                                   
+  LevelInfo_Med_4_LevelStartDelayRefresh            dq 200                                                                                                                                   
+  LevelInfo_Med_4_LevelTimer                        dq 1000 * 60 * 4  ; 4 Minutes                                                                                                            
+  LevelInfo_Med_4_LevelTimerRefresh                 dq 1000 * 60 * 4  ; 4 Minutes                                                                                                            
+  LevelInfo_Med_4_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Med_4_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Med_4_TimerAfterCarExitsScreen          dq 0                                                                                                                                     
+  LevelInfo_Med_4_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                          
+  LevelInfo_Med_4_TimerForPedestrians               dq 0                                                                                                                                     
+  LevelInfo_Med_4_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Med_4_TimerForFuel                      dq 0                                                                                                                                     
+  LevelInfo_Med_4_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Med_4_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                        
+  LevelInfo_Med_4_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                        
+  LevelInfo_Med_4_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Med_4_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Med_4_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Med_4_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Med_4_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Med_4_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Med_4_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                         
+  LevelInfo_Med_4_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                         
+  LevelInfo_Med_4_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Med_4_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel_Win
+
+  ;
+  ; Hard Mode Settings
+  ;
+
+  LevelInfo_Hard_1_LevelNumber                       dq 1                                                                                                                                                       
+  LevelInfo_Hard_1_LevelNumberGraphic                dq OFFSET LevelOneGraphic                                                                                                                                  
+  LevelInfo_Hard_1_NumberOfConcurrentCars            dq 2                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfCars               dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_NumberOfConcurrentFuel            dq 2                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfFuel               dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_NumberOfConcurrentPartOne         dq 1                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfPartOne            dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_NumberOfConcurrentPartTwo         dq 1                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfPartTwo            dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_NumberOfConcurrentPartThree       dq 1                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfPartThree          dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_NumberOfConcurrentBlockers        dq 1                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfBlockers           dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_NumberOfConcurrentStreetPeds      dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentNumberOfStreetPeds         dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_RequiredFuelCollection            dq 25                                                                                                                                                      
+  LevelInfo_Hard_1_CurrentFuelCollection             dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_RequiredPartOneCollection         dq 20                                                                                                                                                      
+  LevelInfo_Hard_1_CurrentPartOneCollection          dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_RequiredPartTwoCollection         dq 10                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentPartTwoCollection          dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_RequiredPartThreeCollection       dq 8                                                                                                                                                       
+  LevelInfo_Hard_1_CurrentPartThreeCollection        dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_GenerateCarsPercentage            dq 30                                                                                                                                                      
+  LevelInfo_Hard_1_GenerateFuelPercentage            dq 30                                                                                                                                                      
+  LevelInfo_Hard_1_GenerateCarPartOnPercentage       dq 15                                                                                                                                                      
+  LevelInfo_Hard_1_GenerateCarPartTwoPercentage      dq 10                                                                                                                                                      
+  LevelInfo_Hard_1_GenerateCarPartThreePercentage    dq 2                                                                                                                                                       
+  LevelInfo_Hard_1_GenerateHazardsPercentage         dq 5                                                                                                                                                       
+  LevelInfo_Hard_1_GenerateExtraLifePercentage       dq 5                                                                                                                                                       
+  LevelInfo_Hard_1_GeneratePedestriansPercentage     dq 50                                                                                                                                                      
+  LevelInfo_Hard_1_FuelPoints                        dq 550                                                                                                                                                     
+  LevelInfo_Hard_1_CarPartOnePoints                  dq 850                                                                                                                                                     
+  LevelInfo_Hard_1_CarPartTwoPoints                  dq 950                                                                                                                                                     
+  LevelInfo_Hard_1_CarPartThreePoints                dq 1150                                                                                                                                                     
+  LevelInfo_Hard_1_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                                              
+  LevelInfo_Hard_1_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                                              
+  LevelInfo_Hard_1_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                                         
+  LevelInfo_Hard_1_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                                            
+  LevelInfo_Hard_1_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                                           
+  LevelInfo_Hard_1_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                                           
+  LevelInfo_Hard_1_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                                                                                                                                                     
+  LevelInfo_Hard_1_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                                          
+  LevelInfo_Hard_1_BlockingItemCountLane0            dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_BlockingItemCountLane1            dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                                               
+  LevelInfo_Hard_1_NumberBlockingItemCountRight      dq 1                                                                                                                                                       
+  LevelInfo_Hard_1_BlockingItemCountRight            dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_MinCarVelocity                    dq 3                                                                                                                                                       
+  LevelInfo_Hard_1_MaxCarVelocity                    dq 5                                                                                                                                                       
+  LevelInfo_Hard_1_PedestriansCanBeInStreet          dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_LevelStartDelay                   dq 200                                                                                                                                                     
+  LevelInfo_Hard_1_LevelStartDelayRefresh            dq 200                                                                                                                                                     
+  LevelInfo_Hard_1_LevelTimer                        dq 1000 * 60 * 5  ; 5 Minutes                                                                                                                              
+  LevelInfo_Hard_1_LevelTimerRefresh                 dq 1000 * 60 * 5  ; 5 Minutes                                                                                                                              
+  LevelInfo_Hard_1_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                            
+  LevelInfo_Hard_1_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                            
+  LevelInfo_Hard_1_TimerAfterCarExitsScreen          dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                                            
+  LevelInfo_Hard_1_TimerForPedestrians               dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                                              
+  LevelInfo_Hard_1_TimerForFuel                      dq 0                                                                                                                                                       
+  LevelInfo_Hard_1_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Hard_1_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                          
+  LevelInfo_Hard_1_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                          
+  LevelInfo_Hard_1_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                                                                                                                                                                   
+  LevelInfo_Hard_1_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                                                                                                                                                                   
+  LevelInfo_Hard_1_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Hard_1_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Hard_1_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Hard_1_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                            
+  LevelInfo_Hard_1_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                           
+  LevelInfo_Hard_1_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                           
+  LevelInfo_Hard_1_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel                                                                                                                          
+  LevelInfo_Hard_1_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel                                                                                                                           
+            
+  LevelInfo_Hard_2_LevelNumber                       dq 2
+  LevelInfo_Hard_2_LevelNumberGraphic                dq OFFSET LevelTwoGraphic
+  LevelInfo_Hard_2_NumberOfConcurrentCars            dq 2                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfCars               dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_NumberOfConcurrentFuel            dq 2                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfFuel               dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_NumberOfConcurrentPartOne         dq 1                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfPartOne            dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_NumberOfConcurrentPartTwo         dq 1                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfPartTwo            dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_NumberOfConcurrentPartThree       dq 1                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfPartThree          dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_NumberOfConcurrentBlockers        dq 1                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfBlockers           dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_NumberOfConcurrentStreetPeds      dq 1                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentNumberOfStreetPeds         dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_RequiredFuelCollection            dq 25                                                                                                                                                                         
+  LevelInfo_Hard_2_CurrentFuelCollection             dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_RequiredPartOneCollection         dq 20                                                                                                                                                                         
+  LevelInfo_Hard_2_CurrentPartOneCollection          dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_RequiredPartTwoCollection         dq 10                                                                                                                                                                         
+  LevelInfo_Hard_2_CurrentPartTwoCollection          dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_RequiredPartThreeCollection       dq 8                                                                                                                                                                          
+  LevelInfo_Hard_2_CurrentPartThreeCollection        dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_GenerateCarsPercentage            dq 30                                                                                                                                                                         
+  LevelInfo_Hard_2_GenerateFuelPercentage            dq 30                                                                                                                                                                         
+  LevelInfo_Hard_2_GenerateCarPartOnPercentage       dq 15                                                                                                                                                                         
+  LevelInfo_Hard_2_GenerateCarPartTwoPercentage      dq 10                                                                                                                                                                         
+  LevelInfo_Hard_2_GenerateCarPartThreePercentage    dq 2                                                                                                                                                                          
+  LevelInfo_Hard_2_GenerateHazardsPercentage         dq 5                                                                                                                                                                          
+  LevelInfo_Hard_2_GenerateExtraLifePercentage       dq 5                                                                                                                                                                          
+  LevelInfo_Hard_2_GeneratePedestriansPercentage     dq 50                                                                                                                                                                         
+  LevelInfo_Hard_2_FuelPoints                        dq 550                                                                                                                                                                        
+  LevelInfo_Hard_2_CarPartOnePoints                  dq 850                                                                                                                                                                        
+  LevelInfo_Hard_2_CarPartTwoPoints                  dq 950                                                                                                                                                                        
+  LevelInfo_Hard_2_CarPartThreePoints                dq 1150                                                                                                                                                                       
+  LevelInfo_Hard_2_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Hard_2_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Hard_2_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                                                            
+  LevelInfo_Hard_2_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                                                               
+  LevelInfo_Hard_2_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                                                              
+  LevelInfo_Hard_2_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                                                              
+  LevelInfo_Hard_2_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Hard_2_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                                                             
+  LevelInfo_Hard_2_BlockingItemCountLane0            dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_BlockingItemCountLane1            dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                                                                  
+  LevelInfo_Hard_2_NumberBlockingItemCountRight      dq 2                                                                                                                                                                          
+  LevelInfo_Hard_2_BlockingItemCountRight            dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_MinCarVelocity                    dq 4                                                                                                                                                                          
+  LevelInfo_Hard_2_MaxCarVelocity                    dq 5                                                                                                                                                                          
+  LevelInfo_Hard_2_PedestriansCanBeInStreet          dq 1                                                                                                                                                                          
+  LevelInfo_Hard_2_LevelStartDelay                   dq 200                                                                                                                                                                        
+  LevelInfo_Hard_2_LevelStartDelayRefresh            dq 200                                                                                                                                                                        
+  LevelInfo_Hard_2_LevelTimer                        dq 1000 * 60 * 4  ; 4 Minutes                                                                                                                                                 
+  LevelInfo_Hard_2_LevelTimerRefresh                 dq 1000 * 60 * 4  ; 4 Minutes                                                                                                                                                 
+  LevelInfo_Hard_2_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Hard_2_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Hard_2_TimerAfterCarExitsScreen          dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                                                               
+  LevelInfo_Hard_2_TimerForPedestrians               dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                                                                 
+  LevelInfo_Hard_2_TimerForFuel                      dq 0                                                                                                                                                                          
+  LevelInfo_Hard_2_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Hard_2_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                                             
+  LevelInfo_Hard_2_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                                                             
+  LevelInfo_Hard_2_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Hard_2_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                                                               
+  LevelInfo_Hard_2_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Hard_2_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Hard_2_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Hard_2_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                                                               
+  LevelInfo_Hard_2_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                                              
+  LevelInfo_Hard_2_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                                                              
+  LevelInfo_Hard_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Hard_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
+                 
+  LevelInfo_Hard_3_LevelNumber                       dq 3
+  LevelInfo_Hard_3_LevelNumberGraphic                dq OFFSET LevelThreeGraphic
+  LevelInfo_Hard_3_NumberOfConcurrentCars            dq 2                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfCars               dq 0                                                                                                                                     
+  LevelInfo_Hard_3_NumberOfConcurrentFuel            dq 2                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfFuel               dq 0                                                                                                                                     
+  LevelInfo_Hard_3_NumberOfConcurrentPartOne         dq 1                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfPartOne            dq 0                                                                                                                                     
+  LevelInfo_Hard_3_NumberOfConcurrentPartTwo         dq 1                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfPartTwo            dq 0                                                                                                                                     
+  LevelInfo_Hard_3_NumberOfConcurrentPartThree       dq 1                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfPartThree          dq 0                                                                                                                                     
+  LevelInfo_Hard_3_NumberOfConcurrentBlockers        dq 2                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfBlockers           dq 0                                                                                                                                     
+  LevelInfo_Hard_3_NumberOfConcurrentStreetPeds      dq 2                                                                                                                                     
+  LevelInfo_Hard_3_CurrentNumberOfStreetPeds         dq 0                                                                                                                                     
+  LevelInfo_Hard_3_RequiredFuelCollection            dq 25                                                                                                                                    
+  LevelInfo_Hard_3_CurrentFuelCollection             dq 0                                                                                                                                     
+  LevelInfo_Hard_3_RequiredPartOneCollection         dq 20                                                                                                                                    
+  LevelInfo_Hard_3_CurrentPartOneCollection          dq 0                                                                                                                                     
+  LevelInfo_Hard_3_RequiredPartTwoCollection         dq 10                                                                                                                                    
+  LevelInfo_Hard_3_CurrentPartTwoCollection          dq 0                                                                                                                                     
+  LevelInfo_Hard_3_RequiredPartThreeCollection       dq 8                                                                                                                                     
+  LevelInfo_Hard_3_CurrentPartThreeCollection        dq 0                                                                                                                                     
+  LevelInfo_Hard_3_GenerateCarsPercentage            dq 30                                                                                                                                    
+  LevelInfo_Hard_3_GenerateFuelPercentage            dq 30                                                                                                                                    
+  LevelInfo_Hard_3_GenerateCarPartOnPercentage       dq 15                                                                                                                                    
+  LevelInfo_Hard_3_GenerateCarPartTwoPercentage      dq 10                                                                                                                                    
+  LevelInfo_Hard_3_GenerateCarPartThreePercentage    dq 2                                                                                                                                     
+  LevelInfo_Hard_3_GenerateHazardsPercentage         dq 5                                                                                                                                     
+  LevelInfo_Hard_3_GenerateExtraLifePercentage       dq 5                                                                                                                                     
+  LevelInfo_Hard_3_GeneratePedestriansPercentage     dq 50                                                                                                                                    
+  LevelInfo_Hard_3_FuelPoints                        dq 550                                                                                                                                   
+  LevelInfo_Hard_3_CarPartOnePoints                  dq 850                                                                                                                                   
+  LevelInfo_Hard_3_CarPartTwoPoints                  dq 950                                                                                                                                   
+  LevelInfo_Hard_3_CarPartThreePoints                dq 1150                                                                                                                                  
+  LevelInfo_Hard_3_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_3_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_3_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                       
+  LevelInfo_Hard_3_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                          
+  LevelInfo_Hard_3_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                         
+  LevelInfo_Hard_3_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                         
+  LevelInfo_Hard_3_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_3_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                        
+  LevelInfo_Hard_3_BlockingItemCountLane0            dq 0                                                                                                                                     
+  LevelInfo_Hard_3_BlockingItemCountLane1            dq 0                                                                                                                                     
+  LevelInfo_Hard_3_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                             
+  LevelInfo_Hard_3_NumberBlockingItemCountRight      dq 2                                                                                                                                     
+  LevelInfo_Hard_3_BlockingItemCountRight            dq 0                                                                                                                                     
+  LevelInfo_Hard_3_MinCarVelocity                    dq 5                                                                                                                                     
+  LevelInfo_Hard_3_MaxCarVelocity                    dq 5                                                                                                                                     
+  LevelInfo_Hard_3_PedestriansCanBeInStreet          dq 1                                                                                                                                     
+  LevelInfo_Hard_3_LevelStartDelay                   dq 200                                                                                                                                   
+  LevelInfo_Hard_3_LevelStartDelayRefresh            dq 200                                                                                                                                   
+  LevelInfo_Hard_3_LevelTimer                        dq 1000 * 60 * 4  ; 4 Minutes                                                                                                            
+  LevelInfo_Hard_3_LevelTimerRefresh                 dq 1000 * 60 * 4  ; 4 Minutes                                                                                                            
+  LevelInfo_Hard_3_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_3_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_3_TimerAfterCarExitsScreen          dq 0                                                                                                                                     
+  LevelInfo_Hard_3_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                          
+  LevelInfo_Hard_3_TimerForPedestrians               dq 0                                                                                                                                     
+  LevelInfo_Hard_3_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_3_TimerForFuel                      dq 0                                                                                                                                     
+  LevelInfo_Hard_3_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_3_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                        
+  LevelInfo_Hard_3_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                        
+  LevelInfo_Hard_3_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_3_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_3_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_3_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_3_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_3_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_3_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                         
+  LevelInfo_Hard_3_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                         
+  LevelInfo_Hard_3_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Hard_3_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
+
+
+  LevelInfo_Hard_4_LevelNumber                       dq 4
+  LevelInfo_Hard_4_LevelNumberGraphic                dq OFFSET LevelFourGraphic
+  LevelInfo_Hard_4_NumberOfConcurrentCars            dq 2                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfCars               dq 0                                                                                                                                     
+  LevelInfo_Hard_4_NumberOfConcurrentFuel            dq 2                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfFuel               dq 0                                                                                                                                     
+  LevelInfo_Hard_4_NumberOfConcurrentPartOne         dq 1                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfPartOne            dq 0                                                                                                                                     
+  LevelInfo_Hard_4_NumberOfConcurrentPartTwo         dq 1                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfPartTwo            dq 0                                                                                                                                     
+  LevelInfo_Hard_4_NumberOfConcurrentPartThree       dq 1                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfPartThree          dq 0                                                                                                                                     
+  LevelInfo_Hard_4_NumberOfConcurrentBlockers        dq 2                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfBlockers           dq 0                                                                                                                                     
+  LevelInfo_Hard_4_NumberOfConcurrentStreetPeds      dq 2                                                                                                                                     
+  LevelInfo_Hard_4_CurrentNumberOfStreetPeds         dq 0                                                                                                                                     
+  LevelInfo_Hard_4_RequiredFuelCollection            dq 20                                                                                                                                    
+  LevelInfo_Hard_4_CurrentFuelCollection             dq 0                                                                                                                                     
+  LevelInfo_Hard_4_RequiredPartOneCollection         dq 20                                                                                                                                    
+  LevelInfo_Hard_4_CurrentPartOneCollection          dq 0                                                                                                                                     
+  LevelInfo_Hard_4_RequiredPartTwoCollection         dq 10                                                                                                                                    
+  LevelInfo_Hard_4_CurrentPartTwoCollection          dq 0                                                                                                                                     
+  LevelInfo_Hard_4_RequiredPartThreeCollection       dq 10                                                                                                                                     
+  LevelInfo_Hard_4_CurrentPartThreeCollection        dq 0                                                                                                                                     
+  LevelInfo_Hard_4_GenerateCarsPercentage            dq 50                                                                                                                                    
+  LevelInfo_Hard_4_GenerateFuelPercentage            dq 30                                                                                                                                    
+  LevelInfo_Hard_4_GenerateCarPartOnPercentage       dq 15                                                                                                                                    
+  LevelInfo_Hard_4_GenerateCarPartTwoPercentage      dq 10                                                                                                                                    
+  LevelInfo_Hard_4_GenerateCarPartThreePercentage    dq 2                                                                                                                                     
+  LevelInfo_Hard_4_GenerateHazardsPercentage         dq 50                                                                                                                                     
+  LevelInfo_Hard_4_GenerateExtraLifePercentage       dq 5                                                                                                                                     
+  LevelInfo_Hard_4_GeneratePedestriansPercentage     dq 50                                                                                                                                    
+  LevelInfo_Hard_4_FuelPoints                        dq 1000                                                                                                                                   
+  LevelInfo_Hard_4_CarPartOnePoints                  dq 2000                                                                                                                                   
+  LevelInfo_Hard_4_CarPartTwoPoints                  dq 3000                                                                                                                                   
+  LevelInfo_Hard_4_CarPartThreePoints                dq 4000                                                                                                                                  
+  LevelInfo_Hard_4_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_4_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_4_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3                                                                                                       
+  LevelInfo_Hard_4_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8                                                                                                          
+  LevelInfo_Hard_4_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16                                                                                                         
+  LevelInfo_Hard_4_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25                                                                                                         
+  LevelInfo_Hard_4_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_4_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2                                                                                                        
+  LevelInfo_Hard_4_BlockingItemCountLane0            dq 0                                                                                                                                     
+  LevelInfo_Hard_4_BlockingItemCountLane1            dq 0                                                                                                                                     
+  LevelInfo_Hard_4_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.                                                                             
+  LevelInfo_Hard_4_NumberBlockingItemCountRight      dq 2                                                                                                                                     
+  LevelInfo_Hard_4_BlockingItemCountRight            dq 0                                                                                                                                     
+  LevelInfo_Hard_4_MinCarVelocity                    dq 5                                                                                                                                     
+  LevelInfo_Hard_4_MaxCarVelocity                    dq 6                                                                                                                                     
+  LevelInfo_Hard_4_PedestriansCanBeInStreet          dq 1                                                                                                                                     
+  LevelInfo_Hard_4_LevelStartDelay                   dq 200                                                                                                                                   
+  LevelInfo_Hard_4_LevelStartDelayRefresh            dq 200                                                                                                                                   
+  LevelInfo_Hard_4_LevelTimer                        dq 1000 * 60 * 3  ; 3 Minutes                                                                                                            
+  LevelInfo_Hard_4_LevelTimerRefresh                 dq 1000 * 60 * 3  ; 3 Minutes                                                                                                            
+  LevelInfo_Hard_4_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_4_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_4_TimerAfterCarExitsScreen          dq 0                                                                                                                                     
+  LevelInfo_Hard_4_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3                                                                                                          
+  LevelInfo_Hard_4_TimerForPedestrians               dq 0                                                                                                                                     
+  LevelInfo_Hard_4_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND                                                                                                            
+  LevelInfo_Hard_4_TimerForFuel                      dq 0                                                                                                                                     
+  LevelInfo_Hard_4_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_4_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                        
+  LevelInfo_Hard_4_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120                                                                                                        
+  LevelInfo_Hard_4_TimerForHazard                    dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_4_TimerForHazardRefresh             dq ESTIMATED_TICKS_PER_SECOND*2                                                                                                          
+  LevelInfo_Hard_4_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_4_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_4_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_4_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5                                                                                                          
+  LevelInfo_Hard_4_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                         
+  LevelInfo_Hard_4_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36                                                                                                         
+  LevelInfo_Hard_4_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
+  LevelInfo_Hard_4_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel_Win
+
+
+
+
+
+
+
+  LevelNameGraphic     IMAGE_INFORMATION  <?>
+  LevelOneGraphic      IMAGE_INFORMATION  <?>
+  LevelTwoGraphic      IMAGE_INFORMATION  <?>
+  LevelThreeGraphic    IMAGE_INFORMATION  <?>
+  LevelFourGraphic     IMAGE_INFORMATION  <?>
 
     ;
     ; Activate Boom Timer
@@ -1083,7 +1711,7 @@ endif
                                     dq 0
 
     AboutText                       dq 50, 275
-                                    db "Great Machine Version 1.0 Beta", 0
+                                    db "Great Machine Version 1.0  Beta", 0
                                     dq 50, 375
                                     db "Written in 100% x64 x86 Assembly", 0
                                     dq 50, 400
