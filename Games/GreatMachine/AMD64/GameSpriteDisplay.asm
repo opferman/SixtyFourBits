@@ -593,14 +593,20 @@ NESTED_ENTRY GreateMachine_Pedestrian_OffScreen, _TEXT$00
   MOV RAX, SPECIAL_SPRITE_STRUCT.SpriteDeBounceRefresh[RDI]
   MOV SPECIAL_SPRITE_STRUCT.SpriteDeBounce[RDI], RAX
 
-  MOV RCX, [LevelInformationPtr]
+  MOV R8, [LevelInformationPtr]
 
-  MOV RAX, LEVEL_INFO.TimerForPedestriansRefresh[RCX]
-  MOV LEVEL_INFO.TimerForPedestrians[RCX], RAX
+  MOV RAX, LEVEL_INFO.TimerForPedestriansRefresh[R8]
+  MOV LEVEL_INFO.TimerForPedestrians[R8], RAX
   
   MOV RDX, RCX
   MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RDI]
 
+  TEST RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2
+  JZ @SkipUpdateCounter
+  DEC LEVEL_INFO.CurrentNumberOfStreetPeds[R8]
+@SkipUpdateCounter:
+  MOV RDX, LANE_GENERATE_RIGHT
+  MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RDI]
   DEBUG_FUNCTION_CALL GreatMachine_UnblockLane
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -769,7 +775,8 @@ NESTED_ENTRY GreateMachine_Hazard_OffScreen, _TEXT$00
   MOV RAX, LEVEL_INFO.TimerForHazardRefresh[RDX]
   MOV LEVEL_INFO.TimerForHazard[RDX], RAX
   DEC LEVEL_INFO.CurrentNumberOfBlockers[RDX]
-
+  
+  MOV RDX, LANE_GENERATE_RIGHT
   MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RCX]
   DEBUG_FUNCTION_CALL GreatMachine_UnblockLane
 
@@ -797,7 +804,7 @@ NESTED_ENTRY GreateMachine_Car_OffScreen, _TEXT$00
   DEC LEVEL_INFO.CurrentNumberOfCars[RDX]
   MOV RAX, LEVEL_INFO.TimerAfterCarExitsScreenRefresh[RDX]
   MOV LEVEL_INFO.TimerAfterCarExitsScreen[RDX], RAX
-
+  MOV RDX, LANE_GENERATE_LEFT
   MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RCX]
   DEBUG_FUNCTION_CALL GreatMachine_UnblockLane
    
@@ -810,7 +817,7 @@ NESTED_END GreateMachine_Car_OffScreen, _TEXT$00
 ;*********************************************************
 ;   GreatMachine_UnblockLane
 ;
-;        Parameters: Lane Bitmask
+;        Parameters: Lane Bitmask, Left or Right of Lane
 ;
 ;        Return Value: None
 ;
@@ -820,24 +827,33 @@ NESTED_ENTRY GreatMachine_UnblockLane, _TEXT$00
   alloc_stack(SIZEOF STD_FUNCTION_STACK)
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG
- 
+ MOV R10, RDX
+ MOV RDX, [LevelInformationPtr]
 
  TEST RCX, LANE_BITMASK_0
  JZ @NotLane0
  DEC LEVEL_INFO.BlockingItemCountLane0[RDX]
-
+ JMP @CheckRightLane
 @NotLane0:
  TEST RCX, LANE_BITMASK_1
  JZ @NotLane1
  DEC LEVEL_INFO.BlockingItemCountLane1[RDX]
-
+ JMP @CheckRightLane
 @NotLane1:
  TEST RCX, LANE_BITMASK_2
  JZ @NotLane2
  DEC LEVEL_INFO.BlockingItemCountLane2[RDX]
-
+ JMP @CheckRightLane
 @NotLane2:
+@Completed:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
+
+@CheckRightLane:
+  CMP R10, LANE_GENERATE_RIGHT
+  JNE @Completed
+  DEC LEVEL_INFO.BlockingItemCountRight[RDX]
+  JMP @Completed
+
 NESTED_END GreatMachine_UnblockLane, _TEXT$00

@@ -915,6 +915,9 @@ NESTED_ENTRY GreatMachine_Hazard_Collision, _TEXT$00
 
   CMP SPECIAL_SPRITE_STRUCT.SpritePoints[RDI], SPRITE_KILLS
   JE @KillThePlayer
+  MOV RDX, LANE_GENERATE_RIGHT
+  MOV RCX, SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RDI]
+  DEBUG_FUNCTION_CALL GreatMachine_UnblockLane
   MOV R12, SPECIAL_SPRITE_STRUCT.SpritePoints[RDI]
   MOV RBX, [CaritemEffectId]
   JMP @SkipKilling

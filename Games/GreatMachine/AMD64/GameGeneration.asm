@@ -462,10 +462,17 @@ NESTED_ENTRY GreatMachine_SelectLane, _TEXT$00
 ;
 ; If blocking is enabled, we need to massage the lanes.
 ;
+  MOV RAX, [LevelInformationPtr]
   CMP R12, LANE_NOT_BLOCKING
   JE @SkipMassageBlockingLanes
 
-  MOV RAX, [LevelInformationPtr]
+  CMP RBX, LANE_GENERATE_RIGHT
+  JNE @SkipRightCheck
+  MOV R8, LEVEL_INFO.NumberBlockingItemCountRight[RAX]
+  CMP LEVEL_INFO.BlockingItemCountRight[RAX], R8
+  JB @SkipRightCheck
+  AND RSI, NOT (LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2)
+@SkipRightCheck:
   CMP LEVEL_INFO.BlockingItemCountLane2[RAX], 0
   JE @TryLane1
   AND RSI, NOT LANE_BITMASK_2
@@ -553,8 +560,15 @@ NESTED_ENTRY GreatMachine_SelectLane, _TEXT$00
 
   CMP R12, 0
   JE @DoesNotBlockLane
-
+  
   MOV RCX, [LevelInformationPtr]
+  TEST QWORD PTR [R14], LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2
+  JZ @SkipUpdateOfRightSide
+  CMP RBX, LANE_GENERATE_RIGHT
+  JNE @SkipUpdateOfRightSide
+  INC LEVEL_INFO.BlockingItemCountRight[RCX]
+@SkipUpdateOfRightSide:
+
 
   TEST QWORD PTR [R14], LANE_BITMASK_0
   JZ @TryNextLane_1
@@ -1370,6 +1384,9 @@ NESTED_ENTRY GreatMachine_Pedestrians_ActivateSprite, _TEXT$00
   MOV RCX, LANE_TOP_SIDEWALK_BITMASK or LANE_BOTTOM_SIDEWALK_BITMASK  
   CMP LEVEL_INFO.PedestriansCanBeInStreet[RAX], 0
   JE @SkipTrafficLanes
+  MOV R8, LEVEL_INFO.NumberOfConcurrentStreetPeds[RAX]
+  CMP LEVEL_INFO.CurrentNumberOfStreetPeds[RAX], R8
+  JAE @SkipTrafficLanes
   OR RCX, LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2
 @SkipTrafficLanes:  
   MOV RDX, RDI                 ; Pass In The Sprite
@@ -1383,6 +1400,12 @@ NESTED_ENTRY GreatMachine_Pedestrians_ActivateSprite, _TEXT$00
   MOV R10, SPECIAL_SPRITE_STRUCT.ScrollingPtr[RDI]
   MOV R10, SCROLLING_GIF.ImageInformation[R10]
   MOV RCX, IMAGE_INFORMATION.ImageWidth[R10]
+
+  TEST SPECIAL_SPRITE_STRUCT.SpriteLaneBitmask[RDI], LANE_BITMASK_0 or LANE_BITMASK_1 or LANE_BITMASK_2
+  JZ @DoNotUpdateStreetPeds
+  MOV RAX, [LevelInformationPtr]
+  INC LEVEL_INFO.CurrentNumberOfStreetPeds[RAX]
+@DoNotUpdateStreetPeds:
 
   DEBUG_FUNCTION_CALL GreatMachine_DelayAllRightItemsByWidth
 

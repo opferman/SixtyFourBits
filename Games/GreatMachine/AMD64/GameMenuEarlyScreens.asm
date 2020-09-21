@@ -115,6 +115,9 @@ NESTED_ENTRY GreatMachine_Credits, _TEXT$00
   MOV R12, OFFSET CreditsText4
   CMP [CreditsPage], 3
   JE @DisplayCreditsPage
+  MOV R12, OFFSET CreditsText5
+  CMP [CreditsPage], 4
+  JE @DisplayCreditsPage
   
   MOV [CreditsPage], 0
   MOV [GreatMachineCurrentState], GREAT_MACHINE_STATE_MENU

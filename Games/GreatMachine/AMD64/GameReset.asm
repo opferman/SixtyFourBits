@@ -413,9 +413,7 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
   MOV LEVEL_INFO.TimerForParts2[RAX], RCX       
   MOV RCX, LEVEL_INFO.TimerForParts3Refresh[RAX]             
   MOV LEVEL_INFO.TimerForParts3[RAX], RCX                    
-  MOV LEVEL_INFO.TimerForLane0ItemSelection[RAX], 0        
-  MOV LEVEL_INFO.TimerForLane1ItemSelection[RAX], 0        
-  MOV LEVEL_INFO.TimerForLane2ItemSelection[RAX], 0  
+
         
   ;
   ; Clear active sprites
@@ -426,9 +424,11 @@ NESTED_ENTRY GreatMachine_ResetLevelInformation, _TEXT$00
   MOV LEVEL_INFO.CurrentNumberOfPartTwo[RAX], 0         
   MOV LEVEL_INFO.CurrentNumberOfPartThree[RAX], 0         
   MOV LEVEL_INFO.CurrentNumberOfBlockers[RAX], 0 
+  MOV LEVEL_INFO.CurrentNumberOfStreetPeds[RAX], 0
   MOV LEVEL_INFO.BlockingItemCountLane0[RAX], 0 
   MOV LEVEL_INFO.BlockingItemCountLane1[RAX], 0 
   MOV LEVEL_INFO.BlockingItemCountLane2[RAX], 0 
+  MOV LEVEL_INFO.BlockingItemCountRight[RAX], 0
 
 @ResetComplete:
 

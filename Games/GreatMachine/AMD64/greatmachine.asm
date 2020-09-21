@@ -15,7 +15,7 @@
 ; Code Switches
 ;*********************************************************
 ; USE_FILES              EQU <1>
- MACHINE_GAME_DEBUG     EQU <1>
+; MACHINE_GAME_DEBUG     EQU <1>
 
 ;*********************************************************
 ; Assembly Options
@@ -355,6 +355,8 @@ LEVEL_INFO STRUCT
   CurrentNumberOfPartThree          dq ?
   NumberOfConcurrentBlockers        dq ?
   CurrentNumberOfBlockers           dq ?
+  NumberOfConcurrentStreetPeds      dq ?
+  CurrentNumberOfStreetPeds         dq ?
  
 ;
 ; Tracking Required Level Completion Criteria
@@ -406,6 +408,12 @@ LEVEL_INFO STRUCT
   BlockingItemCountLane2            dq ?
 
 ;
+; Number Of Blocking Items For Right Side
+;
+  NumberBlockingItemCountRight      dq ?
+  BlockingItemCountRight            dq ?
+
+;
 ; Various Settings to tweak the level
 ;
   MinCarVelocity                    dq ?
@@ -437,12 +445,6 @@ LEVEL_INFO STRUCT
   TimerForParts2Refresh             dq ?
   TimerForParts3                    dq ?
   TimerForParts3Refresh             dq ?
-  TimerForLane0ItemSelection        dq ?
-  TimerForLane0ItemSelectionRefresh dq ?
-  TimerForLane1ItemSelection        dq ?
-  TimerForLane1ItemSelectionRefresh dq ?
-  TimerForLane2ItemSelection        dq ?
-  TimerForLane2ItemSelectionRefresh dq ?
 
 ;
 ; Function Pointers
@@ -678,8 +680,10 @@ endif
   LevelInfo_Easy_1_CurrentNumberOfPartTwo            dq 0
   LevelInfo_Easy_1_NumberOfConcurrentPartThree       dq 1
   LevelInfo_Easy_1_CurrentNumberOfPartThree          dq 0
-  LevelInfo_Easy_1_NumberOfConcurrentBlockers        dq 1
+  LevelInfo_Easy_1_NumberOfConcurrentBlockers        dq 0
   LevelInfo_Easy_1_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_1_NumberOfConcurrentStreetPeds      dq 0
+  LevelInfo_Easy_1_CurrentNumberOfStreetPeds         dq 0
   LevelInfo_Easy_1_RequiredFuelCollection            dq 10
   LevelInfo_Easy_1_CurrentFuelCollection             dq 0
   LevelInfo_Easy_1_RequiredPartOneCollection         dq 5
@@ -689,59 +693,55 @@ endif
   LevelInfo_Easy_1_RequiredPartThreeCollection       dq 1
   LevelInfo_Easy_1_CurrentPartThreeCollection        dq 0
   LevelInfo_Easy_1_GenerateCarsPercentage            dq 15
-  LevelInfo_Easy_1_GenerateFuelPercentage            dq 20
+  LevelInfo_Easy_1_GenerateFuelPercentage            dq 30
   LevelInfo_Easy_1_GenerateCarPartOnPercentage       dq 15
   LevelInfo_Easy_1_GenerateCarPartTwoPercentage      dq 10
   LevelInfo_Easy_1_GenerateCarPartThreePercentage    dq 2
-  LevelInfo_Easy_1_GenerateHazardsPercentage         dq 10
+  LevelInfo_Easy_1_GenerateHazardsPercentage         dq 0
   LevelInfo_Easy_1_GenerateExtraLifePercentage       dq 5
-  LevelInfo_Easy_1_GeneratePedestriansPercentage     dq 20
-  LevelInfo_Easy_1_FuelPoints                        dq 150
+  LevelInfo_Easy_1_GeneratePedestriansPercentage     dq 50
+  LevelInfo_Easy_1_FuelPoints                        dq 200
   LevelInfo_Easy_1_CarPartOnePoints                  dq 300
-  LevelInfo_Easy_1_CarPartTwoPoints                  dq 450
+  LevelInfo_Easy_1_CarPartTwoPoints                  dq 400
   LevelInfo_Easy_1_CarPartThreePoints                dq 600
-  LevelInfo_Easy_1_CarDebounceRefresh                dq 500
-  LevelInfo_Easy_1_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND*3
+  LevelInfo_Easy_1_CarDebounceRefresh                dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_1_FuelDebounceRefresh               dq ESTIMATED_TICKS_PER_SECOND*2
   LevelInfo_Easy_1_ExtraLifeDebounceRefresh          dq ESTIMATED_TICKS_PER_SECOND*60*3
   LevelInfo_Easy_1_Parts1DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*8
   LevelInfo_Easy_1_Parts2DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*16
   LevelInfo_Easy_1_Parts3DebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*25
-  LevelInfo_Easy_1_HazardDebounceRefresh             dq ESTIMATED_TICKS_PER_SECOND*3
-  LevelInfo_Easy_1_PedestrianDebounceRefresh         dq 20
+  LevelInfo_Easy_1_HazardDebounceRefresh             dq 0
+  LevelInfo_Easy_1_PedestrianDebounceRefresh         dq ESTIMATED_TICKS_PER_SECOND / 2
   LevelInfo_Easy_1_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_1_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_1_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
-  LevelInfo_Easy_1_MinCarVelocity                    dq 3
-  LevelInfo_Easy_1_MaxCarVelocity                    dq 4
-  LevelInfo_Easy_1_PedestriansCanBeInStreet          dq 1
+  LevelInfo_Easy_1_NumberBlockingItemCountRight      dq 0
+  LevelInfo_Easy_1_BlockingItemCountRight            dq 0
+  LevelInfo_Easy_1_MinCarVelocity                    dq 2
+  LevelInfo_Easy_1_MaxCarVelocity                    dq 3
+  LevelInfo_Easy_1_PedestriansCanBeInStreet          dq 0
   LevelInfo_Easy_1_LevelStartDelay                   dq 200
   LevelInfo_Easy_1_LevelStartDelayRefresh            dq 200
   LevelInfo_Easy_1_LevelTimer                        dq 1000 * 60 * 6  ; 6 Minutes
   LevelInfo_Easy_1_LevelTimerRefresh                 dq 1000 * 60 * 6  ; 6 Minutes
-  LevelInfo_Easy_1_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND
-  LevelInfo_Easy_1_TimerBetweenConcurrentCarsRefresh dq 150
+  LevelInfo_Easy_1_TimerBetweenConCurrentCars        dq ESTIMATED_TICKS_PER_SECOND*2
+  LevelInfo_Easy_1_TimerBetweenConcurrentCarsRefresh dq ESTIMATED_TICKS_PER_SECOND*2
   LevelInfo_Easy_1_TimerAfterCarExitsScreen          dq 0
-  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerAfterCarExitsScreenRefresh   dq ESTIMATED_TICKS_PER_SECOND*3
   LevelInfo_Easy_1_TimerForPedestrians               dq 0
   LevelInfo_Easy_1_TimerForPedestriansRefresh        dq ESTIMATED_TICKS_PER_SECOND
   LevelInfo_Easy_1_TimerForFuel                      dq 0
-  LevelInfo_Easy_1_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*10
-  LevelInfo_Easy_1_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*5
-  LevelInfo_Easy_1_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*5
-  LevelInfo_Easy_1_TimerForHazard                    dq 50
-  LevelInfo_Easy_1_TimerForHazardRefresh             dq 50
+  LevelInfo_Easy_1_TimerForFuelRefresh               dq ESTIMATED_TICKS_PER_SECOND*5
+  LevelInfo_Easy_1_TimerForExtraLives                dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Easy_1_TimerForExtraLivesRefresh         dq ESTIMATED_TICKS_PER_SECOND*120
+  LevelInfo_Easy_1_TimerForHazard                    dq 0
+  LevelInfo_Easy_1_TimerForHazardRefresh             dq 0
   LevelInfo_Easy_1_TimerForParts1                    dq ESTIMATED_TICKS_PER_SECOND*5
   LevelInfo_Easy_1_TimerForParts1Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
   LevelInfo_Easy_1_TimerForParts2                    dq ESTIMATED_TICKS_PER_SECOND*5
   LevelInfo_Easy_1_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*5
   LevelInfo_Easy_1_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*36
-  LevelInfo_Easy_1_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*56
-  LevelInfo_Easy_1_TimerForLane0ItemSelection        dq 150
-  LevelInfo_Easy_1_TimerForLane0ItemSelectionRefresh dq 150
-  LevelInfo_Easy_1_TimerForLane1ItemSelection        dq 250
-  LevelInfo_Easy_1_TimerForLane1ItemSelectionRefresh dq 250
-  LevelInfo_Easy_1_TimerForLane2ItemSelection        dq 350
-  LevelInfo_Easy_1_TimerForLane2ItemSelectionRefresh dq 350
+  LevelInfo_Easy_1_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*36
   LevelInfo_Easy_1_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_1_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
@@ -759,6 +759,8 @@ endif
   LevelInfo_Easy_2_CurrentNumberOfPartThree          dq 0
   LevelInfo_Easy_2_NumberOfConcurrentBlockers        dq 1
   LevelInfo_Easy_2_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_2_NumberOfConcurrentStreetPeds      dq 1
+  LevelInfo_Easy_2_CurrentNumberOfStreetPeds         dq 0
   LevelInfo_Easy_2_RequiredFuelCollection            dq 10
   LevelInfo_Easy_2_CurrentFuelCollection             dq 0
   LevelInfo_Easy_2_RequiredPartOneCollection         dq 5
@@ -790,6 +792,8 @@ endif
   LevelInfo_Easy_2_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_2_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_2_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_2_NumberBlockingItemCountRight      dq 2
+  LevelInfo_Easy_2_BlockingItemCountRight            dq 0
   LevelInfo_Easy_2_MinCarVelocity                    dq 3
   LevelInfo_Easy_2_MaxCarVelocity                    dq 4
   LevelInfo_Easy_2_PedestriansCanBeInStreet          dq 0
@@ -815,12 +819,6 @@ endif
   LevelInfo_Easy_2_TimerForParts2Refresh             dq ESTIMATED_TICKS_PER_SECOND*7
   LevelInfo_Easy_2_TimerForParts3                    dq ESTIMATED_TICKS_PER_SECOND*25
   LevelInfo_Easy_2_TimerForParts3Refresh             dq ESTIMATED_TICKS_PER_SECOND*25
-  LevelInfo_Easy_2_TimerForLane0ItemSelection        dq 50
-  LevelInfo_Easy_2_TimerForLane0ItemSelectionRefresh dq 50
-  LevelInfo_Easy_2_TimerForLane1ItemSelection        dq 50
-  LevelInfo_Easy_2_TimerForLane1ItemSelectionRefresh dq 50
-  LevelInfo_Easy_2_TimerForLane2ItemSelection        dq 50
-  LevelInfo_Easy_2_TimerForLane2ItemSelectionRefresh dq 50
   LevelInfo_Easy_2_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_2_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
 
@@ -838,6 +836,8 @@ endif
   LevelInfo_Easy_3_CurrentNumberOfPartThree          dq 0
   LevelInfo_Easy_3_NumberOfConcurrentBlockers        dq 1
   LevelInfo_Easy_3_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_3_NumberOfConcurrentStreetPeds      dq 1
+  LevelInfo_Easy_3_CurrentNumberOfStreetPeds         dq 0
   LevelInfo_Easy_3_RequiredFuelCollection            dq 10
   LevelInfo_Easy_3_CurrentFuelCollection             dq 0
   LevelInfo_Easy_3_RequiredPartOneCollection         dq 5
@@ -869,6 +869,8 @@ endif
   LevelInfo_Easy_3_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_3_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_3_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_3_NumberBlockingItemCountRight      dq 2
+  LevelInfo_Easy_3_BlockingItemCountRight            dq 0
   LevelInfo_Easy_3_MinCarVelocity                    dq 3
   LevelInfo_Easy_3_MaxCarVelocity                    dq 4
   LevelInfo_Easy_3_PedestriansCanBeInStreet          dq 0
@@ -894,12 +896,6 @@ endif
   LevelInfo_Easy_3_TimerForParts2Refresh             dq 500
   LevelInfo_Easy_3_TimerForParts3                    dq 1000
   LevelInfo_Easy_3_TimerForParts3Refresh             dq 1000
-  LevelInfo_Easy_3_TimerForLane0ItemSelection        dq 150
-  LevelInfo_Easy_3_TimerForLane0ItemSelectionRefresh dq 150
-  LevelInfo_Easy_3_TimerForLane1ItemSelection        dq 250
-  LevelInfo_Easy_3_TimerForLane1ItemSelectionRefresh dq 250
-  LevelInfo_Easy_3_TimerForLane2ItemSelection        dq 350
-  LevelInfo_Easy_3_TimerForLane2ItemSelectionRefresh dq 350
   LevelInfo_Easy_3_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_3_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel
                  
@@ -917,6 +913,8 @@ endif
   LevelInfo_Easy_4_CurrentNumberOfPartThree          dq 0
   LevelInfo_Easy_4_NumberOfConcurrentBlockers        dq 1
   LevelInfo_Easy_4_CurrentNumberOfBlockers           dq 0
+  LevelInfo_Easy_4_NumberOfConcurrentStreetPeds      dq 1
+  LevelInfo_Easy_4_CurrentNumberOfStreetPeds         dq 0
   LevelInfo_Easy_4_RequiredFuelCollection            dq 10
   LevelInfo_Easy_4_CurrentFuelCollection             dq 0
   LevelInfo_Easy_4_RequiredPartOneCollection         dq 5
@@ -948,6 +946,8 @@ endif
   LevelInfo_Easy_4_BlockingItemCountLane0            dq 0
   LevelInfo_Easy_4_BlockingItemCountLane1            dq 0
   LevelInfo_Easy_4_BlockingItemCountLane2            dq 0               ; Can only have 1 blocking item per lane.
+  LevelInfo_Easy_4_NumberBlockingItemCountRight      dq 2
+  LevelInfo_Easy_4_BlockingItemCountRight            dq 0
   LevelInfo_Easy_4_MinCarVelocity                    dq 3
   LevelInfo_Easy_4_MaxCarVelocity                    dq 4
   LevelInfo_Easy_4_PedestriansCanBeInStreet          dq 0
@@ -973,12 +973,6 @@ endif
   LevelInfo_Easy_4_TimerForParts2Refresh             dq 500
   LevelInfo_Easy_4_TimerForParts3                    dq 1000
   LevelInfo_Easy_4_TimerForParts3Refresh             dq 1000
-  LevelInfo_Easy_4_TimerForLane0ItemSelection        dq 150
-  LevelInfo_Easy_4_TimerForLane0ItemSelectionRefresh dq 150
-  LevelInfo_Easy_4_TimerForLane1ItemSelection        dq 250
-  LevelInfo_Easy_4_TimerForLane1ItemSelectionRefresh dq 250
-  LevelInfo_Easy_4_TimerForLane2ItemSelection        dq 350
-  LevelInfo_Easy_4_TimerForLane2ItemSelectionRefresh dq 350
   LevelInfo_Easy_4_pfnLevelReset                     dq OFFSET GreatMachine_ResetLevel
   LevelInfo_Easy_4_pfnNextLevel                      dq OFFSET GreatMachine_NextLevel_Win
 
@@ -1089,11 +1083,7 @@ endif
                                     dq 0
 
     AboutText                       dq 50, 275
-                                    db "This game is a submission for the", 0
-                                    dq 50, 300
-                                    db "OLC CODEJAM 2020 where the theme",0
-                                    dq 50, 325
-                                    db "was `The Great Machine'.", 0
+                                    db "Great Machine Version 1.0 Beta", 0
                                     dq 50, 375
                                     db "Written in 100% x64 x86 Assembly", 0
                                     dq 50, 400
@@ -1190,6 +1180,15 @@ endif
                                     db "No credit is required.", 0
                                     dq 0
 
+    CreditsText5                    dq 50, 275
+                                    db "Music purchased PRO membership", 0
+                                    dq 50, 325
+                                    db "from dl-sounds.",0
+                                    dq 50, 375
+                                    db "Sound effects Creative Commons.", 0
+                                    dq 50, 425
+                                    db "from zapsplat.com.", 0
+                                    dq 0
     ;
     ; Strings
     ;                               									
