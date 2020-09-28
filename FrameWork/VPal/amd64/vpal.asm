@@ -28,6 +28,10 @@ PARAMFRAME ends
 
 SAVEFRAME struct
     SaveRdi        dq ?
+    SaveRbx        dq ?
+    SaveR15        dq ?
+    SaveRsi        dq ?
+    SaveR12        dq ?
 SAVEFRAME ends
 
 VPAL_INIT_LOCALS struct
@@ -50,6 +54,11 @@ public VPal_GetColorIndex
 public VPal_Free
 public VPal_Rotate
 public VPal_RotateReset
+public VPal_FindColorIndex
+public VPal_CopyIndexRange
+public VPal_MoveColorIndexes
+public VPal_Transparent
+
 .CODE
 
 ;*********************************************************
@@ -149,7 +158,7 @@ NESTED_ENTRY VPal_GetColorIndex, _TEXT$00
   JBE @ExitFunctionGet
   MOV RDI, RCX
   CALL VPal_GetRotatedIndex
-  MOV RAX, RDX
+  MOV RDX, RAX
   MOV RCX, RDI
 
   MOV RCX, VPAL_HANDLE.PalettePtr[RCX]
@@ -162,6 +171,254 @@ NESTED_ENTRY VPal_GetColorIndex, _TEXT$00
   ADD RSP, SIZE VPAL_INIT_LOCALS
   RET
 NESTED_END VPal_GetColorIndex, _TEXT$00
+
+
+;*********************************************************
+;  VPal_CopyIndexRange
+;
+;        Parameters: Palette Handle, Start Index Source, Start Index Destination, Number
+;
+;       return None
+;
+;
+;*********************************************************  
+NESTED_ENTRY VPal_CopyIndexRange, _TEXT$00
+  alloc_stack(SIZEOF VPAL_INIT_LOCALS)
+  save_reg rdi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi
+  save_reg rsi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRsi
+.ENDPROLOG 
+  
+  MOV RAX, R9
+  ADD RAX, RDX
+  CMP VPAL_HANDLE.NumberIndexes[RCX], RAX
+  JBE @ExitFunctionGet
+
+  MOV RAX, R9
+  ADD RAX, R8
+  CMP VPAL_HANDLE.NumberIndexes[RCX], RAX
+  JBE @ExitFunctionGet
+
+  MOV RSI, VPAL_HANDLE.PalettePtr[RCX]
+  SHL RDX, 2
+  ADD RSI, RDX
+
+  MOV RDI, VPAL_HANDLE.PalettePtr[RCX]
+  SHL R8, 2
+  ADD RDI, R8
+  
+  MOV RCX, R9
+  REP MOVSD
+@ExitFunctionGet:
+  MOV RSI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
+  MOV RDI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  ADD RSP, SIZE VPAL_INIT_LOCALS
+  RET
+NESTED_END VPal_CopyIndexRange, _TEXT$00
+
+
+;*********************************************************
+;  VPal_MoveColorIndexes
+;
+;        Parameters: Palette Handle,  Distance Left, Index Source,  Index Destination
+;
+;       return None
+;
+;
+;*********************************************************  
+NESTED_ENTRY VPal_MoveColorIndexes, _TEXT$00
+  alloc_stack(SIZEOF VPAL_INIT_LOCALS)
+  save_reg rdi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi
+  save_reg rsi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRsi
+  save_reg r15, VPAL_INIT_LOCALS.SaveRegsFrame.SaveR15
+.ENDPROLOG 
+  MOV RSI, RCX
+  
+  ;
+  ; Check indexes are in valid range.
+  ;  
+  CMP VPAL_HANDLE.NumberIndexes[RCX], R8
+  JBE @ExitFunction
+  CMP VPAL_HANDLE.NumberIndexes[RCX], R9
+  JBE @ExitFunction
+
+;
+; Updating Color Indexes
+;
+
+  MOV RDI, VPAL_HANDLE.PalettePtr[RCX]
+  SHL R8, 2
+  LEA R10, [RDI + R8]
+  SHL R9, 2
+  LEA R11, [RDI + R9]
+  XOR R15, R15
+  MOV R9, RDX
+@UpdatingColorIndex:
+  XOR RCX, RCX
+  XOR RDX, RDX
+  MOV CL, BYTE PTR [R10 + R15] ; Target
+  MOV DL, BYTE PTR [R11 + R15] ; Current
+  MOV AL, CL
+  SUB AL, DL
+
+  CMP AL, -10
+  JGE @CheckUpperRange
+  JMP @DoUpdateInc
+
+@CheckUpperRange:
+  CMP AL, 10
+  JLE @ForceUpdate
+@DoUpdateInc:
+  CMP CL, DL
+  JB @UpdateBelow
+  MOV RAX, 1
+  JMP @CheckRange
+@UpdateBelow:
+  MOV RAX, -1
+  JMP @CheckRange
+@CheckRange:
+  CMP R9, 10
+  JA @DontForce
+@ForceUpdate:
+  MOV CL, BYTE PTR [R10 + R15]
+  MOV BYTE PTR [R11 + R15], CL
+  JMP @DoneUpdating
+
+@DontForce:
+  XOR RCX, RCX
+  MOV CL, BYTE PTR [R11 + R15]
+  ADD RCX, RAX
+  MOV BYTE PTR [R11 + R15], CL
+
+@SkipUpdating:
+@DoneUpdating:
+  INC R15
+  CMP R15, 3
+  JB @UpdatingColorIndex
+
+
+  
+@ExitFunction:
+  MOV RSI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
+  MOV RDI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV R15, VPAL_INIT_LOCALS.SaveRegsFrame.SaveR15[RSP]
+  ADD RSP, SIZE VPAL_INIT_LOCALS
+  RET
+NESTED_END VPal_MoveColorIndexes, _TEXT$00
+
+
+
+;*********************************************************
+;  VPal_Transparent
+;
+;        Parameters: Palette Handle, Background, Foreground,  Index Destination
+;
+;       return None
+;
+;
+;*********************************************************  
+NESTED_ENTRY VPal_Transparent, _TEXT$00
+  alloc_stack(SIZEOF VPAL_INIT_LOCALS)
+  save_reg rdi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi
+  save_reg rsi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRsi
+  save_reg r15, VPAL_INIT_LOCALS.SaveRegsFrame.SaveR15
+.ENDPROLOG 
+  MOV RSI, RCX
+  
+  ;
+  ; Check indexes are in valid range.
+  ;  
+  CMP VPAL_HANDLE.NumberIndexes[RCX], RDX
+  JBE @ExitFunction
+  CMP VPAL_HANDLE.NumberIndexes[RCX], R8
+  JBE @ExitFunction
+  CMP VPAL_HANDLE.NumberIndexes[RCX], R9
+  JBE @ExitFunction
+
+;
+; Updating Color Indexes
+;
+
+  MOV RDI, VPAL_HANDLE.PalettePtr[RCX]
+  SHL R8, 2
+  LEA R8, [RDI + R8]
+  SHL R9, 2
+  LEA R9, [RDI + R9]
+  SHL RDX, 2
+  LEA RDX, [RDI + RDX]
+
+  XOR R15, R15
+@UpdatingColorIndex:
+  XOR RCX, RCX
+  XOR RAX, RAX
+  MOV CL, BYTE PTR [RDX + R15] ; Background
+  MOV AL, BYTE PTR [R8 + R15] ; Foreground
+;  SHR CL, 1  Adjust for transparency settings
+  ADD AX, CX
+  CMP AX, 255
+  JBE @NoNeedToTruncate
+  MOV AX, 255
+@NoNeedToTruncate:  
+  MOV [R15 + R9], AL
+
+  INC R15
+  CMP R15, 3
+  JB @UpdatingColorIndex
+
+
+  
+@ExitFunction:
+  MOV RSI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
+  MOV RDI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV R15, VPAL_INIT_LOCALS.SaveRegsFrame.SaveR15[RSP]
+  ADD RSP, SIZE VPAL_INIT_LOCALS
+  RET
+NESTED_END VPal_Transparent, _TEXT$00
+
+
+;*********************************************************
+;  VPal_FindColorIndex
+;
+;        Parameters: Palette Handle, Color, Rotated TRUE or FALSE
+;
+;       return DWORD (0RGB)
+;
+;
+;*********************************************************  
+NESTED_ENTRY VPal_FindColorIndex, _TEXT$00
+  alloc_stack(SIZEOF VPAL_INIT_LOCALS)
+  save_reg rdi, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi
+  save_reg rbx, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRbx
+.ENDPROLOG 
+  XOR RAX, RAX
+  MOV RBX, RDX
+  LEA RDI, VPAL_HANDLE.PalettePtr[RCX]
+
+@FindColorIndexLoop:
+  MOV EDX, DWORD PTR [RDI]
+  CMP EBX, EDX
+  JE @FoundColor
+  ADD RDI, 4
+  INC RAX
+  CMP RAX, VPAL_HANDLE.NumberIndexes[RCX]
+  JB @FindColorIndexLoop
+
+  XOR RAX, RAX
+  NOT RAX
+  JMP @ExitFunction
+
+@FoundColor:
+  CMP R8, 0
+  JE @ExitFunction
+
+  MOV RDX, RAX
+  CALL VPal_GetRotatedIndex
+
+@ExitFunction:
+  MOV RDI, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV RBX, VPAL_INIT_LOCALS.SaveRegsFrame.SaveRbx[RSP]
+  ADD RSP, SIZE VPAL_INIT_LOCALS
+  RET
+NESTED_END VPal_FindColorIndex, _TEXT$00
 
 
 ;*********************************************************

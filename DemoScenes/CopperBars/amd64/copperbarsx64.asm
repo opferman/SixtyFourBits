@@ -20,80 +20,151 @@ include demoscene.inc
 include vpal_public.inc
 include font_public.inc
 include dbuffer_public.inc
+include soft3d_public.inc
+include audio_public.inc
+include gif_public.inc
+include gameengine_public.inc
 
+;*********************************************************
+; External APIs
+;*********************************************************
 extern LocalAlloc:proc
 extern LocalFree:proc
-
-PARAMFRAME struct
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-    Param5         dq ?
-    Param6         dq ?
-PARAMFRAME ends
-
-SAVEREGSFRAME struct
-    SaveRdi        dq ?
-    SaveRsi        dq ?
-    SaveRbx        dq ?
-    SaveR14        dq ?
-    SaveR15        dq ?
-    SaveR12        dq ?
-    SaveR13        dq ?
-SAVEREGSFRAME ends
-
-FUNC_PARAMS struct
-    ReturnAddress  dq ?
-    Param1         dq ?
-    Param2         dq ?
-    Param3         dq ?
-    Param4         dq ?
-    Param5         dq ?
-    Param6         dq ?
-    Param7         dq ?
-FUNC_PARAMS ends
-
+extern LoadResource:proc
+extern SizeofResource:proc
+extern LockResource:proc
+extern FindResourceA:proc
+LMEM_ZEROINIT EQU <40h>
+;*********************************************************
+; Demo Structures
+;*********************************************************
 COPPERBARS_FIELD_ENTRY struct
    X              dq ?
    Y              dq ?
    StartColor     dw ?
+   MinVelocity    dq ?
+   MaxVelocity    dq ?
    Velocity       dq ?
 COPPERBARS_FIELD_ENTRY ends
 
-COPPERBARS_DEMO_STRUCTURE struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-COPPERBARS_DEMO_STRUCTURE ends
 
-COPPERBARS_DEMO_STRUCTURE_FUNC struct
-   ParameterFrame PARAMFRAME      <?>
-   SaveFrame      SAVEREGSFRAME   <?>
-   FuncParams     FUNC_PARAMS     <?>
-COPPERBARS_DEMO_STRUCTURE_FUNC ends
+COLOR_BAR_STRUCT struct
+   CurrentY               dq ?
+   Velocity               dq ?
+   CurrentYThreshold      dq ?
+   MaxVelocity            dq ?
+   TopColors              dq ?  ; Used for transparency if set
+   BottomColors           dq ?
+   ScratchColors          dq ?
+COLOR_BAR_STRUCT ends
 
-MAX_HORZ_BARS     EQU <4>
-MAX_VERTICLE_BARS EQU <200>
-VBAR_LOWER_BOUNDS EQU <10>
-VBAR_UPPER_BOUNDS EQU <1000>
+COLOR_DESCRIPTIONS_STRUCT struct
+   StartingColorIndex     dq ?
+   RedColorIncrement      db ?
+   GreenColorIncrement    db ?
+   BlueColorIncrement     db ?
+   ColorLength            dq ?
+   StartingColorValue     dd ?
+   BooleanDitherUpAndDown db ?
+COLOR_DESCRIPTIONS_STRUCT ends
 
+SQUARE_TRCKER struct
+
+  CurrentTopCornerX      dq ?
+  CurrentTopCornerY      dq ?
+  SquareVisibleAt00      dq ?
+  CurrentIncrementX      dq ?
+  CurrentDecayX          dq ?
+  CurrentDecayXRefresh   dq ?
+  CurrentIncrementY      dq ?
+  CurrentDecayY          dq ?
+  CurrentDecayYRefresh   dq ?
+
+SQUARE_TRCKER ends
+
+;*********************************************************
+; Demo Constants
+;*********************************************************
+COLOR_DESCRIPTIONS_SIZE     EQU <22>
+NUMBER_TOP_HORIZONTAL_BARS  EQU <3>
+NUMBER_MID_HORIZONTAL_BARS  EQU <4>
+HEIGHT_OF_HORIZONTAL_BARS   EQU <20>
+THRESHOLD_UPPER             EQU <255-60>
+THRESHOLD_LOWER             EQU <30>
+MIDDLE_BACKGROUND           EQU <11>
+TILE_IMAGE_PIXELS           EQU <10000>
+THRESHOLD_LOW_MID           EQU <550>
+THRESHOLD_HIGH_MID          EQU <300>
+
+;*********************************************************
+; Public Functions
+;*********************************************************
 public CopperBarsDemo_Init
 public CopperBarsDemo_Demo
 public CopperBarsDemo_Free
 
 
 .DATA
-  DoubleBuffer     dq ?
-  TripleBuffer     dq ?
-  Stepping         dq 2
-  VirtualPallete   dq ?
-  FrameCountDown   dd 4000
-  CopperBarsVert   dq ?
-  CopperBarsVert2  dq ?
-  CopperBarsHorz   dq ?
-  Opacity          mmword 0.80
-  InverseOpacity   mmword 0.20
-  WaitState        dq 3
+
+  
+
+  ColorDescriptions     COLOR_DESCRIPTIONS_STRUCT<1, 0, 0, 1, 255, 01h, 0>
+  Middlebackground      COLOR_DESCRIPTIONS_STRUCT<300, 7, 2, 1, 30, 0160400h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<330, 6, 3, 1, 30, 0260A00h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<360, 6, 3, 0, 30, 0391005h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<390, 5, 3, 0, 30, 0392905h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<420, 4, 4, 0, 30, 0304005h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<450, 3, 5, 0, 30, 0304005h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<480, 3, 5, 1, 30, 02A4000h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<510, 3, 5, 2, 30, 0204000h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<540, 3, 5, 3, 30, 0104000h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<570, 3, 5, 4, 30, 02A4000h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<600, 2, 5, 5, 30, 02A4000h, 0>
+
+  MiddleHorizontalBars  COLOR_DESCRIPTIONS_STRUCT<700, 0, 0, 10, 20, 044h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<3000, 0, 0, 10, 20, 044h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<3030, 0, 0, 10, 20, 044h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<3060, 0, 0, 10, 20, 044h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<3090, 0, 0, 10, 20, 044h, 1>
+
+  TopHorizontalBars     COLOR_DESCRIPTIONS_STRUCT<900, 0, 17,  5, 20, 0005420h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<1000, 15, 15, 15, 20, 0646464h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<2000, 0, 17,  5, 20, 0005420h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<2030, 0, 17,  5, 20, 0005420h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<2060, 0, 17,  5, 20, 0005420h, 1>
+
+  HoriztonalBarsTop     COLOR_BAR_STRUCT <5,  1, THRESHOLD_UPPER, 2, 900, 1000, 2000>
+                        COLOR_BAR_STRUCT <40, 1, THRESHOLD_UPPER, 2, 900, 1000, 2030>
+                        COLOR_BAR_STRUCT <70, 1, THRESHOLD_UPPER, 2, 900, 1000, 2060>
+
+  HoriztonalBarsMid     COLOR_BAR_STRUCT <300,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3000>
+                        COLOR_BAR_STRUCT <350,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3030>
+                        COLOR_BAR_STRUCT <400,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3060>
+                        COLOR_BAR_STRUCT <450,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3090>
+
+
+  AudioFormat            db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h, 00h, 00h
+  AudioVolume            dq 150
+  AudioHandle            dq ?
+  AudioDataId            dq ?
+  AudioData              AUDIO_SOUND_DATA <?>
+  AudioImage             db "AUDIODEMO", 0
+  AudioType              db "AUDIO_TYPE", 0
+  GifType                db "GIF_TYPE", 0
+  GifImage               db "TILE", 0
+  GifDataPtr             dq ?
+  GifImageInformation    IMAGE_INFORMATION <?>
+  GifPalBufPtr           dq ?
+
+  SquareGrid             SQUARE_TRCKER <20, 10, 1, 3, 200, 200, -3, 250, 250>
+
+
+  DoubleBuffer           dq ?
+  VirtualPallete         dq ?
+  CopperBarsVertOne      dq ?
+  CopperBarsVertTwo      dq ?
+  CopperBarsHorzTop      dq ?
+  CopperBarsHorzBottom   dq ?
 .CODE
 
 ;*********************************************************
@@ -106,13 +177,9 @@ public CopperBarsDemo_Free
 ;
 ;*********************************************************  
 NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
   MOV RSI, RCX
 
   MOV [VirtualPallete], 0
@@ -124,99 +191,203 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   TEST RAX, RAX
   JZ @CopperInit_Failed
 
-  MOV RDX, 2
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL DBuffer_Create
-  MOV [TripleBuffer], RAX
-  TEST RAX, RAX
-  JZ @CopperInit_Failed
-
   MOV RCX, 65536
   DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @CopperInit_Failed
-
   MOV [VirtualPallete], RAX
 
-  MOV RDX, 0D37373h
-  MOV RCX, 10
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
+  LEA RDI, [ColorDescriptions]
+  XOR RBX, RBX
+@CreateDitheringColors:  
 
-  MOV RDX, 2F29C4h
-  MOV RCX, 20
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_CreateColorDither
 
-  MOV RDX, 9390BEh
-  MOV RCX, 30
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
+  ADD RDI, SIZE COLOR_DESCRIPTIONS_STRUCT
+  INC RBX
 
-  MOV RDX, 0CBC13Dh
-  MOV RCX, 40
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
+  CMP RBX, COLOR_DESCRIPTIONS_SIZE
+  JB @CreateDitheringColors
 
-  MOV RDX, 6C762Eh
-  MOV RCX, 50
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  MOV RDX, 0C3CC1B0h
-  MOV RCX, 60
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  MOV RDX, 143B95h
-  MOV RCX, 70
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  MOV RDX, 07F8081h
-  MOV RCX, 80
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  MOV RDX, 082875h
-  MOV RCX, 90
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  MOV RDX, 0D23333h
-  MOV RCX, 100
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  MOV RDX, 066009Ch
-  MOV RCX, 110
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBarColor
-
-  
-  MOV RDX, 049619Ah
-  MOV RCX, 200
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateBackgroundColor
-
-  MOV RDX, 200
-  MOV RCX, 110
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateTransparancy
-  
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateHorzBars
-
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateVertBars
-
-  MOV RCX, RSI
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreateVertBars
+  DEBUG_FUNCTION_CALL CopperBarsDemo_LoadAndStartAudio
+  DEBUG_FUNCTION_CALL CopperBarsDemo_LoadImages
     
-  MOV RSI, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
   MOV EAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 
 @CopperInit_Failed:
-  MOV RSI, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV RDI, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  XOR EAX, EAX
+  XOR RAX, RAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END CopperBarsDemo_Init, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarsDemo_LoadImages
+;
+;        Parameters: None
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_LoadImages, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+
+  LEA RCX, [GifImage]
+  DEBUG_FUNCTION_CALL CopperBarsDemo_LoadGifResource
+  CMP RAX, 0
+  JE @NotLoaded
+  MOV [GifDataPtr], RAX
+
+  LEA RDX, [GifImageInformation]
+  MOV RCX, [GifDataPtr]
+  DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
+
+  MOV RDX, TILE_IMAGE_PIXELS
+  LEA RCX, [GifImageInformation]
+  DEBUG_FUNCTION_CALL CopperBarsDemo_ConvertImageToPalImage
+
+@NotLoaded:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_LoadImages, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarsDemo_LoadAndStartAudio
+;
+;        Parameters: None
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_LoadAndStartAudio, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+ DEBUG_RSP_CHECK_MACRO
+
+  LEA RCX, [AudioFormat]
+  DEBUG_FUNCTION_CALL Audio_Init
+  CMP RAX, 0
+  JE @Audio_Failed
+  MOV [AudioHandle], RAX
+
+  LEA RDX, [AudioData]
+  LEA RCX, [AudioImage]
+  DEBUG_FUNCTION_CALL CopperBarsDemo_LoadAudioResource
+
+  LEA RDX, [AudioData]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_AddMusic
+  MOV [AudioDataId], RAX
+
+  MOV RDX, [AudioVolume]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_SetVolume
+
+  MOV RDX, [AudioDataId]
+  MOV RCX, [AudioHandle]
+  DEBUG_FUNCTION_CALL Audio_PlayMusic
+  MOV RAX, 1
+
+@Audio_Failed:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_LoadAndStartAudio, _TEXT$00
+
+
+;*********************************************************
+;   CopperBarsDemo_LoadAudioResource
+;
+;        Parameters: Resource Name, Sound Data Structure
+;
+;        Return Value: Memory
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_LoadAudioResource, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, RDX
+
+  MOV R8, OFFSET AudioType               ; Resource Type
+  MOV RDX, RSI                           ; Resource Name
+  XOR RCX, RCX                           ; Use process module
+  DEBUG_FUNCTION_CALL FindResourceA
+  MOV RDX, RAX
+  MOV R15, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL SizeofResource
+  MOV AUDIO_SOUND_DATA.PcmDataSize[RDI], RAX
+
+  MOV RDX, R15
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL LoadResource
+  
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL LockResource
+
+  MOV AUDIO_SOUND_DATA.PcmData[RDI], RAX
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END CopperBarsDemo_LoadAudioResource, _TEXT$00
+
+
+;*********************************************************
+;   CopperBarsDemo_LoadGifResource
+;
+;        Parameters: Resource Name
+;
+;        Return Value: Memory
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_LoadGifResource, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  
+  MOV R8, OFFSET GifType                 ; Resource Type
+  MOV RDX, RSI                           ; Resource Name
+  XOR RCX, RCX                           ; Use process module
+  DEBUG_FUNCTION_CALL FindResourceA
+
+  MOV RDX, RAX
+  XOR RCX, RCX
+  DEBUG_FUNCTION_CALL LoadResource
+  
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL LockResource
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END CopperBarsDemo_LoadGifResource, _TEXT$00
 
 
 
@@ -230,68 +401,77 @@ NESTED_END CopperBarsDemo_Init, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r14, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR14
- save_reg r15, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR15
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
-
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
 
-  ;
-  ; Update the screen with the buffer
-  ;  
-   MOV RCX, [TripleBuffer]
-   MOV RDX, [VirtualPallete]
-   MOV R8, DB_FLAG_CLEAR_BUFFER
-   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+ ;
+ ; Update the screen with the buffer
+ ;  
+  MOV RCX, [DoubleBuffer]
+  MOV RDX, [VirtualPallete]
+  MOV R8, DB_FLAG_CLEAR_BUFFER
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
-   MOV RDX, [CopperBarsVert]
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_MoveVertBars
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_ChangeDirections
 
-   MOV RDX, [CopperBarsVert2]
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_MoveVertBars
-   
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_MoveHorzBars
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_MoveSquares
 
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_CreateBackground
-   
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_PlotHBars
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_GenerateTopBackground
 
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_PlotVBars
-      
-   MOV RCX, RDI
-   DEBUG_FUNCTION_CALL CopperBarDemo_ResizeAndCopyBuffers
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_MiddleBackGround
 
-  MOV RCX, 10
-  MOV RDX, 120
-  DEBUG_FUNCTION_CALL CopperBarDemo_RotateBarColor
+  XOR RBX, RBX
+  MOV R15, OFFSET HoriztonalBarsTop
+@DrawBars:
 
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL CopperBarDemo_MoveTopHorzBars
 
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL CopperBarDemo_UpdateBarColorColors
+  XOR R8, R8
+  MOV RDX, R15
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_DrawHorizBar
 
-  MOV r14, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
-  MOV r15, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
+  ADD R15, SIZE COLOR_BAR_STRUCT
+  INC RBX
+  CMP RBX, NUMBER_TOP_HORIZONTAL_BARS
+  JB @DrawBars
 
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  MOV R15, OFFSET HoriztonalBarsMid
+  XOR RBX, RBX
+@DrawMidBars:
+
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL CopperBarDemo_MoveMidHorzBars
+
+ ; MOV RCX, R15
+ ; DEBUG_FUNCTION_CALL CopperBarDemo_UpdateBarColorColors
+  MOV R8, 1
+  MOV RDX, R15
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_DrawHorizBar
+
+  ADD R15, SIZE COLOR_BAR_STRUCT
+  INC RBX
+  CMP RBX, NUMBER_MID_HORIZONTAL_BARS
+  JB @DrawMidBars
   
-  DEC [FrameCountDown]
-  MOV EAX, [FrameCountDown]
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_DrawSquares
+ 
+  MOV EAX, 1
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END CopperBarsDemo_Demo, _TEXT$00
 
@@ -307,587 +487,86 @@ NESTED_END CopperBarsDemo_Demo, _TEXT$00
 ;
 ;*********************************************************  
 NESTED_ENTRY CopperBarsDemo_Free, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
 
  MOV RCX, [VirtualPallete]
  DEBUG_FUNCTION_CALL VPal_Free
 
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END CopperBarsDemo_Free, _TEXT$00
 
 
+
 ;*********************************************************
-;  CopperBarDemo_CreateVertBars
+;  CopperBarsDemo_ConvertImageToPalImage
 ;
-;        Parameters: Master Context
+;        Parameters: Image Information, Start Pallete Number
 ;
-;       
+;        Return: Image Buffer
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreateVertBars, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
+NESTED_ENTRY CopperBarsDemo_ConvertImageToPalImage, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RBX, 5
-  LEA RDI, [CopperBarsVert]
-  CMP QWORD PTR [RDI], 0
-  JZ @PopulateFirst
-    
-  LEA RDI, [CopperBarsVert2]
+ DEBUG_RSP_CHECK_MACRO
+  MOV R15, RCX
+  MOV RBX, RDX
   
-  MOV RBX, -5
-  
-@PopulateFirst:
-  MOV RDX, SIZEOF COPPERBARS_FIELD_ENTRY * MAX_VERTICLE_BARS 
-  MOV RCX, 040h   
-  DEBUG_FUNCTION_CALL LocalAlloc
-  MOV [RDI], RAX
-  TEST RAX, RAX
-  JZ @FailedCreateVert
-  
-  MOV RDI, RAX
-  MOV RSI, MAX_VERTICLE_BARS
-  MOV R12, 300
-@CopperBarsCreate:
-  
-  MOV RAX, RSI
-  ADD RAX, 200
-  MOV COPPERBARS_FIELD_ENTRY.Y[RDI], RAX
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], R12
-  ADD R12, RBX
-
-  DEBUG_FUNCTION_CALL Math_Rand
-  XOR RDX, RDX
-  MOV RCX, 10
-  DIV RCX
-  INC RDX
-  MOV RCX, RDX
-  MOV RAX, 10
+  MOV RCX, IMAGE_INFORMATION.ImageWidth[R15]
+  MOV RAX, IMAGE_INFORMATION.ImageHeight[R15]
   XOR RDX, RDX
   MUL RCX
-  MOV COPPERBARS_FIELD_ENTRY.StartColor[RDI], AX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RBX
-
-  ADD RDI, SIZEOF COPPERBARS_FIELD_ENTRY
-  DEC RSI
-  DEC RSI
-  CMP RSI, 0
-  JA @CopperBarsCreate
-
-@FailedCreateVert:
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-NESTED_END CopperBarDemo_CreateVertBars, _TEXT$00
-
-;*********************************************************
-;  CopperBarDemo_CreateHorzBars
-;
-;        Parameters: Master Context
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreateHorzBars, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RBX, RCX
-
-  MOV RDX, SIZEOF COPPERBARS_FIELD_ENTRY * MAX_HORZ_BARS 
-  MOV RCX, 040h   
-  DEBUG_FUNCTION_CALL LocalAlloc
-  MOV [CopperBarsHorz], RAX
-  TEST RAX, RAX
-  JZ @FailedCreateVert
-  
-  MOV RDI, [CopperBarsHorz]
-  XOR RSI, RSI
-  MOV R8, 10
-@CopperBarsHorzCreate:
-  MOV RCX, 50
-  IMUL RCX, RSI
-  MOV RAX, RCX
-  ADD RAX, 200
-  MOV COPPERBARS_FIELD_ENTRY.Y[RDI], RAX
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], 0
-  MOV COPPERBARS_FIELD_ENTRY.StartColor[RDI], 110
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], R8
-  SUB R8, 2
-
-  ADD RDI, SIZEOF COPPERBARS_FIELD_ENTRY
-  INC RSI
-  CMP RSI,MAX_HORZ_BARS
-  JB @CopperBarsHorzCreate
-
-@FailedCreateVert:
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-NESTED_END CopperBarDemo_CreateHorzBars, _TEXT$00
-
-
-
-
-;*********************************************************
-;  CopperBarDemo_MoveVertBars
-;
-;        Parameters: Master Context, Verticle Bars
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_MoveVertBars, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
- save_reg r14, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR14
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RBX, RCX
-
-  MOV RDI, RDX
-  XOR RSI, RSI
-  MOV R13, -1
-  MOV R14, 8
-@CopperBarsPlot:
-  XOR RDX, RDX
-
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Velocity[RDI]
-  ADD RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
-
-  CMP RAX, VBAR_LOWER_BOUNDS
-  JG @CheckUpperBounds
-
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], VBAR_LOWER_BOUNDS + 1
-  CALL Math_Rand
-  XOR RDX, RDX
-  MOV RCX, R14
-  DIV RCX
-  INC RDX
-  CMP R14, 8
-  JE @AdjustVelocity
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-  JMP @NotOutOfBounds
-@AdjustVelocity:
-  CMP RDX, 4
-  JA @NotOutOfBounds
-  ADD RDX, 4
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-  JMP @NotOutOfBounds
-@CheckUpperBounds:
-  ADD RAX, 21
-  CMP RAX, VBAR_UPPER_BOUNDS
-  JL @NotOutOfBounds
-  
-  MOV RAX, VBAR_UPPER_BOUNDS 
-  SUB RAX, 22
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
-  CALL Math_Rand
-  XOR RDX, RDX
-  MOV RCX, R14
-  DIV RCX
-  INC RDX
-  CMP R14, 8
-  JE @AdjustVelocityNeg
-  NEG RDX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-  JMP @NotOutOfBounds
-@AdjustVelocityNeg:
-  CMP RDX, 4
-  JA @SkipIncrease
-  ADD RDX, 4
-@SkipIncrease:
-  NEG RDX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-@NotOutOfBounds:
-  CMP RSI, 0
-  JE @SkipPreviousXAlignmentCheck
-  
-  MOV RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
-  MOV RCX, R13
-  SUB RCX, 18
-  CMP RAX, RCX
-  JG @CheckUpperBoundsOfPreviousBar
-  INC RCX
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RCX
-
-  CALL Math_Rand
-  XOR RDX, RDX
-  MOV RCX, R14
-  DIV RCX
-  INC RDX
-
-  CMP R14, 8
-  JE @AdjustVelocity2
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-  JMP @SkipPreviousXAlignmentCheck
-
-@AdjustVelocity2:
-  CMP RDX, 4
-  JA @DontAdjustVel
-   ADD RDX, 4
-
-@DontAdjustVel:
-   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-  JMP @SkipPreviousXAlignmentCheck
-
-@CheckUpperBoundsOfPreviousBar:
-  MOV RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
-  MOV RCX, R13
-  ADD RCX, 18
-  CMP RAX, RCX
-  JL @SkipPreviousXAlignmentCheck
-
-  DEC RCX
-  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RCX
-
-  CALL Math_Rand
-  XOR RDX, RDX
-  MOV RCX, R14
-  DIV RCX
-  INC RDX
-  CMP R14, 8
-  JE @AdjustVelocity3
-  NEG RDX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-  JMP @SkipPreviousXAlignmentCheck
-@AdjustVelocity3:
-  CMP RDX, 4
-  JA @DoNotAdjustVelocity
-  ADD RDX, 4
-@DoNotAdjustVelocity:
-  NEG RDX
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
-@SkipPreviousXAlignmentCheck:
-  MOV R14, 3
-  MOV R13, COPPERBARS_FIELD_ENTRY.X[RDI]
-  ADD RDI, SIZEOF COPPERBARS_FIELD_ENTRY
-  INC RSI  
-  CMP RSI, MAX_VERTICLE_BARS
-  JB @CopperBarsPlot
-  
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  MOV r14, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-
-NESTED_END CopperBarDemo_MoveVertBars, _TEXT$00
-
-;*********************************************************
-;  CopperBarDemo_MoveHorzBars
-;
-;        Parameters: Master Context
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_MoveHorzBars, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RBX, RCX
-
-  MOV RDI, [CopperBarsHorz]
-  MOV RSI, [CopperBarsHorz]
-  XOR R13, R13
-
-@CopperBarsMove:
-  CMP R13, 0
-  JNE @PlotFollowers
-
-  CMP [WaitState], 3
-  JB @Complete
-
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RDI]
-  ADD RAX, COPPERBARS_FIELD_ENTRY.Velocity[RDI]
-  MOV COPPERBARS_FIELD_ENTRY.Y[RDI], RAX
-  CMP RAX, 100 
-  JA @CheckUpperBounds
-  MOV [WaitState], 0
-  MOV COPPERBARS_FIELD_ENTRY.Y[RDI], 100
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], 10
-  ADD COPPERBARS_FIELD_ENTRY.StartColor[RDI], 10
-  JMP @Complete
-
-@CheckUpperBounds:
-  CMP RAX, 700
-  JB @Complete
-  MOV [WaitState], 0
-  MOV COPPERBARS_FIELD_ENTRY.Y[RDI], 700
-  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], -10
-  ADD COPPERBARS_FIELD_ENTRY.StartColor[RDI], 10
-  JMP @Complete
-@PlotFollowers:
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RSI]
-  MOV RCX, COPPERBARS_FIELD_ENTRY.Y[RDI]
-  CMP RCX, RAX
-  JB @MoveFromLower
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Velocity[RDI]
-  SUB COPPERBARS_FIELD_ENTRY.Y[RDI], RAX
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RDI]
-  SUB RAX, 20
-  CMP COPPERBARS_FIELD_ENTRY.Y[RSI], RAX
-  JB @Complete
-  INC [WaitState]
-  JMP @Complete
-@MoveFromLower:
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Velocity[RDI]
-  ADD COPPERBARS_FIELD_ENTRY.Y[RDI], RAX
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RDI]
-  ADD RAX, 20
-  CMP COPPERBARS_FIELD_ENTRY.Y[RSI], RAX
-  JA @Complete
-  INC [WaitState]
-@Complete:
-  CMP COPPERBARS_FIELD_ENTRY.StartColor[RDI], 120
-  JB @SkipColorUpdate
-  MOV COPPERBARS_FIELD_ENTRY.StartColor[RDI], 10
-@SkipColorUpdate:
-  ADD RDI, SIZE COPPERBARS_FIELD_ENTRY
-  INC R13
-  CMP R13,MAX_HORZ_BARS
-  JB @CopperBarsMove
-  
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-NESTED_END CopperBarDemo_MoveHorzBars, _TEXT$00
-
-;*********************************************************
-;  CopperBarDemo_PlotVBars
-;
-;        Parameters: Master Context
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_PlotVBars, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
- save_reg r14, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR14
- save_reg r15, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR15
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV R14, RCX
-
-  MOV RSI, [CopperBarsVert2]
-  MOV RDI, [CopperBarsVert]
-  XOR RDX, RDX
-  MOV RAX, MAX_VERTICLE_BARS/2
-  MOV RCX, SIZE COPPERBARS_FIELD_ENTRY
-  MUL RCX
-  ADD RDI, RAX
-  SUB RDI, SIZE COPPERBARS_FIELD_ENTRY
-  ADD RSI, RAX
-  SUB RSI, SIZE COPPERBARS_FIELD_ENTRY
-  XOR R11, R11
-@CopperBarsPlot:
-  XOR RDX, RDX
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RDI]
-  MOV R13, RAX
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R14]
-  SHL RCX, 1
-  MUL RCX
-  MOV RCX, [DoubleBuffer]
-  ADD RCX, RAX
-  MOV RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
+  MOV R12, RAX
   SHL RAX, 1
-  ADD RCX, RAX
-  MOV AX, COPPERBARS_FIELD_ENTRY.StartColor[RDI]
-  MOV BX, AX
 
-  XOR RDX, RDX
-  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RSI]
-  MOV R13, RAX
-  MOV R10, MASTER_DEMO_STRUCT.ScreenWidth[R14]
-  SHL R10, 1
-  MUL R10
-  MOV RDX, [DoubleBuffer]
-  ADD RDX, RAX
-  MOV RAX, COPPERBARS_FIELD_ENTRY.X[RSI]
-  SHL RAX, 1
-  ADD RDX, RAX
-  MOV AX, BX
-  MOV BX, COPPERBARS_FIELD_ENTRY.StartColor[RDI]
+  MOV RDX, RAX
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV [GifPalBufPtr], RAX
+  CMP RAX, 0
+  JE @AllocationError
 
-  XOR R9, R9
-@PlotX:
-  
+  MOV RSI, IMAGE_INFORMATION.CurrImagePtr[R15]
+  MOV RDI, [GifPalBufPtr]
+@CreateVPalBufferLoop:
   XOR R8, R8
-  MOV R15, R13
-@PlotY:
-  MOV [RCX + R8], AX
-  MOV [RDX + R8], BX
-  MOV R10, MASTER_DEMO_STRUCT.ScreenWidth[R14]
-  SHL R10, 1
-  ADD R8, R10
-  INC R15
-  CMP R15, 767
-  JB @PlotY
+  MOV EDX, DWORD PTR [RSI]
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_FindColorIndex
+  CMP AX, 0FFFFh
+  JNE @SetFoundIndex
 
-  INC R9
-  CMP R9, 10
-  JB @IncrementColor
-  DEC AX
-  DEC BX
-  JMP @SkipIncrement
-@IncrementColor:
-  INC AX
-  INC BX
-@SkipIncrement:
-  ADD RCX, 2
-  ADD RDX, 2
-  CMP R9, 19
-  JB @PlotX
-  SUB RDI, SIZEOF COPPERBARS_FIELD_ENTRY
-  SUB RSI, SIZEOF COPPERBARS_FIELD_ENTRY
-  INC R11  
-  INC R11
-  CMP R11, MAX_VERTICLE_BARS
-  JB @CopperBarsPlot
-  
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  MOV r14, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR14[RSP]
-  MOV r15, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR15[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-NESTED_END CopperBarDemo_PlotVBars, _TEXT$00
-
-
-;*********************************************************
-;  CopperBarDemo_PlotHBars
-;
-;        Parameters: Master Context
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_PlotHBars, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RBX, RCX
-
-  MOV RSI, [CopperBarsHorz]
-  XOR R13, R13
-
-@StartPlotBar:  
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  XOR RDX, RDX
-  MOV RDI, COPPERBARS_FIELD_ENTRY.Y[RSI]
-  MUL RDI
-  SHL RAX, 1
-  MOV RDI, RAX
-  ADD RDI, [DoubleBuffer]
-  
-  MOV AX, COPPERBARS_FIELD_ENTRY.StartColor[RSI]
-  XOR RDX, RDX
-
-@PlotHorizontal:
-;  CMP R13, 0
-;  JA @TransparentBars  transparency needs work, disable it for now.
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  REP STOSW
-  JMP @NextLine
-@TransparentBars:
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  SHL AX, 8
-@NextPixel:
-  ADD WORD PTR [RDI], AX
+  MOV R8D, DWORD PTR [RSI]
+  MOV RDX, RBX
+  MOV RCX,  [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_SetColorIndex
+  MOV RAX, RBX
+  INC RBX
+@SetFoundIndex:
+  MOV WORD PTR [RDI], AX
+  ADD RSI, 4
   ADD RDI, 2
-  DEC RCX  
-  JNZ @NextPixel
-  SHR AX, 8
-@NextLine:
-  INC RDX
-  CMP RDX, 10
-  JB @IncrementColor
-  DEC AX
-  JMP @CheckHorzLines
-@IncrementColor:
-  INC AX
-@CheckHorzLines:
-  CMP RDX, 20
-  JB @PlotHorizontal
+  DEC R12
+  JNZ @CreateVPalBufferLoop
 
-  INC R13
-  ADD RSI, SIZE COPPERBARS_FIELD_ENTRY
-
-  CMP R13, MAX_HORZ_BARS
-  JB @StartPlotBar
-  
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+@AllocationError:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-NESTED_END CopperBarDemo_PlotHBars, _TEXT$00
+NESTED_END CopperBarsDemo_ConvertImageToPalImage, _TEXT$00
+
+
+
 
 ;*********************************************************
-;  CopperBarDemo_CreateBackground
+;  CopperBarDemo_GenerateTopBackground
 ;
 ;        Parameters: Master Context
 ;
@@ -895,318 +574,593 @@ NESTED_END CopperBarDemo_PlotHBars, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreateBackground, _TEXT$00
- alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
- save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
- save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
- save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
- save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
- save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
+NESTED_ENTRY CopperBarDemo_GenerateTopBackground, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX
-
-  MOV RCX, [DoubleBuffer]
-  MOV R12, 200
-  XOR R8, R8
-  XOR R9, R9
-@BackgroundPlot:
-  MOV RAX, R12
-  MOV [RCX], AX
-  ADD RCX, 2
-  INC R8
-  CMP R8, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  JB @BackgroundPlot
+  MOV RDI, [DoubleBuffer]
+  MOV R12, 1
+@BackgroundTopPlot:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
+  MOV AX, R12W
+  REP STOSW
   INC R12
-  CMP R12, 250
-  JB @ColorStillValid
-  MOV R12, 200
-@ColorStillValid:
-  XOR R8, R8
-  INC R9
-  CMP R9, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
-  JB @BackgroundPlot
-  
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  CMP R12, 256
+  JB @BackgroundTopPlot
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-NESTED_END CopperBarDemo_CreateBackground, _TEXT$00
+NESTED_END CopperBarDemo_GenerateTopBackground, _TEXT$00
+
+;*********************************************************
+;  CopperBarDemo_MiddleBackGround
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_MiddleBackGround, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RBX, 300
+  XOR R10, R10
+  MOV RDI, [DoubleBuffer]
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV RCX, 256
+  MUL RCX
+  SHL RAX, 1
+  ADD RDI, RAX
+  XOR R9, R9
+@DrawScanLines:
+  XOR R11, R11
+@DrawBackgroundBar:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV RAX, RBX
+  REP STOSW
+  INC RBX
+  INC R11
+  CMP R11, 30
+  JB @DrawBackgroundBar
+  INC R9
+  CMP R9, MIDDLE_BACKGROUND
+  JB @DrawScanLines
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_MiddleBackGround, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_UpdateBarColorColors
+;
+;        Parameters: Color Bar
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_UpdateBarColorColors, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JL @GoingUp
+
+@GoingDown:
+  MOV RAX, THRESHOLD_UPPER
+  SUB RAX, COLOR_BAR_STRUCT.CurrentY[RSI]
+  MOV RBX, COLOR_BAR_STRUCT.BottomColors[RSI]
+  CMP RAX, 0
+  JLE @JustUpdateDirectly
+  MOV R12, RAX
+  MOV R15, COLOR_BAR_STRUCT.ScratchColors[RSI]
+  JMP @LoopAllIndexes
+@GoingUp:
+  MOV RAX, COLOR_BAR_STRUCT.CurrentY[RSI]
+  SUB RAX, THRESHOLD_LOWER
+  MOV RBX, COLOR_BAR_STRUCT.TopColors[RSI]
+  CMP RAX, 0
+  JLE @JustUpdateDirectly
+  MOV R12, RAX
+  XOR R13, R13
+  MOV R15, COLOR_BAR_STRUCT.ScratchColors[RSI]
+@LoopAllIndexes:  
+
+  MOV R9, R15
+  MOV R8, RBX
+  MOV RDX, R12
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_MoveColorIndexes  
+
+  INC RBX
+  INC R15
+  INC R13
+  CMP R13, HEIGHT_OF_HORIZONTAL_BARS
+  JB @LoopAllIndexes
+  JMP @DoneUpdatingColors
+     
+@JustUpdateDirectly:
+  MOV R9, 30
+  MOV R8, COLOR_BAR_STRUCT.ScratchColors[RSI]
+  MOV RDX, RBX
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_CopyIndexRange
+
+@DoneUpdatingColors:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_UpdateBarColorColors, _TEXT$00
+
+
+
+
+
+
 
 ;*********************************************************
 ;  CopperBarDemo_CreateBarColor
 ;
-;        Parameters: Start Index, Start Color
+;        Parameters: Color Description Structure
 ;
 ;       
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreateBarColor, _TEXT$00
-  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
-  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
-  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
-  .ENDPROLOG 
+NESTED_ENTRY CopperBarDemo_CreateColorDither, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-   XOR EBX, EBX
-   MOV R12, 10
-   MOV RDI, RCX
-   MOV RSI, RDX
 
-@CreateCopperBarColor:
-   MOV RAX, RSI
-   MOV DL, AL
-   SHR RAX, 8
-   ADD DL, 5
-   ADD AL, 5
-   ADD AH, 5
-   SHL RAX, 8
-   MOV AL, DL
-   MOV RSI, RAX
+   CMP COLOR_DESCRIPTIONS_STRUCT.BooleanDitherUpAndDown[RCX], 0
+   JE @OnlyOneWayDither
 
-   MOV R8, RAX
-   MOV RDX, RBX
-   ADD RDX, RDI
-   MOV RCX, [VirtualPallete]
-   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+   DEBUG_FUNCTION_CALL CopperBarDemo_CreateColorDitherBothWays
 
-   DEC R12
-   INC RBX
-   CMP EBX, 10
-   JB @CreateCopperBarColor
+   JMP @DoneCreatingDither
+@OnlyOneWayDither:
+   DEBUG_FUNCTION_CALL CopperBarDemo_CreateColorDitherOneWay
    
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+@DoneCreatingDither:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-NESTED_END CopperBarDemo_CreateBarColor, _TEXT$00
+NESTED_END CopperBarDemo_CreateColorDither, _TEXT$00
 
 ;*********************************************************
-;  CopperBarDemo_RotateBarColor
+;  CopperBarDemo_MoveTopHorzBars
 ;
-;        Parameters: Start Index, Stop Index
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_RotateBarColor, _TEXT$00
-  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
-  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
-  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
-  save_reg r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13
-  .ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RDI, RCX
-  MOV RSI, RDX
-  MOV R12, RCX
-
-   MOV RDX, RDI
-   MOV RCX, [VirtualPallete]
-   DEBUG_FUNCTION_CALL VPal_GetColorIndex
-   MOV R13, RAX
-   INC RDI
-   
-@RotateCopperBarColor:
-
-   MOV RDX, RDI
-   MOV RCX, [VirtualPallete]
-   DEBUG_FUNCTION_CALL VPal_GetColorIndex
-
-   MOV R8, R13
-   MOV R13, RAX
-   MOV RDX, RDI
-   MOV RCX, [VirtualPallete]
-   DEBUG_FUNCTION_CALL VPal_SetColorIndex
-
-   INC RDI
-   CMP RDI, RSI
-   JBE @RotateCopperBarColor
-
-   MOV R8, R13
-   MOV RDX, R12
-   MOV RCX, [VirtualPallete]
-   DEBUG_FUNCTION_CALL VPal_SetColorIndex
-   
-  MOV r13, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR13[RSP]
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-NESTED_END CopperBarDemo_RotateBarColor, _TEXT$00
-
-;*********************************************************
-;  CopperBarDemo_CreateBackgroundColor
-;
-;        Parameters: Start Index, Start Color
+;        Parameters: Color Description Structure
 ;
 ;       
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreateBackgroundColor, _TEXT$00
-  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
-  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
-  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
-  .ENDPROLOG 
+NESTED_ENTRY CopperBarDemo_MoveTopHorzBars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-   XOR EBX, EBX
-   MOV RDI, RCX
-   MOV RSI, RDX
+  MOV RSI, RCX
 
-@CreateCopperBarColor:
-   MOV RAX, RSI
-   MOV DL, AL
-   SHR RAX, 8
-   ADD DL, 1
-   ADD AL, 1
-   ADD AH, 1
-   SHL RAX, 8
-   MOV AL, DL
-   MOV RSI, RAX
-   MOV R8, RAX
-   MOV RDX, RBX
-   ADD RDX, RDI
-   MOV RCX, [VirtualPallete]
-   DEBUG_FUNCTION_CALL VPal_SetColorIndex
-   INC RBX
-   CMP EBX, 50
-   JB @CreateCopperBarColor
-
-
-
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
-  RET
-NESTED_END CopperBarDemo_CreateBackgroundColor, _TEXT$00
-
-
-;*********************************************************
-;  CopperBarDemo_CreateTransparancy
-;
-;        Parameters: Start Index, Start Background
-;
-;       
-;
-;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreateTransparancy, _TEXT$00
-  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
-  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
-  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
-  .ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-   MOV RDI, RCX
-   MOV RSI, RDX
-
-@CreateTransparancyOutterLoop:
-  MOV RDX, RDI
-  MOV RCX, [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_GetColorIndex
-  MOV R12, RAX
-  MOV RBX, RSI
-
-@CreateTransparancyInnerLoop:
-  MOV RDX, RBX
-  MOV RCX, [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_GetColorIndex
-
-  ; New Color = Opacity * Color + (1-Opacity) * Background
-
-  MOVSD xmm0, [Opacity]
-  MOV RDX, RAX
-  MOV RCX, R12
-  AND RCX, 0FFh
-  AND RDX, 0FFh
-  CVTSI2SD xmm1, RCX
-  MULSD xmm1, xmm0
-  CVTSI2SD xmm2, RDX
-  MOVSD xmm0, [InverseOpacity]
-  MULSD xmm2, xmm0
-  ADDSD xmm1, xmm2
-  CVTSD2SI RDX, xmm1
-  MOV R8, RDX
-
-  MOVSD xmm0, [Opacity]
-  MOV RDX, RAX
-  MOV RCX, R12
-  SHL RCX, 8
-  AND RCX, 0FFh
-  SHL RCX, 8
-  AND RDX, 0FFh
-  CVTSI2SD xmm1, RCX
-  MULSD xmm1, xmm0
-  CVTSI2SD xmm2, RDX
-  MOVSD xmm0, [InverseOpacity]
-  MULSD xmm2, xmm0
-  ADDSD xmm1, xmm2
-  CVTSD2SI RDX, xmm1
-  SHL RDX, 8
-  OR R8, RDX
-
-  MOVSD xmm0, [Opacity]
-  MOV RDX, RAX
-  MOV RCX, R12
-  SHL RCX, 16
-  AND RCX, 0FFh
-  SHL RDX, 16
-  AND RDX, 0FFh
-  CVTSI2SD xmm1, RCX
-  MULSD xmm1, xmm0
-  CVTSI2SD xmm2, RDX
-  MOVSD xmm0, [InverseOpacity]
-  MULSD xmm2, xmm0
-  ADDSD xmm1, xmm2
-  CVTSD2SI RDX, xmm1
-  SHL RDX, 16
-  OR R8, RDX
-
-  MOV RDX, RDI
-  SHL RDX, 8
-  ADD RDX, RBX
-  MOV RCX, [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_SetColorIndex
-
-  INC RBX
-  CMP RBX, 250
-  JB @CreateTransparancyInnerLoop
-
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JL @DoNegativeVelocity
   
-  INC RDI
-  CMP RDI, 120
-  JB @CreateTransparancyOutterLoop
+  MOV RAX, COLOR_BAR_STRUCT.CurrentYThreshold[RSI]
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JB @SkipDecrementVelocity
 
+  DEC COLOR_BAR_STRUCT.Velocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JNE @UpdateVelocity
 
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+  ;NEG COLOR_BAR_STRUCT.Velocity[RSI]
+  ;NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  ;MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_LOWER
 
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+@UpdateVelocity:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JMP @DoAnotherCheck
+
+@SkipDecrementVelocity:
+  MOV RAX, COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], RAX
+  JE @SkipIncrement
+  INC COLOR_BAR_STRUCT.Velocity[RSI]
+@SkipIncrement:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  ;JMP @CompleteUpdate
+@DoAnotherCheck:
+ 
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], 255-30
+  JL @Done
+
+  MOV COLOR_BAR_STRUCT.CurrentY[RSI], 255-31
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+  NEG COLOR_BAR_STRUCT.Velocity[RSI]
+  NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_LOWER
+  JMP @Done
+  
+@DoNegativeVelocity:
+
+  MOV RAX, COLOR_BAR_STRUCT.CurrentYThreshold[RSI]
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JA @SkipDecrementVelocity2
+
+  INC COLOR_BAR_STRUCT.Velocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JNE @UpdateVelocity2
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+
+  NEG COLOR_BAR_STRUCT.Velocity[RSI]
+  NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_UPPER
+
+@UpdateVelocity2:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JMP @CompleteUpdate
+
+@SkipDecrementVelocity2:
+  MOV RAX, COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], RAX
+  JE @SkipDecrement
+  DEC COLOR_BAR_STRUCT.Velocity[RSI]
+@SkipDecrement:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JMP @CompleteUpdate
+
+@CompleteUpdate:
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], 0
+  JG @SkipFixUp
+
+  MOV COLOR_BAR_STRUCT.CurrentY[RSI], 1
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+  CMP COLOR_BAR_STRUCT.MaxVelocity[RSI], 0
+  JG @SkipNegate
+  NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+@SkipNegate:
+  MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_UPPER
+@SkipFixUp:
+@Done:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-NESTED_END CopperBarDemo_CreateTransparancy, _TEXT$00
+NESTED_END CopperBarDemo_MoveTopHorzBars, _TEXT$00
+
 
 
 ;*********************************************************
-;  CopperBarDemo_ResizeAndCopyBuffers
+;  CopperBarDemo_MoveMidHorzBars
+;
+;        Parameters: Color bar Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_MoveMidHorzBars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JL @DoNegativeVelocity
+  
+  MOV RAX, COLOR_BAR_STRUCT.CurrentYThreshold[RSI]
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JB @SkipDecrementVelocity
+
+  DEC COLOR_BAR_STRUCT.Velocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JNE @UpdateVelocity
+
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+
+@UpdateVelocity:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JMP @DoAnotherCheck
+
+@SkipDecrementVelocity:
+  MOV RAX, COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], RAX
+  JE @SkipIncrement
+  INC COLOR_BAR_STRUCT.Velocity[RSI]
+@SkipIncrement:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  ;JMP @CompleteUpdate
+@DoAnotherCheck:
+ 
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], 600-30
+  JL @Done
+
+  MOV COLOR_BAR_STRUCT.CurrentY[RSI], 600-31
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+  NEG COLOR_BAR_STRUCT.Velocity[RSI]
+  NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_HIGH_MID
+  JMP @Done
+  
+@DoNegativeVelocity:
+
+  MOV RAX, COLOR_BAR_STRUCT.CurrentYThreshold[RSI]
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JA @SkipDecrementVelocity2
+
+  INC COLOR_BAR_STRUCT.Velocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], 0
+  JNE @UpdateVelocity2
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+
+  NEG COLOR_BAR_STRUCT.Velocity[RSI]
+  NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_LOW_MID
+
+@UpdateVelocity2:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JMP @CompleteUpdate
+
+@SkipDecrementVelocity2:
+  MOV RAX, COLOR_BAR_STRUCT.MaxVelocity[RSI]
+  CMP COLOR_BAR_STRUCT.Velocity[RSI], RAX
+  JE @SkipDecrement
+  DEC COLOR_BAR_STRUCT.Velocity[RSI]
+@SkipDecrement:
+  MOV RAX, COLOR_BAR_STRUCT.Velocity[RSI]
+  ADD COLOR_BAR_STRUCT.CurrentY[RSI], RAX
+  JMP @CompleteUpdate
+
+@CompleteUpdate:
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], 257
+  JG @SkipFixUp
+
+  MOV COLOR_BAR_STRUCT.CurrentY[RSI], 258
+  MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
+  CMP COLOR_BAR_STRUCT.MaxVelocity[RSI], 0
+  JG @SkipNegate
+  NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
+@SkipNegate:
+  MOV COLOR_BAR_STRUCT.CurrentYThreshold[RSI], THRESHOLD_LOW_MID
+@SkipFixUp:
+@Done:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_MoveMidHorzBars, _TEXT$00
+
+
+
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_CreateColorDitherOneWay
+;
+;        Parameters: Color Description Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_CreateColorDitherOneWay, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  XOR RDI, RDI
+  MOV EBX, COLOR_DESCRIPTIONS_STRUCT.StartingColorValue[RSI]
+@CreateColorDither:
+
+   MOV R8, RBX
+   MOV RDX, COLOR_DESCRIPTIONS_STRUCT.StartingColorIndex[RSI]
+   ADD RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+
+   INC RDI
+   CMP RDI, COLOR_DESCRIPTIONS_STRUCT.ColorLength[RSI]
+   JE @DoneCreatingDither
+   
+   MOV RAX, RBX
+   XOR RCX, RCX
+   MOV CX, BX
+   SHR RAX, 16
+   ADD CL, COLOR_DESCRIPTIONS_STRUCT.BlueColorIncrement[RSI]
+   ADD CH, COLOR_DESCRIPTIONS_STRUCT.GreenColorIncrement[RSI]
+   ADD AL, COLOR_DESCRIPTIONS_STRUCT.RedColorIncrement[RSI]
+   SHL RAX, 16
+   MOV RBX, RCX
+   OR RBX, RAX
+   JMP @CreateColorDither
+
+@DoneCreatingDither:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_CreateColorDitherOneWay, _TEXT$00
+
+
+
+;*********************************************************
+;  CopperBarDemo_CreateColorDitherBothWays
+;
+;        Parameters: Color Description Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_CreateColorDitherBothWays, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  XOR RDI, RDI
+  MOV EBX, COLOR_DESCRIPTIONS_STRUCT.StartingColorValue[RSI]
+@CreateColorDither:
+
+   MOV R8, RBX
+   MOV RDX, COLOR_DESCRIPTIONS_STRUCT.StartingColorIndex[RSI]
+   ADD RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+
+   INC RDI
+   MOV RAX, COLOR_DESCRIPTIONS_STRUCT.ColorLength[RSI]
+   SHR RAX, 1
+   CMP RDI, RAX
+   JE @DoneCreatingDitherUp
+   
+   MOV RAX, RBX
+   XOR RCX, RCX
+   MOV CX, BX
+   SHR RAX, 16
+   ADD CL, COLOR_DESCRIPTIONS_STRUCT.BlueColorIncrement[RSI]
+   ADD CH, COLOR_DESCRIPTIONS_STRUCT.GreenColorIncrement[RSI]
+   ADD AL, COLOR_DESCRIPTIONS_STRUCT.RedColorIncrement[RSI]
+   SHL RAX, 16
+   MOV RBX, RCX
+   OR RBX, RAX
+   JMP @CreateColorDither
+
+@DoneCreatingDitherUp:
+@CreateColorDitherDown:
+
+   MOV R8, RBX
+   MOV RDX, COLOR_DESCRIPTIONS_STRUCT.StartingColorIndex[RSI]
+   ADD RDX, RDI
+   MOV RCX, [VirtualPallete]
+   DEBUG_FUNCTION_CALL VPal_SetColorIndex
+
+   INC RDI
+   CMP RDI, COLOR_DESCRIPTIONS_STRUCT.ColorLength[RSI]
+   JE @DoneCreatingDitherDown
+   
+   MOV RAX, RBX
+   XOR RCX, RCX
+   MOV CX, BX
+   SHR RAX, 16
+   SUB CL, COLOR_DESCRIPTIONS_STRUCT.BlueColorIncrement[RSI]
+   SUB CH, COLOR_DESCRIPTIONS_STRUCT.GreenColorIncrement[RSI]
+   SUB AL, COLOR_DESCRIPTIONS_STRUCT.RedColorIncrement[RSI]
+   SHL RAX, 16
+   MOV RBX, RCX
+   OR RBX, RAX
+   JMP @CreateColorDitherDown
+@DoneCreatingDitherDown:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_CreateColorDitherBothWays, _TEXT$00
+
+
+
+;*********************************************************
+;  CopperBarDemo_DrawHorizBar
+;
+;        Parameters: MMaster Context, Horizontal Bar Structure, Transparent
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DrawHorizBar, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  MOV R15, RDX
+  MOV R14, R8
+  MOV R12, COLOR_BAR_STRUCT.ScratchColors[R15]  
+
+  MOV RDI, [DoubleBuffer]
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV R8, COLOR_BAR_STRUCT.CurrentY[R15]
+  MUL R8
+  SHL RAX, 1
+  ADD RDI, RAX
+  MOV R13, COLOR_BAR_STRUCT.TopColors[R15]
+  XOR RBX, RBX
+@GoingUp:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  XOR RDX, RDX
+  MOV DX, WORD PTR[RDI]
+  MOV RAX, R12
+  REP STOSW
+  CMP R14, 0
+  JE @NoTransparentcy
+  MOV R9, R12
+  MOV R8, R13
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_Transparent
+@NoTransparentcy:
+  INC RBX
+  INC R12
+  INC R13
+  CMP RBX, 10
+  JB @GoingUp
+  MOV R13, COLOR_BAR_STRUCT.TopColors[R15]
+  XOR RBX, RBX
+@GoingDown:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  XOR RDX, RDX
+  MOV DX, WORD PTR[RDI]
+  MOV RAX, R12
+  REP STOSW
+  CMP R14, 0
+  JE @NoTransparentcy2
+  MOV R9, R12
+  MOV R8, R13
+  MOV RCX, [VirtualPallete]
+  DEBUG_FUNCTION_CALL VPal_Transparent
+@NoTransparentcy2:
+  INC RBX
+  INC R13
+  INC R12
+  CMP RBX, 10
+  JB @GoingDown
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DrawHorizBar, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_DrawTopSquares
 ;
 ;        Parameters: Master Context
 ;
@@ -1214,71 +1168,257 @@ NESTED_END CopperBarDemo_CreateTransparancy, _TEXT$00
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY CopperBarDemo_ResizeAndCopyBuffers, _TEXT$00
-  alloc_stack(SIZEOF COPPERBARS_DEMO_STRUCTURE)
-  save_reg rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi
-  save_reg rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi
-  save_reg rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx
-  save_reg r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12
-  .ENDPROLOG 
+NESTED_ENTRY CopperBarDemo_DrawTopSquares, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV RBX, RCX
-  MOV RDI, [TripleBuffer]
-
-  XOR R9, R9                  ; True Width Counter
-  XOR R10, R10                ; True Height Counter
-  XOR R8, R8                  ; Image Width Counter
-
-@StartImagePlot:
-  XOR R11, R11                ; Image Height Counter
-  MOV RSI, [DoubleBuffer]
-@PlotHorizontalLines:
-  MOV AX, WORD PTR [RSI+R8]
-  MOV WORD PTR [RDI], AX
-  ADD RDI, 2
-  INC R9
-  MOV RAX, [Stepping]
-  SHL RAX, 1
-  ADD R8, RAX
-  CMP R9, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  JAE @DoneWithHorizontalPlotting
-  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  SHL RAX, 1
-  CMP R8, RAX
-  JB @PlotHorizontalLines
-  XOR R8, R8
-  JMP @PlotHorizontalLines
-
-@DoneWithHorizontalPlotting:  
-  XOR R9,R9
-  INC R10
-  CMP R10, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
-  JAE @DoneWithImage
-  XOR R8, R8
-  ADD R11, [Stepping]
-  CMP R11, MASTER_DEMO_STRUCT.ScreenHeight[RBX]
-  JAE @StartImagePlot
-
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  SHL RCX, 1
+  MOV R12, RCX
+  XOR RAX, RAX
+  MOV RDI, [DoubleBuffer]
+  MOV RSI, [GifPalBufPtr]
+@HeightLoop:
   XOR RDX, RDX
-  MOV RAX, [Stepping]
-  MUL RCX
-  ADD RSI, RAX
-  JMP @PlotHorizontalLines
-  
+  XOR R8, R8
+@WidthLoop:
+  MOV CX, WORD PTR [RSI]
+  MOV WORD PTR [RDI + RDX], CX
+  ADD RSI, 2
+  INC R8
+  ADD RDX, 2
+  CMP R8, [GifImageInformation.ImageWidth]
+  JB @WidthLoop
 
-@DoneWithImage:
+  MOV R10, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SHL R10, 1
+  ADD RDI, R10
+  INC RAX
+  CMP RAX, [GifImageInformation.ImageHeight]
+  JB @HeightLoop
 
-  MOV rdi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRdi[RSP]
-  MOV rsi, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRsi[RSP]
-  MOV rbx, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveRbx[RSP]
-  MOV r12, COPPERBARS_DEMO_STRUCTURE.SaveFrame.SaveR12[RSP]
-  ADD RSP, SIZE COPPERBARS_DEMO_STRUCTURE
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
   RET
-NESTED_END CopperBarDemo_ResizeAndCopyBuffers, _TEXT$00
+NESTED_END CopperBarDemo_DrawTopSquares, _TEXT$00
 
 
+;*********************************************************
+;  CopperBarDemo_DrawSquares
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DrawSquares, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R12, RCX
+
+  MOV R10, [SquareGrid.SquareVisibleAt00]       ; If the current location has a square on the far left side.
+  MOV RDI, [DoubleBuffer]                       ; Current line 
+  MOV R9, [SquareGrid.CurrentTopCornerY]        ; Start of Y for current line.
+
+  XOR RDX, RDX
+  MOV RAX, [GifImageInformation.ImageWidth]
+  MOV RSI, [SquareGrid.CurrentTopCornerY]
+  MUL RSI
+  SHL RAX, 1
+  MOV RDX, [GifPalBufPtr]
+  ADD RDX, RAX
+
+  XOR R13, R13                                  ; Count Scan Lines
+@DrawTopGrid:
+  CMP R10, 0
+  JE @SetupSecondSquare
+  MOV R11, [SquareGrid.CurrentTopCornerX]       ; Starting X  of the current line for the first square.
+  MOV RSI, R11
+  SHL RSI, 1
+  ADD RSI, RDX
+  XOR R14, R14
+  XOR RAX, RAX
+  JMP @ScanLine
+@SetupSecondSquare:
+  MOV R14, [GifImageInformation.ImageWidth]
+  SUB R14, [SquareGrid.CurrentTopCornerX]
+  MOV RAX, R14
+  SHL RAX, 1
+  MOV RSI, RDX
+  XOR R11, R11
+
+@ScanLine:
+  ADD RDI, RAX
+  MOV RCX, [GifImageInformation.ImageWidth]
+  SUB RCX, R11
+  LEA RAX, [RCX + R14]
+  CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  JB @OkToProceed
+  SUB RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SUB RCX, RAX
+@OkToProceed:
+  ADD R14, RCX
+  REP MOVSW
+  MOV RAX, [GifImageInformation.ImageWidth]
+  ADD RAX, R14
+  CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  JB @NoFixUp
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SUB RAX, R14
+  SHL RAX, 1
+  ADD RDI, RAX
+@NoFixUp:
+  MOV RAX, [GifImageInformation.ImageWidth]
+  ADD R14, RAX
+  SHL RAX, 1
+  MOV RSI, RDX
+  XOR R11, R11
+  CMP R14, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  JB @ScanLine
+
+  MOV RAX, [GifImageInformation.ImageWidth]
+  SHL RAX, 1
+  ADD RDX, RAX
+  INC R9
+  CMP R9, [GifImageInformation.ImageHeight]
+  JB @SkipResetOfGifLines
+  XOR R10, 1
+  MOV RDX, [GifPalBufPtr]
+  XOR R9, R9
+@SkipResetOfGifLines: 
+  INC R13
+  CMP R13, 256
+  JB @DrawTopGrid
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DrawSquares, _TEXT$00
+
+
+
+;*********************************************************
+;  CopperBarDemo_MoveSquares
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_MoveSquares, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  
+  MOV RAX, [SquareGrid.CurrentIncrementX]
+  MOV R8, [SquareGrid.CurrentTopCornerX]
+  ADD R8, RAX
+
+  CMP R8, [GifImageInformation.ImageWidth]
+  JL @CheckLess2
+  SUB R8, [GifImageInformation.ImageWidth]
+  XOR [SquareGrid.SquareVisibleAt00], 1
+@CheckLess2:
+  CMP R8, 0
+  JG @CheckY
+  MOV RAX, [GifImageInformation.ImageWidth]
+  ADD RAX, R8
+  MOV R8, RAX
+  XOR [SquareGrid.SquareVisibleAt00], 1
+@CheckY:
+  MOV [SquareGrid.CurrentTopCornerX], R8  
+
+  MOV RAX, [SquareGrid.CurrentIncrementY]
+  MOV R8, [SquareGrid.CurrentTopCornerY]
+  ADD R8, RAX
+
+  CMP R8, [GifImageInformation.ImageHeight]
+  JL @CheckLess
+  SUB R8, [GifImageInformation.ImageHeight]
+  XOR [SquareGrid.SquareVisibleAt00], 1
+@CheckLess:
+  CMP R8, 0
+  JG @DoneWithY
+  MOV RAX, [GifImageInformation.ImageHeight]
+  ADD RAX, R8
+  MOV R8, RAX
+  XOR [SquareGrid.SquareVisibleAt00], 1
+@DoneWithY:
+  MOV [SquareGrid.CurrentTopCornerY], R8  
+
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_MoveSquares, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_ChangeDirections
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_ChangeDirections, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  DEC [SquareGrid.CurrentDecayX]
+  JZ @DecayXExpire
+
+  MOV RAX, [SquareGrid.CurrentIncrementX]
+  MOV RCX, -1
+  CMP RAX, 0
+  JG @SkipNegate
+  NEG RAX
+  MOV RCX, 1
+@SkipNegate:
+  CMP RAX, [SquareGrid.CurrentDecayX] 
+  JNE @GoToY
+  JMP @GoToY
+@DecayXExpire:
+  NEG [SquareGrid.CurrentIncrementX]
+  MOV RAX, [SquareGrid.CurrentDecayXRefresh]
+  MOV [SquareGrid.CurrentDecayX], RAX
+  ; TBD
+
+@GoToY:
+  DEC [SquareGrid.CurrentDecayY]
+  JZ @DecayYExpire
+
+  MOV RAX, [SquareGrid.CurrentIncrementY]
+  MOV RCX, -1
+  CMP RAX, 0
+  JG @SkipNegate2
+  NEG RAX
+  MOV RCX, 1
+@SkipNegate2:
+  CMP RAX, [SquareGrid.CurrentDecayY] 
+  JNE @Done
+  JMP @Done
+  ; TBD
+@DecayYExpire:
+  NEG [SquareGrid.CurrentIncrementY]
+  MOV RAX, [SquareGrid.CurrentDecayYRefresh]
+  MOV [SquareGrid.CurrentDecayY], RAX
+
+@Done:
+
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_ChangeDirections, _TEXT$00
 
 
 END

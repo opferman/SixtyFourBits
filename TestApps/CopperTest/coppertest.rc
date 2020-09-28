@@ -1,0 +1,5 @@
+#include <windows.h>
+
+
+AUDIODEMO     AUDIO_TYPE resources\demo.audio
+TILE          GIF_TYPE   resources\tile.gif
