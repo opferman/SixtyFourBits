@@ -36,7 +36,7 @@ TIMER_EMULATE_VRTRACE EQU <1>
 extern AdjustWindowRectEx:proc
 extern ValidateRect:proc
 extern SetTimer:proc
-
+extern DwmFlush:proc
 
 HKEY_LOCAL_MACHINE EQU <080000002h>
 KEY_READ EQU <020019h>
@@ -98,7 +98,7 @@ FRAME_DELAY_VALUE  EQU <10>
  FullScreenMode  dq ?
  EmulateVRTrace  dq ?
  EscapeDisabled  dq ?
- StartValue      dq ?
+ StartValue      dq 0
  CpuMhz                      dq 0
  RegistryCpuKey              db "HARDWARE\DESCRIPTION\System\CentralProcessor\0", 0
  RegistryMhzValue            db "~MHz", 0
@@ -248,9 +248,11 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
 .ENDPROLOG 
    CMP [EmulateVRTrace], 0
    JE @Windowx64_MessageLoop
-
-   DEBUG_FUNCTION_CALL Windowx64_StartTimerValue
-   MOV [StartValue], RAX
+   
+;   CMP [StartValue], 0
+;   JNE @Windowx64_MessageLoop
+;   DEBUG_FUNCTION_CALL Windowx64_StartTimerValue
+;   MOV [StartValue], RAX
    
 @Windowx64_MessageLoop:
 
@@ -266,12 +268,15 @@ NESTED_ENTRY Windowx64_Loop, _TEXT$00
 
 	CMP [EmulateVRTrace], 0
 	JE @Windowx64_EngineDrawFrame
-  
-        MOV RCX, [StartValue]
-        DEBUG_FUNCTION_CALL Windowx64_GetElapsedMs
-        CMP RAX, FRAME_DELAY_VALUE
-        JB @Windowx64_MessageLoop
+        
+        DEBUG_FUNCTION_CALL DwmFlush 
+;        MOV RCX, [StartValue]
+;        DEBUG_FUNCTION_CALL Windowx64_GetElapsedMs
+;        CMP RAX, FRAME_DELAY_VALUE
+;        JB @Windowx64_MessageLoop
 
+        DEBUG_FUNCTION_CALL Windowx64_StartTimerValue
+        MOV [StartValue], RAX
  @Windowx64_EngineDrawFrame:        
         ADD RSP, SIZEOF LOOP_STACK_FRAME
         XOR RAX, RAX

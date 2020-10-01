@@ -58,6 +58,7 @@ public VPal_FindColorIndex
 public VPal_CopyIndexRange
 public VPal_MoveColorIndexes
 public VPal_Transparent
+public VPal_DirectAccess
 
 .CODE
 
@@ -352,7 +353,7 @@ NESTED_ENTRY VPal_Transparent, _TEXT$00
   XOR RAX, RAX
   MOV CL, BYTE PTR [RDX + R15] ; Background
   MOV AL, BYTE PTR [R8 + R15] ; Foreground
-;  SHR CL, 1  Adjust for transparency settings
+ ; SHR CL, 1  ; Adjust for transparency settings
   ADD AX, CX
   CMP AX, 255
   JBE @NoNeedToTruncate
@@ -419,6 +420,23 @@ NESTED_ENTRY VPal_FindColorIndex, _TEXT$00
   ADD RSP, SIZE VPAL_INIT_LOCALS
   RET
 NESTED_END VPal_FindColorIndex, _TEXT$00
+
+;*********************************************************
+;  VPal_DirectAccess
+;
+;        Parameters: Palette Handle
+;
+;       return Palette Array
+;
+;
+;*********************************************************  
+NESTED_ENTRY VPal_DirectAccess, _TEXT$00
+  alloc_stack(SIZEOF VPAL_INIT_LOCALS)
+.ENDPROLOG 
+  MOV RAX, VPAL_HANDLE.PalettePtr[RCX]
+  ADD RSP, SIZE VPAL_INIT_LOCALS
+  RET
+NESTED_END VPal_DirectAccess, _TEXT$00
 
 
 ;*********************************************************

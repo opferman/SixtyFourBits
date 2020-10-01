@@ -16,3 +16,4 @@ extern VPal_FindColorIndex:proc
 extern VPal_CopyIndexRange:proc
 extern VPal_MoveColorIndexes:proc
 extern VPal_Transparent:proc
+extern VPal_DirectAccess:proc

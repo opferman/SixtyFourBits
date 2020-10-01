@@ -21,6 +21,7 @@ TARGETLIBS = $(TARGETLIBS) \
              $(SDK_LIB_PATH)\user32.lib \
              $(SDK_LIB_PATH)\kernel32.lib \
              $(SDK_LIB_PATH)\ddraw.lib \
+             ..\..\libs\x64\dwmapi.lib \
              $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
              $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
              $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \

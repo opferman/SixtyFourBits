@@ -5,6 +5,8 @@
 ; 
 ;  By Toby Opferman  2017
 ;
+;     Redone to look like Kukoo2 in September 2020.
+;
 ;*********************************************************
 
 
@@ -34,6 +36,9 @@ extern LoadResource:proc
 extern SizeofResource:proc
 extern LockResource:proc
 extern FindResourceA:proc
+extern cos:proc
+extern sin:proc
+
 LMEM_ZEROINIT EQU <40h>
 ;*********************************************************
 ; Demo Structures
@@ -41,10 +46,13 @@ LMEM_ZEROINIT EQU <40h>
 COPPERBARS_FIELD_ENTRY struct
    X              dq ?
    Y              dq ?
+   Bounds         dq ?
    StartColor     dw ?
    MinVelocity    dq ?
    MaxVelocity    dq ?
    Velocity       dq ?
+   LeftWall       dq ?
+   RightWall      dq ?
 COPPERBARS_FIELD_ENTRY ends
 
 
@@ -58,6 +66,19 @@ COLOR_BAR_STRUCT struct
    ScratchColors          dq ?
 COLOR_BAR_STRUCT ends
 
+
+DEMO_TEXT_STRUCT struct
+   BetweenCharacters       dq ?
+   CurrentIndex            dq ?
+   StartBitIndex           dq ?
+   String                  dq ?
+   FontScale               dq ?
+   CenterYorX              dq ?
+   WaveScale               dq ?
+DEMO_TEXT_STRUCT ends
+
+
+
 COLOR_DESCRIPTIONS_STRUCT struct
    StartingColorIndex     dq ?
    RedColorIncrement      db ?
@@ -69,7 +90,6 @@ COLOR_DESCRIPTIONS_STRUCT struct
 COLOR_DESCRIPTIONS_STRUCT ends
 
 SQUARE_TRCKER struct
-
   CurrentTopCornerX      dq ?
   CurrentTopCornerY      dq ?
   SquareVisibleAt00      dq ?
@@ -79,23 +99,51 @@ SQUARE_TRCKER struct
   CurrentIncrementY      dq ?
   CurrentDecayY          dq ?
   CurrentDecayYRefresh   dq ?
-
 SQUARE_TRCKER ends
+
+WAVE_TRACKER struct
+  WaveVelocity         dq ?
+  WaveThetaAddition    dq ?
+WAVE_TRACKER ends
 
 ;*********************************************************
 ; Demo Constants
 ;*********************************************************
-COLOR_DESCRIPTIONS_SIZE     EQU <22>
-NUMBER_TOP_HORIZONTAL_BARS  EQU <3>
-NUMBER_MID_HORIZONTAL_BARS  EQU <4>
-HEIGHT_OF_HORIZONTAL_BARS   EQU <20>
-THRESHOLD_UPPER             EQU <255-60>
-THRESHOLD_LOWER             EQU <30>
-MIDDLE_BACKGROUND           EQU <11>
-TILE_IMAGE_PIXELS           EQU <10000>
-THRESHOLD_LOW_MID           EQU <550>
-THRESHOLD_HIGH_MID          EQU <300>
+COLOR_DESCRIPTIONS_SIZE       EQU <38>
+NUMBER_TOP_HORIZONTAL_BARS    EQU <3>
+NUMBER_MID_HORIZONTAL_BARS    EQU <4>
+HEIGHT_OF_HORIZONTAL_BARS     EQU <20>
+THRESHOLD_UPPER               EQU <255-60>
+THRESHOLD_LOWER               EQU <30>
+MIDDLE_BACKGROUND             EQU <11>
+TILE_IMAGE_PIXELS             EQU <10000>
+THRESHOLD_LOW_MID             EQU <540>
+THRESHOLD_HIGH_MID            EQU <300>
+NUMBER_OF_VERTICLE_BARS       EQU <300/2>
+VERTICLE_BAR_START            EQU <255>
+VERTICLE_BAR_END              EQU <586>
+LEFT_VERT_WALL                EQU <20>
+RIGHT_VERT_WALL               EQU <1024 - 20>
+STARTING_VELOCITY             EQU <10>
+START_OF_VERTICLE_BARS_COLOR  EQU <4000>
+LAST_COLOR_INDEX_VERTICLE     EQU <START_OF_VERTICLE_BARS_COLOR + (30*14)>
+MAX_VELOCITY                  EQU <15>
+MIN_VELOCITY                  EQU <8>
+TRANSPARENT_TILE_1_COLOR      EQU <01a1a1ah>
+TRANSPARENT_TILE_2_COLOR      EQU <0h>
+TRANSPARENT_TILE_3_COLOR      EQU <0a2c380h>
 
+FIRE_START_Y                  EQU <VERTICLE_BAR_END - (FIRE_HEIGHT-2)>
+FIRE_WIDTH                    EQU <1024>
+FIRE_HEIGHT                   EQU <330>
+MAX_FIRE_INDEX                EQU <256>
+COPPER_BARS_CENTER            EQU <512>
+COPPER_BARS_RANGE             EQU <350>
+TRANSPARENT_TILE_COLOR        EQU <0h>
+
+
+
+FIRE_START_COUNT              EQU <500>
 ;*********************************************************
 ; Public Functions
 ;*********************************************************
@@ -106,9 +154,310 @@ public CopperBarsDemo_Free
 
 .DATA
 
-  
+ FirePalette       db  0h, 0h, 0h    , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  0h, 0h, 00h , 0h
+                   db  2Ah, 0Bh, 02h , 0h
+                   db  2Bh, 0Bh, 02h , 0h
+                   db  2Ch, 0Ch, 02h , 0h
+                   db  2Dh, 0Ch, 02h , 0h
+                   db  2Eh, 0Dh, 02h , 0h
+                   db  2Fh, 0Dh, 02h , 0h
+                   db  2Fh, 0Dh, 03h , 0h
+                   db  30h, 0Eh, 03h , 0h
+                   db  31h, 0Eh, 03h , 0h
+                   db  32h, 0Fh, 03h , 0h
+                   db  33h, 0Fh, 03h , 0h
+                   db  34h, 10h, 03h , 0h
+                   db  35h, 10h, 03h , 0h
+                   db  36h, 11h, 03h , 0h
+                   db  37h, 11h, 03h , 0h
+                   db  38h, 11h, 03h , 0h
+                   db  39h, 12h, 03h , 0h
+                   db  3Ah, 12h, 03h , 0h
+                   db  3Ah, 13h, 04h , 0h
+                   db  3Bh, 13h, 04h , 0h
+                   db  3Ch, 14h, 04h , 0h
+                   db  3Dh, 14h, 04h , 0h
+                   db  3Eh, 15h, 04h , 0h
+                   db  3Fh, 15h, 04h , 0h
+                   db  3Fh, 15h, 04h , 0h
+                   db  3Fh, 16h, 04h , 0h
+                   db  3Fh, 17h, 04h , 0h
+                   db  3Fh, 17h, 04h , 0h
+                   db  3Fh, 18h, 05h , 0h
+                   db  3Fh, 19h, 05h , 0h
+                   db  3Fh, 19h, 05h , 0h
+                   db  3Fh, 1Ah, 05h , 0h
+                   db  3Fh, 1Bh, 05h , 0h
+                   db  3Fh, 1Bh, 05h , 0h
+                   db  3Fh, 1Ch, 05h , 0h
+                   db  3Fh, 1Dh, 05h , 0h
+                   db  3Fh, 1Dh, 06h , 0h
+                   db  3Fh, 1Eh, 06h , 0h
+                   db  3Fh, 1Fh, 06h , 0h
+                   db  3Fh, 1Fh, 06h , 0h
+                   db  3Fh, 20h, 06h , 0h
+                   db  3Fh, 20h, 06h , 0h
+                   db  3Fh, 21h, 06h , 0h
+                   db  3Fh, 22h, 06h , 0h
+                   db  3Fh, 22h, 07h , 0h
+                   db  3Fh, 23h, 07h , 0h
+                   db  3Fh, 24h, 07h , 0h
+                   db  3Fh, 24h, 07h , 0h
+                   db  3Fh, 25h, 07h , 0h
+                   db  3Fh, 26h, 07h , 0h
+                   db  3Fh, 26h, 07h , 0h
+                   db  3Fh, 27h, 07h , 0h
+                   db  3Fh, 28h, 08h , 0h
+                   db  3Fh, 28h, 08h , 0h
+                   db  3Fh, 29h, 08h , 0h
+                   db  3Fh, 2Ah, 08h , 0h
+                   db  3Fh, 2Ah, 08h , 0h
+                   db  3Fh, 2Bh, 08h , 0h
+                   db  3Fh, 2Ch, 08h , 0h
+                   db  3Fh, 2Ch, 08h , 0h
+                   db  3Fh, 2Dh, 09h , 0h
+                   db  3Fh, 2Eh, 09h , 0h
+                   db  3Fh, 2Eh, 09h , 0h
+                   db  3Fh, 2Fh, 09h , 0h
+                   db  3Fh, 30h, 09h , 0h
+                   db  3Fh, 30h, 09h , 0h
+                   db  3Fh, 31h, 09h , 0h
+                   db  3Fh, 32h, 09h , 0h
+                   db  3Fh, 32h, 0Ah , 0h
+                   db  3Fh, 33h, 0Ah , 0h
+                   db  3Fh, 34h, 0Ah , 0h
+                   db  3Fh, 34h, 0Ah , 0h
+                   db  3Fh, 35h, 0Ah , 0h
+                   db  3Fh, 36h, 0Ah , 0h
+                   db  3Fh, 36h, 0Ah , 0h
+                   db  3Fh, 37h, 0Ah , 0h
+                   db  3Fh, 38h, 0Bh , 0h
+                   db  3Fh, 38h, 0Bh , 0h
+                   db  3Fh, 39h, 0Bh , 0h
+                   db  3Fh, 3Ah, 0Bh , 0h
+                   db  3Fh, 3Ah, 0Bh , 0h
+                   db  3Fh, 3Bh, 0Bh , 0h
+                   db  3Fh, 3Ch, 0Bh , 0h
+                   db  3Fh, 3Ch, 0Bh , 0h
+                   db  3Fh, 3Dh, 0Ch , 0h
+                   db  3Fh, 3Eh, 0Ch , 0h
+                   db  3Fh, 3Eh, 0Ch , 0h
+                   db  3Fh, 3Fh, 0Ch , 0h
+                   db  3Fh, 3Fh, 0Ch , 0h
+                   db  3Fh, 3Fh, 0Dh , 0h
+                   db  3Fh, 3Fh, 0Dh , 0h
+                   db  3Fh, 3Fh, 0Eh , 0h
+                   db  3Fh, 3Fh, 0Eh , 0h
+                   db  3Fh, 3Fh, 0Fh , 0h
+                   db  3Fh, 3Fh, 0Fh , 0h
+                   db  3Fh, 3Fh, 10h , 0h
+                   db  3Fh, 3Fh, 10h , 0h
+                   db  3Fh, 3Fh, 11h , 0h
+                   db  3Fh, 3Fh, 11h , 0h
+                   db  3Fh, 3Fh, 12h , 0h
+                   db  3Fh, 3Fh, 12h , 0h
+                   db  3Fh, 3Fh, 13h , 0h
+                   db  3Fh, 3Fh, 14h , 0h
+                   db  3Fh, 3Fh, 14h , 0h
+                   db  3Fh, 3Fh, 15h , 0h
+                   db  3Fh, 3Fh, 15h , 0h
+                   db  3Fh, 3Fh, 16h , 0h
+                   db  3Fh, 3Fh, 16h , 0h
+                   db  3Fh, 3Fh, 17h , 0h
+                   db  3Fh, 3Fh, 17h , 0h
+                   db  3Fh, 3Fh, 18h , 0h
+                   db  3Fh, 3Fh, 18h , 0h
+                   db  3Fh, 3Fh, 19h , 0h
+                   db  3Fh, 3Fh, 19h , 0h
+                   db  3Fh, 3Fh, 1Ah , 0h
+                   db  3Fh, 3Fh, 1Ah , 0h
+                   db  3Fh, 3Fh, 1Bh , 0h
+                   db  3Fh, 3Fh, 1Ch , 0h
+                   db  3Fh, 3Fh, 1Ch , 0h
+                   db  3Fh, 3Fh, 1Dh , 0h
+                   db  3Fh, 3Fh, 1Dh , 0h
+                   db  3Fh, 3Fh, 1Eh , 0h
+                   db  3Fh, 3Fh, 1Eh , 0h
+                   db  3Fh, 3Fh, 1Fh , 0h
+                   db  3Fh, 3Fh, 1Fh , 0h
+                   db  3Fh, 3Fh, 20h , 0h
+                   db  3Fh, 3Fh, 20h , 0h
+                   db  3Fh, 3Fh, 21h , 0h
+                   db  3Fh, 3Fh, 21h , 0h
+                   db  3Fh, 3Fh, 22h , 0h
+                   db  3Fh, 3Fh, 23h , 0h
+                   db  3Fh, 3Fh, 23h , 0h
+                   db  3Fh, 3Fh, 24h , 0h
+                   db  3Fh, 3Fh, 24h , 0h
+                   db  3Fh, 3Fh, 25h , 0h
+                   db  3Fh, 3Fh, 25h , 0h
+                   db  3Fh, 3Fh, 26h , 0h
+                   db  3Fh, 3Fh, 26h , 0h
+                   db  3Fh, 3Fh, 27h , 0h
+                   db  3Fh, 3Fh, 27h , 0h
+                   db  3Fh, 3Fh, 28h , 0h
+                   db  3Fh, 3Fh, 28h , 0h
+                   db  3Fh, 3Fh, 29h , 0h
+                   db  3Fh, 3Fh, 2Ah , 0h
+                   db  3Fh, 3Fh, 2Ah , 0h
+                   db  3Fh, 3Fh, 2Bh , 0h
+                   db  3Fh, 3Fh, 2Bh , 0h
+                   db  3Fh, 3Fh, 2Ch , 0h
+                   db  3Fh, 3Fh, 2Ch , 0h
+                   db  3Fh, 3Fh, 2Dh , 0h
+                   db  3Fh, 3Fh, 2Dh , 0h
+                   db  3Fh, 3Fh, 2Eh , 0h
+                   db  3Fh, 3Fh, 2Eh , 0h
+                   db  3Fh, 3Fh, 2Fh , 0h
+                   db  3Fh, 3Fh, 2Fh , 0h
+                   db  3Fh, 3Fh, 30h , 0h
+                   db  3Fh, 3Fh, 31h , 0h
+                   db  3Fh, 3Fh, 31h , 0h
+                   db  3Fh, 3Fh, 32h , 0h
+                   db  3Fh, 3Fh, 32h , 0h
+                   db  3Fh, 3Fh, 33h , 0h
+                   db  3Fh, 3Fh, 33h , 0h
+                   db  3Fh, 3Fh, 34h , 0h
+                   db  3Fh, 3Fh, 34h , 0h
+                   db  3Fh, 3Fh, 35h , 0h
+                   db  3Fh, 3Fh, 35h , 0h
+                   db  3Fh, 3Fh, 36h , 0h
+                   db  3Fh, 3Fh, 36h , 0h
+                   db  3Fh, 3Fh, 37h , 0h
+                   db  3Fh, 3Fh, 37h , 0h
+                   db  3Fh, 3Fh, 38h , 0h
+                   db  3Fh, 3Fh, 39h , 0h
+                   db  3Fh, 3Fh, 39h , 0h
+                   db  3Fh, 3Fh, 3Ah , 0h
+                   db  3Fh, 3Fh, 3Ah , 0h
+                   db  3Fh, 3Fh, 3Bh , 0h
+                   db  3Fh, 3Fh, 3Bh , 0h
+                   db  3Fh, 3Fh, 3Ch , 0h
+                   db  3Fh, 3Fh, 3Ch , 0h
+                   db  3Fh, 3Fh, 3Dh , 0h
+                   db  3Fh, 3Fh, 3Dh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h                                                         
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h  
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Dh , 0h
+                   db  3Fh, 3Fh, 3Dh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h                                                         
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h  
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Eh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h   
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
+                   db  3Fh, 3Fh, 3Fh , 0h
 
   ColorDescriptions     COLOR_DESCRIPTIONS_STRUCT<1, 0, 0, 1, 255, 01h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<256, 3, 2, -1, 44, 00101FFh, 0>
   Middlebackground      COLOR_DESCRIPTIONS_STRUCT<300, 7, 2, 1, 30, 0160400h, 0>
                         COLOR_DESCRIPTIONS_STRUCT<330, 6, 3, 1, 30, 0260A00h, 0>
                         COLOR_DESCRIPTIONS_STRUCT<360, 6, 3, 0, 30, 0391005h, 0>
@@ -119,29 +468,49 @@ public CopperBarsDemo_Free
                         COLOR_DESCRIPTIONS_STRUCT<510, 3, 5, 2, 30, 0204000h, 0>
                         COLOR_DESCRIPTIONS_STRUCT<540, 3, 5, 3, 30, 0104000h, 0>
                         COLOR_DESCRIPTIONS_STRUCT<570, 3, 5, 4, 30, 02A4000h, 0>
-                        COLOR_DESCRIPTIONS_STRUCT<600, 2, 5, 5, 30, 02A4000h, 0>
+                        COLOR_DESCRIPTIONS_STRUCT<600, 2, 5, 5, 30, 02A4000h, 0>  ; 13
 
   MiddleHorizontalBars  COLOR_DESCRIPTIONS_STRUCT<700, 0, 0, 10, 20, 044h, 1>
                         COLOR_DESCRIPTIONS_STRUCT<3000, 0, 0, 10, 20, 044h, 1>
                         COLOR_DESCRIPTIONS_STRUCT<3030, 0, 0, 10, 20, 044h, 1>
                         COLOR_DESCRIPTIONS_STRUCT<3060, 0, 0, 10, 20, 044h, 1>
-                        COLOR_DESCRIPTIONS_STRUCT<3090, 0, 0, 10, 20, 044h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<3090, 0, 0, 10, 20, 044h, 1> ; 5
 
   TopHorizontalBars     COLOR_DESCRIPTIONS_STRUCT<900, 0, 17,  5, 20, 0005420h, 1>
                         COLOR_DESCRIPTIONS_STRUCT<1000, 15, 15, 15, 20, 0646464h, 1>
                         COLOR_DESCRIPTIONS_STRUCT<2000, 0, 17,  5, 20, 0005420h, 1>
                         COLOR_DESCRIPTIONS_STRUCT<2030, 0, 17,  5, 20, 0005420h, 1>
-                        COLOR_DESCRIPTIONS_STRUCT<2060, 0, 17,  5, 20, 0005420h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<2060, 0, 17,  5, 20, 0005420h, 1> ; 5
 
-  HoriztonalBarsTop     COLOR_BAR_STRUCT <5,  1, THRESHOLD_UPPER, 2, 900, 1000, 2000>
+  VerticleBarsColors    COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR, 5, 5, 5, 20, 0CBC13Dh, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + 30, 5, 5, 5, 20, 0ABA130h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*2), 5, 5, 5, 20, 08B813Dh, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*3), 5, 5, 5, 20, 080712Dh, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*4), 5, 5, 5, 20, 0D23333h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*5), 5, 5, 5, 20, 0D37373h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*6), 5, 5, 5, 20, 0B35353h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*7), 5, 5, 5, 20, 06C762Eh, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*8), 5, 5, 5, 20, 0C3CC1B0h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*9), 5, 5, 5, 20, 07F8081h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*10), 5, 5, 5, 20, 09390BEh, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*11), 5, 5, 5, 20, 02F29C4h, 1>                        
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*12), 5, 5, 5, 20, 082875h, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*13), 5, 5, 5, 20, 066009Ch, 1>
+                        COLOR_DESCRIPTIONS_STRUCT<START_OF_VERTICLE_BARS_COLOR + (30*14), 5, 5, 5, 20, 049619Ah, 1> ; 15
+  
+
+  HoriztonalBarsTop     COLOR_BAR_STRUCT <10, 1, THRESHOLD_UPPER, 2, 900, 1000, 2000>
                         COLOR_BAR_STRUCT <40, 1, THRESHOLD_UPPER, 2, 900, 1000, 2030>
                         COLOR_BAR_STRUCT <70, 1, THRESHOLD_UPPER, 2, 900, 1000, 2060>
 
   HoriztonalBarsMid     COLOR_BAR_STRUCT <300,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3000>
-                        COLOR_BAR_STRUCT <350,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3030>
-                        COLOR_BAR_STRUCT <400,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3060>
-                        COLOR_BAR_STRUCT <450,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3090>
+                        COLOR_BAR_STRUCT <330,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3030>
+                        COLOR_BAR_STRUCT <360,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3060>
+                        COLOR_BAR_STRUCT <380,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3090>
 
+  DemoText               db "Testing the demo text", 0
+  
+  DemoFrameCounter       dq 0
 
   AudioFormat            db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h, 00h, 00h
   AudioVolume            dq 150
@@ -154,17 +523,28 @@ public CopperBarsDemo_Free
   GifImage               db "TILE", 0
   GifDataPtr             dq ?
   GifImageInformation    IMAGE_INFORMATION <?>
-  GifPalBufPtr           dq ?
+
+  FLASH_TO_BOLD_START     dq 1000
+  BOLD_START              dq 1050
+  FLASH_TO_LIGHT_START    dq 1500
+  LIGHT_START             dq 1550
+  FLASH_TO_SOLID_START    dq 2000
+  SOLID_START             dq 2050
 
   SquareGrid             SQUARE_TRCKER <20, 10, 1, 3, 200, 200, -3, 250, 250>
-
-
+  Transparent            dq 1
+  PaletteArray           dq ?
   DoubleBuffer           dq ?
-  VirtualPallete         dq ?
+  FireDoubleBuffer       dq ?
+  VirtualPalette         dq ?
   CopperBarsVertOne      dq ?
   CopperBarsVertTwo      dq ?
-  CopperBarsHorzTop      dq ?
-  CopperBarsHorzBottom   dq ?
+  CopperBarsVertOneHead  dq ?
+  CopperBarsVertTwoHead  dq ?
+  
+  CopperBarsOneWave      WAVE_TRACKER <2, 0>
+  CopperBarsTwoWave      WAVE_TRACKER <2, 180>
+  PI                     mmword 3.14
 .CODE
 
 ;*********************************************************
@@ -182,20 +562,33 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
 .ENDPROLOG 
   MOV RSI, RCX
 
-  MOV [VirtualPallete], 0
+  MOV [VirtualPalette], 0
     
-  MOV RDX, 2
+  MOV RDX, 4
   MOV RCX, RSI
   DEBUG_FUNCTION_CALL DBuffer_Create
   MOV [DoubleBuffer], RAX
   TEST RAX, RAX
   JZ @CopperInit_Failed
 
+  MOV RDX, FIRE_WIDTH * FIRE_HEIGHT * 2
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV [FireDoubleBuffer], RAX
+  TEST RAX, RAX
+  JZ @CopperInit_Failed
+
+
   MOV RCX, 65536
   DEBUG_FUNCTION_CALL VPal_Create
   TEST RAX, RAX
   JZ @CopperInit_Failed
-  MOV [VirtualPallete], RAX
+  MOV [VirtualPalette], RAX
+
+  MOV RCX, RAX
+  DEBUG_FUNCTION_CALL VPal_DirectAccess
+  MOV [PaletteArray], RAX
+
 
   LEA RDI, [ColorDescriptions]
   XOR RBX, RBX
@@ -210,9 +603,12 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   CMP RBX, COLOR_DESCRIPTIONS_SIZE
   JB @CreateDitheringColors
 
-  DEBUG_FUNCTION_CALL CopperBarsDemo_LoadAndStartAudio
+  DEBUG_FUNCTION_CALL CopperBarsDemo_SetupVerticleBars
+
   DEBUG_FUNCTION_CALL CopperBarsDemo_LoadImages
-    
+
+  DEBUG_FUNCTION_CALL CopperBarsDemo_LoadAndStartAudio
+  
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -253,9 +649,9 @@ NESTED_ENTRY CopperBarsDemo_LoadImages, _TEXT$00
   MOV RCX, [GifDataPtr]
   DEBUG_FUNCTION_CALL GameEngine_LoadGifMemory
 
-  MOV RDX, TILE_IMAGE_PIXELS
-  LEA RCX, [GifImageInformation]
-  DEBUG_FUNCTION_CALL CopperBarsDemo_ConvertImageToPalImage
+  ;MOV RDX, TILE_IMAGE_PIXELS
+  ;LEA RCX, [GifImageInformation]
+  ;DEBUG_FUNCTION_CALL CopperBarsDemo_ConvertImageToPalImage
 
 @NotLoaded:
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -264,6 +660,126 @@ NESTED_ENTRY CopperBarsDemo_LoadImages, _TEXT$00
 NESTED_END CopperBarsDemo_LoadImages, _TEXT$00
 
 
+
+
+;*********************************************************
+;  CopperBarsDemo_SetupVerticleBars
+;
+;        Parameters: None
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_SetupVerticleBars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  
+  MOV RDX, ((SIZE COPPERBARS_FIELD_ENTRY) * NUMBER_OF_VERTICLE_BARS)
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JE @FailedToAllocate
+
+  MOV [CopperBarsVertOne], RAX
+
+  MOV RDX, ((SIZE COPPERBARS_FIELD_ENTRY) * NUMBER_OF_VERTICLE_BARS)
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JE @FailedToAllocate
+
+  MOV [CopperBarsVertTwo], RAX
+  
+  MOV R9, (1024 / 2 - 100)
+  MOV R8, START_OF_VERTICLE_BARS_COLOR
+  MOV RDX, NUMBER_OF_VERTICLE_BARS
+  MOV RCX, [CopperBarsVertOne]
+  DEBUG_FUNCTION_CALL CopperBarsDemo_InitializeVerticleBars
+  MOV [CopperBarsVertOneHead], RAX
+
+  MOV R9, (1024 / 2 + 100)
+  MOV R8, START_OF_VERTICLE_BARS_COLOR + (30*8)
+  MOV RDX, NUMBER_OF_VERTICLE_BARS
+  MOV RCX, [CopperBarsVertTwo]
+  DEBUG_FUNCTION_CALL CopperBarsDemo_InitializeVerticleBars
+  MOV [CopperBarsVertTwoHead], RAX
+
+@FailedToAllocate:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_SetupVerticleBars, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarsDemo_InitializeVerticleBars
+;
+;        Parameters: CopperBar List, Number of bars, Starting Color Index, Starting X
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_InitializeVerticleBars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, 20
+  MOV R10, 3
+  MOV RBX, 5
+  MOV R11, VERTICLE_BAR_START
+  CMP R8, START_OF_VERTICLE_BARS_COLOR
+  JE @Initialize
+  NEG R10
+  NEG RBX
+@Initialize:
+  MOV COPPERBARS_FIELD_ENTRY.X[RCX], R9
+  MOV COPPERBARS_FIELD_ENTRY.Y[RCX], R11
+  MOV COPPERBARS_FIELD_ENTRY.StartColor[RCX], R8W
+  MOV COPPERBARS_FIELD_ENTRY.Bounds[RCX], RSI
+  MOV COPPERBARS_FIELD_ENTRY.LeftWall[RCX], LEFT_VERT_WALL
+  MOV COPPERBARS_FIELD_ENTRY.RightWall[RCX], RIGHT_VERT_WALL
+  ADD R11, 2
+  ADD R9, R10
+
+  CMP R9, RIGHT_VERT_WALL
+  JB @CheckOtherWall
+  MOV R9, RIGHT_VERT_WALL
+  DEC R9
+  NEG R10
+  NEG RBX
+@CheckOtherWall:
+  CMP R9, LEFT_VERT_WALL
+  JA @ContinueGoing
+  MOV R9, LEFT_VERT_WALL
+  INC R9
+  NEG R10
+  NEG RBX
+
+@ContinueGoing:
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RCX],RBX
+  MOV COPPERBARS_FIELD_ENTRY.MaxVelocity[RCX], MAX_VELOCITY
+  MOV COPPERBARS_FIELD_ENTRY.MinVelocity[RCX], MIN_VELOCITY
+
+  ADD R8, 30
+  CMP R8, LAST_COLOR_INDEX_VERTICLE
+  JLE @SkipWrapAround
+  MOV R8, START_OF_VERTICLE_BARS_COLOR
+@SkipWrapAround:
+  MOV RAX, RCX
+  ADD RCX, SIZE COPPERBARS_FIELD_ENTRY
+  DEC RDX
+  JNZ @Initialize
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_InitializeVerticleBars, _TEXT$00
 
 
 ;*********************************************************
@@ -406,12 +922,32 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
+  INC [DemoFrameCounter]
+  ;CMP [DemoFrameCounter], 5000
+  JMP @NoMelt
+  JB @NoMelt
+
+  MOV RCX, [DoubleBuffer]
+  ;MOV RDX, [VirtualPalette]
+  XOR RDX, RDX
+  XOR R8, R8
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
+
+;  TEST [ScreenMelt], 03h
+  JNZ @ExitFunction
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_ScreenMelt
+
+  JMP @ExitFunction
+@NoMelt:
 
  ;
  ; Update the screen with the buffer
  ;  
   MOV RCX, [DoubleBuffer]
-  MOV RDX, [VirtualPallete]
+  ;MOV RDX, [VirtualPalette]
+  XOR RDX, RDX
   MOV R8, DB_FLAG_CLEAR_BUFFER
   DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
@@ -426,6 +962,19 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_MiddleBackGround
+
+  CMP [DemoFrameCounter], FIRE_START_COUNT
+  JB @FireNoActivated
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_FeedTheFire
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_RandomFireball
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_UpdateTheFire
+@FireNoActivated:
 
   XOR RBX, RBX
   MOV R15, OFFSET HoriztonalBarsTop
@@ -453,8 +1002,6 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RCX, R15
   DEBUG_FUNCTION_CALL CopperBarDemo_MoveMidHorzBars
 
- ; MOV RCX, R15
- ; DEBUG_FUNCTION_CALL CopperBarDemo_UpdateBarColorColors
   MOV R8, 1
   MOV RDX, R15
   MOV RCX, RDI
@@ -464,11 +1011,119 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   INC RBX
   CMP RBX, NUMBER_MID_HORIZONTAL_BARS
   JB @DrawMidBars
+
+  MOV R8, OFFSET CopperBarsOneWave
+  MOV RDX, [CopperBarsVertOneHead]
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_MoveVertBarsWave
   
+  MOV R8, OFFSET CopperBarsTwoWave
+  MOV RDX, [CopperBarsVertTwoHead]
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_MoveVertBarsWave
+  
+  XOR RBX, RBX  
+  MOV R12, [CopperBarsVertOne]
+  MOV R13, [CopperBarsVertTwo]
+
+
+
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+  MOV RAX, [FLASH_TO_BOLD_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  TEST [DemoFrameCounter], 1
+  JE @SkipTheSolid
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+@SkipTheSolid:
+  MOV RAX, [BOLD_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  
+  MOV RAX, [FLASH_TO_LIGHT_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
+
+  TEST [DemoFrameCounter], 1
+  JE @SkipTheDark
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+@SkipTheDark:
+
+  MOV RAX, [LIGHT_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+  
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
+  
+  MOV RAX, [FLASH_TO_SOLID_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+
+  TEST [DemoFrameCounter], 1
+  JE @SkipTheLight
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
+@SkipTheLight:
+  MOV RAX, [SOLID_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+
+  ; 
+  ; Reset cycle
+  ;
+  MOV RAX, [SOLID_START]
+  ADD RAX, 500
+  MOV [FLASH_TO_BOLD_START], RAX
+  MOV RCX, 50
+  ADD RCX, RAX
+  MOV [BOLD_START], RCX
+  ADD RAX, 500
+  MOV [FLASH_TO_LIGHT_START], RAX
+  MOV RCX, 50
+  ADD RCX, RAX
+  MOV [LIGHT_START], RCX
+  ADD RAX, 500
+  MOV [FLASH_TO_SOLID_START], RAX
+  MOV RCX, 50
+  ADD RCX, RAX
+  MOV [SOLID_START], RCX
+
+
+@DrawVerticleBars:
+
+  MOV RDX, R12
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL R14
+
+  MOV RDX, R13
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL R14
+
+  INC RBX
+  ADD R12, SIZE COPPERBARS_FIELD_ENTRY
+  ADD R13, SIZE COPPERBARS_FIELD_ENTRY
+  CMP RBX, NUMBER_OF_VERTICLE_BARS
+  JB @DrawVerticleBars
+ 
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_DrawSquares
  
+  CMP [DemoFrameCounter], FIRE_START_COUNT
+  JAE @FireReady
+  JMP @SkipFireOverlay
+@FireReady: 
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_OverlayFire
+@SkipFireOverlay:
+@ExitFunction:
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -492,7 +1147,7 @@ NESTED_ENTRY CopperBarsDemo_Free, _TEXT$00
 .ENDPROLOG 
  DEBUG_RSP_CHECK_MACRO
 
- MOV RCX, [VirtualPallete]
+ MOV RCX, [VirtualPalette]
  DEBUG_FUNCTION_CALL VPal_Free
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -505,62 +1160,62 @@ NESTED_END CopperBarsDemo_Free, _TEXT$00
 ;*********************************************************
 ;  CopperBarsDemo_ConvertImageToPalImage
 ;
-;        Parameters: Image Information, Start Pallete Number
+;        Parameters: Image Information, Start Palette Number
 ;
 ;        Return: Image Buffer
 ;
 ;
 ;*********************************************************  
-NESTED_ENTRY CopperBarsDemo_ConvertImageToPalImage, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
- DEBUG_RSP_CHECK_MACRO
-  MOV R15, RCX
-  MOV RBX, RDX
-  
-  MOV RCX, IMAGE_INFORMATION.ImageWidth[R15]
-  MOV RAX, IMAGE_INFORMATION.ImageHeight[R15]
-  XOR RDX, RDX
-  MUL RCX
-  MOV R12, RAX
-  SHL RAX, 1
-
-  MOV RDX, RAX
-  MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
-  MOV [GifPalBufPtr], RAX
-  CMP RAX, 0
-  JE @AllocationError
-
-  MOV RSI, IMAGE_INFORMATION.CurrImagePtr[R15]
-  MOV RDI, [GifPalBufPtr]
-@CreateVPalBufferLoop:
-  XOR R8, R8
-  MOV EDX, DWORD PTR [RSI]
-  MOV RCX, [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_FindColorIndex
-  CMP AX, 0FFFFh
-  JNE @SetFoundIndex
-
-  MOV R8D, DWORD PTR [RSI]
-  MOV RDX, RBX
-  MOV RCX,  [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_SetColorIndex
-  MOV RAX, RBX
-  INC RBX
-@SetFoundIndex:
-  MOV WORD PTR [RDI], AX
-  ADD RSI, 4
-  ADD RDI, 2
-  DEC R12
-  JNZ @CreateVPalBufferLoop
-
-@AllocationError:
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END CopperBarsDemo_ConvertImageToPalImage, _TEXT$00
+;NESTED_ENTRY CopperBarsDemo_ConvertImageToPalImage, _TEXT$00
+;  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+;  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+;.ENDPROLOG 
+; DEBUG_RSP_CHECK_MACRO
+;  MOV R15, RCX
+;  MOV RBX, RDX
+;  
+;  MOV RCX, IMAGE_INFORMATION.ImageWidth[R15]
+;  MOV RAX, IMAGE_INFORMATION.ImageHeight[R15]
+;  XOR RDX, RDX
+;  MUL RCX
+;  MOV R12, RAX
+;  SHL RAX, 1
+;
+;  MOV RDX, RAX
+;  MOV RCX, LMEM_ZEROINIT
+;  DEBUG_FUNCTION_CALL LocalAlloc
+;  MOV [GifPalBufPtr], RAX
+;  CMP RAX, 0
+;  JE @AllocationError
+;
+;  MOV RSI, IMAGE_INFORMATION.CurrImagePtr[R15]
+;  MOV RDI, [GifPalBufPtr]
+;@CreateVPalBufferLoop:
+;  XOR R8, R8
+;  MOV EDX, DWORD PTR [RSI]
+;  MOV RCX, [VirtualPalette]
+;  DEBUG_FUNCTION_CALL VPal_FindColorIndex
+;  CMP AX, 0FFFFh
+;  JNE @SetFoundIndex
+;
+;  MOV R8D, DWORD PTR [RSI]
+;  MOV RDX, RBX
+;  MOV RCX,  [VirtualPalette]
+;  DEBUG_FUNCTION_CALL VPal_SetColorIndex
+;  MOV RAX, RBX
+;  INC RBX
+;@SetFoundIndex:
+;  MOV WORD PTR [RDI], AX
+;  ADD RSI, 4
+;  ADD RDI, 2
+;  DEC R12
+;  JNZ @CreateVPalBufferLoop
+;
+;@AllocationError:
+;  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+;  ADD RSP, SIZE STD_FUNCTION_STACK
+;  RET
+;NESTED_END CopperBarsDemo_ConvertImageToPalImage, _TEXT$00
 
 
 
@@ -581,13 +1236,16 @@ NESTED_ENTRY CopperBarDemo_GenerateTopBackground, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RCX
   MOV RDI, [DoubleBuffer]
-  MOV R12, 1
+  MOV R12, [PaletteArray]
+  ADD R12, 4
+  MOV RDX, 1
 @BackgroundTopPlot:
   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RBX]
-  MOV AX, R12W
-  REP STOSW
-  INC R12
-  CMP R12, 256
+  MOV EAX, DWORD PTR [R12]
+  REP STOSD
+  ADD R12, 4
+  INC RDX
+  CMP RDX, 256
   JB @BackgroundTopPlot
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -616,15 +1274,18 @@ NESTED_ENTRY CopperBarDemo_MiddleBackGround, _TEXT$00
   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MOV RCX, 256
   MUL RCX
-  SHL RAX, 1
+  SHL RAX, 2
   ADD RDI, RAX
   XOR R9, R9
+  MOV R10, [PaletteArray]
 @DrawScanLines:
   XOR R11, R11
 @DrawBackgroundBar:
   MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MOV RAX, RBX
-  REP STOSW
+  SHL RAX, 2
+  MOV EAX, DWORD PTR [R10 + RAX]
+  REP STOSD
   INC RBX
   INC R11
   CMP R11, 30
@@ -681,7 +1342,7 @@ NESTED_ENTRY CopperBarDemo_UpdateBarColorColors, _TEXT$00
   MOV R9, R15
   MOV R8, RBX
   MOV RDX, R12
-  MOV RCX, [VirtualPallete]
+  MOV RCX, [VirtualPalette]
   DEBUG_FUNCTION_CALL VPal_MoveColorIndexes  
 
   INC RBX
@@ -695,7 +1356,7 @@ NESTED_ENTRY CopperBarDemo_UpdateBarColorColors, _TEXT$00
   MOV R9, 30
   MOV R8, COLOR_BAR_STRUCT.ScratchColors[RSI]
   MOV RDX, RBX
-  MOV RCX, [VirtualPallete]
+  MOV RCX, [VirtualPalette]
   DEBUG_FUNCTION_CALL VPal_CopyIndexRange
 
 @DoneUpdatingColors:
@@ -894,10 +1555,10 @@ NESTED_ENTRY CopperBarDemo_MoveMidHorzBars, _TEXT$00
   ;JMP @CompleteUpdate
 @DoAnotherCheck:
  
-  CMP COLOR_BAR_STRUCT.CurrentY[RSI], 600-30
+  CMP COLOR_BAR_STRUCT.CurrentY[RSI], 560
   JL @Done
 
-  MOV COLOR_BAR_STRUCT.CurrentY[RSI], 600-31
+  MOV COLOR_BAR_STRUCT.CurrentY[RSI], 560
   MOV COLOR_BAR_STRUCT.Velocity[RSI], 1
   NEG COLOR_BAR_STRUCT.Velocity[RSI]
   NEG COLOR_BAR_STRUCT.MaxVelocity[RSI]
@@ -981,7 +1642,7 @@ NESTED_ENTRY CopperBarDemo_CreateColorDitherOneWay, _TEXT$00
    MOV R8, RBX
    MOV RDX, COLOR_DESCRIPTIONS_STRUCT.StartingColorIndex[RSI]
    ADD RDX, RDI
-   MOV RCX, [VirtualPallete]
+   MOV RCX, [VirtualPalette]
    DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
    INC RDI
@@ -1030,7 +1691,7 @@ NESTED_ENTRY CopperBarDemo_CreateColorDitherBothWays, _TEXT$00
    MOV R8, RBX
    MOV RDX, COLOR_DESCRIPTIONS_STRUCT.StartingColorIndex[RSI]
    ADD RDX, RDI
-   MOV RCX, [VirtualPallete]
+   MOV RCX, [VirtualPalette]
    DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
    INC RDI
@@ -1057,7 +1718,7 @@ NESTED_ENTRY CopperBarDemo_CreateColorDitherBothWays, _TEXT$00
    MOV R8, RBX
    MOV RDX, COLOR_DESCRIPTIONS_STRUCT.StartingColorIndex[RSI]
    ADD RDX, RDI
-   MOV RCX, [VirtualPallete]
+   MOV RCX, [VirtualPalette]
    DEBUG_FUNCTION_CALL VPal_SetColorIndex
 
    INC RDI
@@ -1102,51 +1763,95 @@ NESTED_ENTRY CopperBarDemo_DrawHorizBar, _TEXT$00
   MOV R15, RDX
   MOV R14, R8
   MOV R12, COLOR_BAR_STRUCT.ScratchColors[R15]  
-
+  MOV R10, [PaletteArray]
   MOV RDI, [DoubleBuffer]
   XOR RDX, RDX
   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
   MOV R8, COLOR_BAR_STRUCT.CurrentY[R15]
   MUL R8
-  SHL RAX, 1
+  SHL RAX, 2
   ADD RDI, RAX
-  MOV R13, COLOR_BAR_STRUCT.TopColors[R15]
   XOR RBX, RBX
 @GoingUp:
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  XOR RDX, RDX
-  MOV DX, WORD PTR[RDI]
-  MOV RAX, R12
-  REP STOSW
+  
   CMP R14, 0
   JE @NoTransparentcy
-  MOV R9, R12
-  MOV R8, R13
-  MOV RCX, [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_Transparent
+  XOR R11, R11
+@PerformTransparency:
+  MOV RAX, R12
+  SHL RAX, 2
+  ADD RAX, R11
+  MOV AL, BYTE PTR [R10 + RAX]
+  XOR RCX, RCX
+  MOV CL, AL
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [RDI + R11]
+  ADD CX, DX
+  CMP CX, 255
+  JB @SkipFixUp
+  MOV CL, 255
+@SkipFixUp:
+  MOV BYTE PTR [RDI + R11], CL
+  INC R11
+  CMP R11, 3
+  JB @PerformTransparency
+
+  MOV EAX, DWORD PTR [RDI]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
+
+  JMP @CompletedWritingPixel  
 @NoTransparentcy:
+  MOV RAX, R12
+  SHL RAX, 2
+  MOV EAX, [R10 + RAX]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
+@CompletedWritingPixel:
   INC RBX
   INC R12
-  INC R13
   CMP RBX, 10
   JB @GoingUp
-  MOV R13, COLOR_BAR_STRUCT.TopColors[R15]
+
+
   XOR RBX, RBX
 @GoingDown:
-  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
-  XOR RDX, RDX
-  MOV DX, WORD PTR[RDI]
-  MOV RAX, R12
-  REP STOSW
+
   CMP R14, 0
   JE @NoTransparentcy2
-  MOV R9, R12
-  MOV R8, R13
-  MOV RCX, [VirtualPallete]
-  DEBUG_FUNCTION_CALL VPal_Transparent
+  XOR R11, R11
+@PerformTransparency2:
+  MOV RAX, R12
+  SHL RAX, 2
+  ADD RAX, R11
+  MOV AL, BYTE PTR [R10 + RAX]
+  XOR RCX, RCX
+  MOV CL, AL
+  XOR RDX, RDX
+  MOV DL, BYTE PTR[RDI + R11]
+  ADD CX, DX
+  CMP CX, 255
+  JB @SkipFixUp2
+  MOV CL, 255
+@SkipFixUp2:
+  MOV BYTE PTR [RDI + R11], CL
+  INC R11
+  CMP R11, 3
+  JB @PerformTransparency2
+
+  MOV EAX, DWORD PTR [RDI]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
+
+  JMP @CompletedWritingPixel2  
 @NoTransparentcy2:
+  MOV RAX, R12
+  SHL RAX, 2
+  MOV EAX, DWORD PTR [R10 + RAX]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  REP STOSD
+@CompletedWritingPixel2:
   INC RBX
-  INC R13
   INC R12
   CMP RBX, 10
   JB @GoingDown
@@ -1158,6 +1863,304 @@ NESTED_END CopperBarDemo_DrawHorizBar, _TEXT$00
 
 
 
+;*********************************************************
+;  CopperBarDemo_DrawVertBarsDarkTransparent
+;
+;        Parameters: MMaster Context, Vert Bar Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DrawVertBarsDarkTransparent, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  MOV R15, RDX
+  MOV RDI, [DoubleBuffer]
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV R8, COPPERBARS_FIELD_ENTRY.Y[R15]
+  MUL R8
+  SHL RAX, 2
+  ADD RDI, RAX
+  MOV RAX, COPPERBARS_FIELD_ENTRY.X[R15]
+  SHL RAX, 2
+  ADD RDI, RAX
+
+  XOR RCX, RCX
+  MOV CX, COPPERBARS_FIELD_ENTRY.StartColor[R15]
+  MOV RBX, [PaletteArray]
+  SHL RCX, 2
+  ADD RCX, RBX
+  XOR RBX, RBX
+@DrawVerticleBar:
+  MOV R10, COPPERBARS_FIELD_ENTRY.Y[R15]
+  MOV R11, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R11, 2
+  MOV R14, RDI
+
+@DrawVerticleLine:
+  ;
+  ; Blue
+  ;
+  SUB R14, R11
+  XOR RDX, RDX
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RCX]
+  MOV DL, BYTE PTR [R14]
+  SHR DL, 1
+  ADD AX, DX
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [R14 + 4]
+  SHR DL, 1
+  ADD AX, DX
+  XOR RDX, RDX
+  ADD R14, R11
+  MOV DL, BYTE PTR [R14 + 4]
+  SHR DL, 1
+  ADD AX, DX
+  SHR RAX, 2
+  MOV [R14], AL
+  SUB R14, R11
+  
+  ;
+  ; Green
+  ;
+  XOR RDX, RDX
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RCX + 1]
+  MOV DL, BYTE PTR [R14 + 1]
+  SHR DL, 1
+  ADD AX, DX
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [R14 + 5]
+  SHR DL, 1
+  ADD AX, DX
+  XOR RDX, RDX
+  ADD R14, R11
+  MOV DL, BYTE PTR [R14 + 5]
+  SHR DL, 1
+  ADD AX, DX
+  SHR RAX, 2
+  MOV [R14 + 1], AL
+  SUB R14, R11
+
+  ;
+  ; Red
+  ;
+  XOR RDX, RDX
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RCX + 1]
+  MOV DL, BYTE PTR [R14 + 2]
+  SHR DL, 1
+  ADD AX, DX
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [R14 + 6]
+  SHR DL, 1
+  ADD AX, DX
+  XOR RDX, RDX
+  ADD R14, R11
+  MOV DL, BYTE PTR [R14 + 5]
+  SHR DL, 1
+  ADD AX, DX
+  SHR RAX, 2
+  MOV [R14 + 2], AL
+
+  ADD R14, R11
+  INC R10
+  CMP R10, 586
+  JB @DrawVerticleLine
+
+  ADD RCX, 4
+  ADD RDI, 4
+  INC RBX
+  CMP RBX, 20
+  JB @DrawVerticleBar
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DrawVertBarsDarkTransparent, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_DrawVertBarsLightTransparent
+;
+;        Parameters: MMaster Context, Vert Bar Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DrawVertBarsLightTransparent, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  MOV R15, RDX
+  MOV RDI, [DoubleBuffer]
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV R8, COPPERBARS_FIELD_ENTRY.Y[R15]
+  MUL R8
+  SHL RAX, 2
+  ADD RDI, RAX
+  MOV RAX, COPPERBARS_FIELD_ENTRY.X[R15]
+  SHL RAX, 2
+  ADD RDI, RAX
+
+  XOR RCX, RCX
+  MOV CX, COPPERBARS_FIELD_ENTRY.StartColor[R15]
+  MOV RBX, [PaletteArray]
+  SHL RCX, 2
+  ADD RCX, RBX
+  XOR RBX, RBX
+@DrawVerticleBar:
+  MOV R10, COPPERBARS_FIELD_ENTRY.Y[R15]
+  MOV R11, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R11, 2
+  MOV R14, RDI
+
+@DrawVerticleLine:
+  ;
+  ; Blue
+  ;
+  SUB R14, R11
+  XOR RDX, RDX
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RCX]
+  MOV DL, BYTE PTR [R14]
+  ADD AX, DX
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [R14 + 4]
+  ADD AX, DX
+  XOR RDX, RDX
+  ADD R14, R11
+  MOV DL, BYTE PTR [R14 + 4]
+  ADD AX, DX
+  SHR RAX, 2
+  MOV [R14], AL
+  SUB R14, R11
+  
+  ;
+  ; Green
+  ;
+  XOR RDX, RDX
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RCX + 1]
+  MOV DL, BYTE PTR [R14 + 1]
+  ADD AX, DX
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [R14 + 5]
+  ADD AX, DX
+  XOR RDX, RDX
+  ADD R14, R11
+  MOV DL, BYTE PTR [R14 + 5]
+  ADD AX, DX
+  SHR RAX, 2
+  MOV [R14 + 1], AL
+  SUB R14, R11
+
+  ;
+  ; Red
+  ;
+  XOR RDX, RDX
+  XOR RAX, RAX
+  MOV AL, BYTE PTR [RCX + 1]
+  MOV DL, BYTE PTR [R14 + 2]
+  ADD AX, DX
+  XOR RDX, RDX
+  MOV DL, BYTE PTR [R14 + 6]
+  ADD AX, DX
+  XOR RDX, RDX
+  ADD R14, R11
+  MOV DL, BYTE PTR [R14 + 5]
+  ADD AX, DX
+  SHR RAX, 2
+  MOV [R14 + 2], AL
+  ADD R14, R11
+  INC R10
+
+  CMP R10, 586
+  JB @DrawVerticleLine
+
+  ADD RCX, 4
+  ADD RDI, 4
+  INC RBX
+  CMP RBX, 20
+  JB @DrawVerticleBar
+
+    RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DrawVertBarsLightTransparent, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_DrawVertBarSolid
+;
+;        Parameters: MMaster Context, Vert Bar Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DrawVertBarSolid, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  MOV R15, RDX
+  MOV RDI, [DoubleBuffer]
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV R8, COPPERBARS_FIELD_ENTRY.Y[R15]
+  MUL R8
+  SHL RAX, 2
+  ADD RDI, RAX
+  MOV RAX, COPPERBARS_FIELD_ENTRY.X[R15]
+  SHL RAX, 2
+  ADD RDI, RAX
+
+  XOR RCX, RCX
+  MOV CX, COPPERBARS_FIELD_ENTRY.StartColor[R15]
+  MOV RBX, [PaletteArray]
+  SHL RCX, 2
+  ADD RCX, RBX
+  XOR RBX, RBX
+@DrawVerticleBar:
+  MOV R10, COPPERBARS_FIELD_ENTRY.Y[R15]
+  MOV R11, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R11, 2
+  MOV R14, RDI
+
+ @DrawVerticleLine:
+    MOV R12D, DWORD PTR [RCX]
+    MOV DWORD PTR [R14], R12D
+    ADD R14, R11
+    INC R10
+    CMP R10, 586
+    JB @DrawVerticleLine
+
+    ADD RCX, 4
+    ADD RDI, 4
+    INC RBX
+    CMP RBX, 20
+    JB @DrawVerticleBar
+
+    RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DrawVertBarSolid, _TEXT$00
+
+
 
 ;*********************************************************
 ;  CopperBarDemo_DrawTopSquares
@@ -1167,39 +2170,39 @@ NESTED_END CopperBarDemo_DrawHorizBar, _TEXT$00
 ;       
 ;
 ;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_DrawTopSquares, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV R12, RCX
-  XOR RAX, RAX
-  MOV RDI, [DoubleBuffer]
-  MOV RSI, [GifPalBufPtr]
-@HeightLoop:
-  XOR RDX, RDX
-  XOR R8, R8
-@WidthLoop:
-  MOV CX, WORD PTR [RSI]
-  MOV WORD PTR [RDI + RDX], CX
-  ADD RSI, 2
-  INC R8
-  ADD RDX, 2
-  CMP R8, [GifImageInformation.ImageWidth]
-  JB @WidthLoop
-
-  MOV R10, MASTER_DEMO_STRUCT.ScreenWidth[R12]
-  SHL R10, 1
-  ADD RDI, R10
-  INC RAX
-  CMP RAX, [GifImageInformation.ImageHeight]
-  JB @HeightLoop
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END CopperBarDemo_DrawTopSquares, _TEXT$00
+;;*********************************************************  
+;NESTED_ENTRY CopperBarDemo_DrawTopSquares, _TEXT$00
+;  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+;  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+;.ENDPROLOG 
+;  DEBUG_RSP_CHECK_MACRO
+;  MOV R12, RCX
+;  XOR RAX, RAX
+;  MOV RDI, [DoubleBuffer]
+;  MOV RSI, [GifImageInformation.CurrImagePtr]
+;@HeightLoop:
+;  XOR RDX, RDX
+;  XOR R8, R8
+;@WidthLoop:
+;  MOV ECX, DWORD PTR [RSI]
+;  MOV DWORD PTR [RDI + RDX], ECX
+;  ADD RSI, 4
+;  INC R8
+;  ADD RDX, 4
+;  CMP R8, [GifImageInformation.ImageWidth]
+;  JB @WidthLoop
+;
+;  MOV R10, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+;  SHL R10, 2
+;  ADD RDI, R10
+;  INC RAX
+;  CMP RAX, [GifImageInformation.ImageHeight]
+;  JB @HeightLoop
+;
+;  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+;  ADD RSP, SIZE STD_FUNCTION_STACK
+;  RET
+;NESTED_END CopperBarDemo_DrawTopSquares, _TEXT$00
 
 
 ;*********************************************************
@@ -1226,8 +2229,8 @@ NESTED_ENTRY CopperBarDemo_DrawSquares, _TEXT$00
   MOV RAX, [GifImageInformation.ImageWidth]
   MOV RSI, [SquareGrid.CurrentTopCornerY]
   MUL RSI
-  SHL RAX, 1
-  MOV RDX, [GifPalBufPtr]
+  SHL RAX, 2
+  MOV RDX, [GifImageInformation.CurrImagePtr]
   ADD RDX, RAX
 
   XOR R13, R13                                  ; Count Scan Lines
@@ -1236,7 +2239,7 @@ NESTED_ENTRY CopperBarDemo_DrawSquares, _TEXT$00
   JE @SetupSecondSquare
   MOV R11, [SquareGrid.CurrentTopCornerX]       ; Starting X  of the current line for the first square.
   MOV RSI, R11
-  SHL RSI, 1
+  SHL RSI, 2
   ADD RSI, RDX
   XOR R14, R14
   XOR RAX, RAX
@@ -1245,7 +2248,7 @@ NESTED_ENTRY CopperBarDemo_DrawSquares, _TEXT$00
   MOV R14, [GifImageInformation.ImageWidth]
   SUB R14, [SquareGrid.CurrentTopCornerX]
   MOV RAX, R14
-  SHL RAX, 1
+  SHL RAX, 2
   MOV RSI, RDX
   XOR R11, R11
 
@@ -1260,36 +2263,49 @@ NESTED_ENTRY CopperBarDemo_DrawSquares, _TEXT$00
   SUB RCX, RAX
 @OkToProceed:
   ADD R14, RCX
-  REP MOVSW
+;  REP MOVSD
+  CMP RCX, 0
+  JE @SkipDrawing
+@MovsdTransparentLoop:
+  MOV EAX, DWORD PTR [RSI]
+  ADD RSI, 4
+  CMP EAX, TRANSPARENT_TILE_COLOR
+  JE @TransparentColor
+  MOV DWORD PTR [RDI], EAX
+@TransparentColor:
+  ADD RDI, 4  
+  DEC RCX
+  JNZ @MovsdTransparentLoop
+@SkipDrawing:
   MOV RAX, [GifImageInformation.ImageWidth]
   ADD RAX, R14
   CMP RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
   JB @NoFixUp
   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
   SUB RAX, R14
-  SHL RAX, 1
+  SHL RAX, 2
   ADD RDI, RAX
 @NoFixUp:
   MOV RAX, [GifImageInformation.ImageWidth]
   ADD R14, RAX
-  SHL RAX, 1
+  SHL RAX, 2
   MOV RSI, RDX
   XOR R11, R11
   CMP R14, MASTER_DEMO_STRUCT.ScreenWidth[R12]
   JB @ScanLine
 
   MOV RAX, [GifImageInformation.ImageWidth]
-  SHL RAX, 1
+  SHL RAX, 2
   ADD RDX, RAX
   INC R9
   CMP R9, [GifImageInformation.ImageHeight]
   JB @SkipResetOfGifLines
   XOR R10, 1
-  MOV RDX, [GifPalBufPtr]
+  MOV RDX, [GifImageInformation.CurrImagePtr]
   XOR R9, R9
 @SkipResetOfGifLines: 
   INC R13
-  CMP R13, 256
+  CMP R13, 255
   JB @DrawTopGrid
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1421,4 +2437,761 @@ NESTED_ENTRY CopperBarDemo_ChangeDirections, _TEXT$00
 NESTED_END CopperBarDemo_ChangeDirections, _TEXT$00
 
 
+
+
+
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_RandomFireball
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_RandomFireball, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  DEBUG_FUNCTION_CALL Math_Rand 
+  XOR RDX, RDX
+  MOV RCX, 10
+  DIV RCX
+  MOV RSI, RDX
+  INC RSI
+
+@CreateAFireball:
+  MOV RDI, [FireDoubleBuffer]
+    
+  DEBUG_FUNCTION_CALL Math_Rand 
+  XOR RDX, RDX
+  MOV RCX, FIRE_WIDTH-10
+  DIV RCX
+  MOV RBX, RDX
+  ADD RBX, 5
+
+  DEBUG_FUNCTION_CALL Math_Rand 
+  XOR RDX, RDX
+  MOV RCX, FIRE_HEIGHT-10
+  DIV RCX
+  MOV RAX, RDX
+  ADD RAX, 5
+  XOR RDX, RDX
+  MOV RCX, FIRE_WIDTH
+  MUL RCX
+  SHL RAX, 1
+
+  ADD RDI, RAX
+  SHL RBX, 1
+  ADD RDI, RBX
+
+  MOV WORD PTR [RDI], MAX_FIRE_INDEX - 5
+  MOV WORD PTR [RDI + 2], MAX_FIRE_INDEX - 5
+  MOV WORD PTR [RDI + FIRE_WIDTH*2], MAX_FIRE_INDEX - 5
+  MOV WORD PTR [RDI + FIRE_WIDTH*2 + 2], MAX_FIRE_INDEX - 5
+
+  DEC RSI
+  JNZ @CreateAFireball
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_RandomFireball, _TEXT$00
+
+
+
+;*********************************************************
+;  CopperBarDemo_FeedTheFire
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_FeedTheFire, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, [FireDoubleBuffer]
+
+  XOR RDX, RDX
+  MOV RAX, FIRE_WIDTH
+  MOV RCX, FIRE_HEIGHT
+  SUB RCX, 3
+  MUL RCX
+  SHL RAX, 1
+  ADD RDI, RAX
+
+  XOR RBX, RBX
+
+@PrimeTheFire:
+  DEBUG_FUNCTION_CALL Math_Rand
+  XOR RDX, RDX
+  MOV RCX, 225
+  TEST RBX, 1
+  JZ @ContinueNumber
+  MOV RCX, 150
+@ContinueNumber:
+  DIV RCX
+  ADD RDX, MAX_FIRE_INDEX - 225
+  MOV WORD PTR [RDI], DX
+
+;@PrimeTheFire:
+;  DEBUG_FUNCTION_CALL Math_Rand
+;  MOV CX, 255
+;  TEST AL, 1
+;  JZ @Write255
+;  MOV CX, 20
+;@Write255:
+;  MOV WORD PTR [RDI], CX
+;
+  ADD RDI, 2
+  INC RBX
+  CMP RBX, FIRE_WIDTH*3
+  JB @PrimeTheFire
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_FeedTheFire, _TEXT$00
+
+
+
+;*********************************************************
+;  CopperBarDemo_UpdateTheFire
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_UpdateTheFire, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, [FireDoubleBuffer]
+  ADD RDI, FIRE_WIDTH*2
+  MOV R8, 1
+@HeightLoop:
+  ;ADD RDI, 2                    ; Don't compute the boundaries.  
+  XOR R9, R9
+
+@WidthLoop:
+
+  ;MOV AX, [RDI]
+  ;ADD AX, [RDI - 2]
+  ;ADD AX, [RDI + 2]
+
+  MOV AX, [RDI + FIRE_WIDTH*2]
+  ADD AX, [RDI + FIRE_WIDTH*2 - 2]
+  ADD AX, [RDI + FIRE_WIDTH*2 + 2]
+
+  ADD AX, [RDI + FIRE_WIDTH*4]
+  ;ADD AX, [RDI + FIRE_WIDTH*2]
+
+  SHR AX, 2
+  CMP AX, 0
+  JE @SkipDecrement
+  DEC AX
+@SkipDecrement:
+  MOV [RDI], AX
+  ADD RDI, 2
+  INC R9
+  CMP R9, FIRE_WIDTH
+  JB @WidthLoop
+
+;  ADD RDI, 2                   ; Don't compute the boundaries.  
+  INC R8
+  CMP R8, FIRE_HEIGHT-2
+  JB @HeightLoop
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_UpdateTheFire, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_UpdateTheFireAlgorithm2
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_UpdateTheFireAlgorithm2, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDI, [FireDoubleBuffer]
+  XOR R8, R8
+@HeightLoop:
+  XOR R9, R9
+@WidthLoop:
+  XOR RDX, RDX
+  MOV AX, [RDI]
+  ADD AX, [RDI + 2]
+  ADC AX, DX
+  ADD AX, [RDI - FIRE_WIDTH*2]
+  ADC AX, DX
+  ADD AX, [RDI + FIRE_WIDTH*2]
+  ADC AX, DX
+  SHR AX, 2
+  CMP AX, 0
+  JE @SkipDecrement
+  DEC AX
+@SkipDecrement:
+  MOV [RDI], AX
+  ADD RDI, 2
+  INC R9
+  CMP R9, FIRE_WIDTH
+  JB @WidthLoop
+  INC R8
+  CMP R8, FIRE_HEIGHT-2
+  JB @HeightLoop
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_UpdateTheFireAlgorithm2, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_OverlayFire
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_OverlayFire, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R12, RCX
+  MOV RSI, [FireDoubleBuffer]
+  MOV RDI, [DoubleBuffer]
+  MOV R10, OFFSET FirePalette
+
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SHL RAX, 2
+  XOR RDX, RDX
+  MOV RCX, FIRE_START_Y + 1
+  MUL RCX
+
+  ADD RDI, RAX
+
+  XOR R8, R8
+@CopyFireLoop:
+  XOR R9, R9
+@CopyFireRow:
+  XOR RAX, RAX
+  MOV AX, WORD PTR [RSI]
+  CMP EAX, 0
+  JE @NothingToPlot
+  SHL EAX, 2
+  CMP DWORD PTR [R10 + RAX], 0
+  JE @NothingToPlot
+  XOR R11, R11
+  XOR RCX, RCX
+  XOR RDX, RDX
+
+  MOV CL, BYTE PTR [R10 + RAX]
+  CMP CL, 63
+  JAE @NoTransparent
+  JMP @NoTransparent    ; Temporary trying this
+  MOV R11, 1
+  MOV DL, BYTE PTR [RDI + 2]
+  ADD CX, DX
+  SHR CX, 1
+  CMP CX, 255
+  JB @WriteRed
+  MOV CX, 255
+@NoTransparent:
+@WriteRed:
+  MOV BYTE PTR [RDI + 2], CL
+  
+  XOR RCX, RCX
+  XOR RDX, RDX
+  INC RAX
+  MOV CL, BYTE PTR [R10 + RAX]
+  CMP R11, 0
+  JE @WriteGreen
+  MOV DL, BYTE PTR [RDI + 1]
+  ADD CX, DX
+  SHR CX, 1
+  CMP CX, 255
+  JB @WriteGreen
+  MOV CX, 255
+@WriteGreen:
+  MOV BYTE PTR [RDI + 1], CL
+  
+  XOR RCX, RCX
+  XOR RDX, RDX
+  INC RAX
+  MOV CL, BYTE PTR [R10 + RAX]
+  CMP R11, 0
+  JE @WriteBlue
+  MOV DL, BYTE PTR [RDI]
+  ADD CX, DX
+  SHR CX, 1
+  CMP CX, 255
+  JB @WriteBlue
+  MOV CX, 255
+@WriteBlue:
+  MOV BYTE PTR [RDI], CL
+@NothingToPlot:
+  ADD RSI, 2
+  ADD RDI, 4
+  INC R9
+  CMP R9, FIRE_WIDTH
+  JB @CopyFireRow
+  
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
+  SHL R9, 2
+  SHL RAX, 2
+  SUB RAX, R9
+  ADD RDI, RAX
+   
+  INC R8
+  CMP R8, FIRE_HEIGHT-3
+  JB @CopyFireLoop
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_OverlayFire, _TEXT$00
+
+;*********************************************************
+;  CopperBarDemo_ScreenMelt
+;
+;        Parameters: Master Context
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_ScreenMelt, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX
+  MOV RDI, [DoubleBuffer]
+
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  XOR RDX, RDX
+  MUL RCX
+  SUB RAX, 1
+  SHL RAX, 2
+  ADD RDI, RAX
+  XOR R8, R8
+@BufferLoop:
+  ;
+  ; Special dealing with right side outter pixel.
+  ; 
+
+  XOR RDX, RDX
+
+@CreateColorMixRight:
+  XOR RAX, RAX
+  XOR RCX, RCX
+
+  MOV R11, RDI
+  SUB R11, FIRE_WIDTH*2
+
+  MOV AL, BYTE PTR [R11 + RDX]
+  SUB R11, 4
+  ADD R11, RDX
+  MOV CL, BYTE PTR [R11]
+  ADD AX, CX
+
+  MOV CL, BYTE PTR [RDI + RDX]
+  ADD AX, CX
+  MOV R11, RDI
+  SUB R11, 4
+  MOV CL, BYTE PTR [R11 + RDX]
+  ADD AX, CX
+  SHR AX, 2
+  CMP AX, 0
+  JE @SkipRightDecrement
+  DEC AX
+@SkipRightDecrement:
+  CMP AX, 255
+  JB @NoUpdateForRight
+  MOV AL, 254
+@NoUpdateForRight:
+  MOV BYTE PTR [RDI + RDX], AL
+  INC RDX
+  CMP RDX, 3
+  JB @CreateColorMixRight
+
+  SUB RDI, 4
+  MOV R9, 1
+@InnerWidthLoop:
+
+  XOR RDX, RDX
+
+@CreateColorMixCenter:
+  XOR RAX, RAX
+  XOR RCX, RCX
+
+  MOV R11, RDI
+  SUB R11, FIRE_WIDTH*2
+  MOV AL, BYTE PTR [R11 + RDX]
+
+
+  SUB R11, 4
+  ADD R11, RDX
+  MOV CL, BYTE PTR [R11]
+  ADD AX, CX
+
+  MOV R11, RDI
+  SUB R11, FIRE_WIDTH*2-4
+  ADD R11, RDX
+  MOV CL, BYTE PTR [R11]
+  ADD AX, CX
+
+  MOV CL, BYTE PTR [RDI + RDX]
+
+  ADD AX, CX
+  SHR AX, 2
+  CMP AX, 0
+  JE @SkipCenterDecrement
+  DEC AX
+@SkipCenterDecrement:
+  CMP AX, 255
+  JB @NoUpdateForCenter
+  MOV AL, 254
+@NoUpdateForCenter:
+  MOV BYTE PTR [RDI + RDX], AL
+  INC RDX
+  CMP RDX, 3
+  JB @CreateColorMixCenter
+
+  SUB RDI, 4
+  INC R9
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SUB RAX, 2
+  CMP R9, RAX
+  JB @InnerWidthLoop
+  
+  ;
+  ; Special dealing with left side outter pixel.
+  ; 
+
+  XOR RDX, RDX
+
+@CreateColorMixLeft:
+  XOR RAX, RAX
+  XOR RCX, RCX
+
+  MOV R11, RDI
+  SUB R11, FIRE_WIDTH*2
+
+  MOV AL, BYTE PTR [R11 + RDX]
+  SUB R11, 4
+  ADD R11, RDX
+  MOV CL, BYTE PTR [R11]
+  ADD AX, CX
+
+  MOV CL, BYTE PTR [RDI + RDX]
+  ADD AX, CX
+  MOV R11, RDI
+  SUB R11, 4
+  MOV CL, BYTE PTR [R11 + RDX]
+  ADD AX, CX
+  SHR AX, 2
+  CMP AX, 0
+  JE @SkipLeftDecrement
+  DEC AX
+@SkipLeftDecrement:
+  CMP AX, 255
+  JB @NoUpdateForLeft
+  MOV AL, 254
+@NoUpdateForLeft:
+  MOV BYTE PTR [RDI + RDX], AL
+  INC RDX
+  CMP RDX, 3
+  JB @CreateColorMixLeft
+  
+  SUB RDI, 4
+  INC R8
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenHeight[RSI]
+  DEC RAX
+  CMP R8, RAX
+  JB @BufferLoop
+
+  XOR RAX, RAX
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL RCX, 1
+  MOV RDI, [DoubleBuffer]
+  REP STOSQ
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_ScreenMelt, _TEXT$00
+
+;*********************************************************
+;  CopperBarDemo_MoveVertBars
+;
+;        Parameters: Master Context, Verticle Bars
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_MoveVertBars, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RBX, RCX
+
+  MOV RDI, RDX
+  XOR RSI, RSI
+  MOV R13, -1
+  MOV R14, 8
+@CopperBarsPlot:
+  XOR RDX, RDX
+
+  MOV RAX, COPPERBARS_FIELD_ENTRY.Velocity[RDI]
+  ADD RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
+  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
+
+  CMP RAX, COPPERBARS_FIELD_ENTRY.LeftWall[RDI]
+  JG @CheckUpperBounds
+             
+  MOV RAX, COPPERBARS_FIELD_ENTRY.LeftWall[RDI]
+  INC RAX
+  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
+  CALL Math_Rand
+  XOR RDX, RDX
+  MOV RCX, R14
+  DIV RCX
+  INC RDX
+  CMP R14, 8
+  JE @AdjustVelocity
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @NotOutOfBounds
+@AdjustVelocity:
+  CMP RDX, 4
+  JA @NotOutOfBounds
+  ADD RDX, 4
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @NotOutOfBounds
+@CheckUpperBounds:
+  ADD RAX, 21
+  CMP RAX, COPPERBARS_FIELD_ENTRY.RightWall[RDI] 
+  JL @NotOutOfBounds
+  
+  MOV RAX, COPPERBARS_FIELD_ENTRY.RightWall[RDI] 
+  SUB RAX, 22
+  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
+  CALL Math_Rand
+  XOR RDX, RDX
+  MOV RCX, R14
+  DIV RCX
+  INC RDX
+  CMP R14, 8
+  JE @AdjustVelocityNeg
+  NEG RDX
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @NotOutOfBounds
+@AdjustVelocityNeg:
+  CMP RDX, 4
+  JA @SkipIncrease
+  ADD RDX, 4
+@SkipIncrease:
+  NEG RDX
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+@NotOutOfBounds:
+  CMP RSI, 0
+  JE @SkipPreviousXAlignmentCheck
+  
+  MOV RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
+  MOV RCX, R13
+  SUB RCX, COPPERBARS_FIELD_ENTRY.Bounds[RDI]
+  CMP RAX, RCX
+  JG @CheckUpperBoundsOfPreviousBar
+  INC RCX
+  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RCX
+
+  CALL Math_Rand
+  XOR RDX, RDX
+  MOV RCX, R14
+  DIV RCX
+  INC RDX
+
+  CMP R14, 8
+  JE @AdjustVelocity2
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @SkipPreviousXAlignmentCheck
+
+@AdjustVelocity2:
+  CMP RDX, 4
+  JA @DontAdjustVel
+   ADD RDX, 4
+
+@DontAdjustVel:
+   MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @SkipPreviousXAlignmentCheck
+
+@CheckUpperBoundsOfPreviousBar:
+  MOV RAX, COPPERBARS_FIELD_ENTRY.X[RDI]
+  MOV RCX, R13
+  ADD RCX, COPPERBARS_FIELD_ENTRY.Bounds[RDI]
+  CMP RAX, RCX
+  JL @SkipPreviousXAlignmentCheck
+
+  DEC RCX
+  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RCX
+
+  CALL Math_Rand
+  XOR RDX, RDX
+  MOV RCX, R14
+  DIV RCX
+  INC RDX
+  CMP R14, 8
+  JE @AdjustVelocity3
+  NEG RDX
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+  JMP @SkipPreviousXAlignmentCheck
+@AdjustVelocity3:
+  CMP RDX, 4
+  JA @DoNotAdjustVelocity
+  ADD RDX, 4
+@DoNotAdjustVelocity:
+  NEG RDX
+  MOV COPPERBARS_FIELD_ENTRY.Velocity[RDI], RDX
+@SkipPreviousXAlignmentCheck:
+  MOV R14, 3
+  MOV R13, COPPERBARS_FIELD_ENTRY.X[RDI]
+  SUB RDI, SIZEOF COPPERBARS_FIELD_ENTRY
+  INC RSI  
+  CMP RSI, NUMBER_OF_VERTICLE_BARS
+  JB @CopperBarsPlot
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END CopperBarDemo_MoveVertBars, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_MoveVertBarsWave
+;
+;        Parameters: Master Context, Verticle Bars, Wave
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RBX, RCX
+  MOV RDI, RDX
+  XOR RSI, RSI
+  MOV R15, R8
+  MOV R12, 0
+@CopperBarsPlot:
+  MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RDI]
+  ADD RAX, R12
+  XOR RDX, RDX
+  MOV RCX, 360
+  DIV RCX
+  MOV RCX, RDX
+  MOV R9, R15
+  MOV R8, COPPER_BARS_CENTER
+  MOV RDX, COPPER_BARS_RANGE
+  DEBUG_FUNCTION_CALL CopperBarDemo_SineWave
+  MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
+  MOV R13, COPPERBARS_FIELD_ENTRY.X[RDI]
+  ADD R12, R12
+  SUB RDI, SIZEOF COPPERBARS_FIELD_ENTRY
+  INC RSI  
+  CMP RSI, NUMBER_OF_VERTICLE_BARS
+  JB @CopperBarsPlot
+
+  MOV RAX, WAVE_TRACKER.WaveVelocity[R15]
+  ADD WAVE_TRACKER.WaveThetaAddition[R15], RAX
+  
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
+NESTED_END CopperBarDemo_MoveVertBarsWave, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_SineWave
+;
+;        Parameters: Angle (Theta), Multiplier, Center, Wave Tracker Struct
+;
+;           Return = Multiplier*SIN(Theta) + Center
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_SineWave, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RDX
+  MOV R12, R8
+  MOV R15, R9
+
+  PXOR XMM0, XMM0
+  PXOR XMM1, XMM1
+  ADD RCX, WAVE_TRACKER.WaveThetaAddition[R15]
+  CVTSI2SD XMM0, RCX
+  MOV RAX, 180
+  CVTSI2SD XMM1, RAX
+  DIVSD XMM0, XMM1
+  MOVSD XMM1, [PI]
+  MULSD XMM0, XMM1
+  DEBUG_FUNCTION_CALL sin
+  CVTSI2SD XMM1, RBX
+  MULSD XMM0, XMM1
+  CVTSI2SD XMM1, R12
+  ADDSD XMM0, XMM1
+  CVTSD2SI RAX, XMM0
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_SineWave, _TEXT$00
+
+
+
 END
+
