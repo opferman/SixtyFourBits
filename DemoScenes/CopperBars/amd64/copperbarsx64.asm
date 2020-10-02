@@ -104,6 +104,10 @@ SQUARE_TRCKER ends
 WAVE_TRACKER struct
   WaveVelocity         dq ?
   WaveThetaAddition    dq ?
+  WaveCenter           dq ?
+  WaveCenterVelocity   dq ?
+  WaveRange            dq ?
+  WaveRangeVelocity    dq ?
 WAVE_TRACKER ends
 
 ;*********************************************************
@@ -137,11 +141,15 @@ FIRE_START_Y                  EQU <VERTICLE_BAR_END - (FIRE_HEIGHT-2)>
 FIRE_WIDTH                    EQU <1024>
 FIRE_HEIGHT                   EQU <330>
 MAX_FIRE_INDEX                EQU <256>
-COPPER_BARS_CENTER            EQU <512>
-COPPER_BARS_RANGE             EQU <350>
 TRANSPARENT_TILE_COLOR        EQU <0h>
 
+COPPER_BARS_CENTER_LOW        EQU <200>
+COPPER_BARS_CENTER_HIGH       EQU <512>
+COPPER_BARS_RANGE_LOW         EQU <80>
+COPPER_BARS_RANGE_HIGH        EQU <350>
 
+FIRE_FONT_HEIGHT_SIZE_PER_LINE  EQU <8>
+FIRE_FONT_WIDTH_SIZE            EQU <8>
 
 FIRE_START_COUNT              EQU <500>
 ;*********************************************************
@@ -508,8 +516,32 @@ public CopperBarsDemo_Free
                         COLOR_BAR_STRUCT <360,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3060>
                         COLOR_BAR_STRUCT <380,  1, THRESHOLD_LOW_MID, 2, 700, 0, 3090>
 
-  DemoText               db "Testing the demo text", 0
-  
+  PureWord               db "Pure", 0
+  AssemblyWord           db "Assembly", 0
+  CodedBy                db "Coded By", 0
+  MyName                 db "Toby Opferman", 0
+  Tribute                db "A Tribute", 0
+  Demo                   db "to the Demos", 0
+  Ninties                db "of the 1990s", 0
+
+  CurrentFireWordPtr     dq OFFSET PureAssembly
+  PureAssembly           dw 382, 250
+                         dq OFFSET PureWord
+                         dw 257, 250
+                         dq OFFSET AssemblyWord
+                         dw 257, 250
+                         dq OFFSET CodedBy
+                         dw 100, 250
+                         dq OFFSET MyName
+                         dw 240, 250
+                         dq OFFSET Tribute
+                         dw 110, 250
+                         dq OFFSET Demo
+                         dw 110, 250
+                         dq OFFSET Ninties
+                         dw 0, 0
+                         dq OFFSET PureAssembly
+
   DemoFrameCounter       dq 0
 
   AudioFormat            db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h, 00h, 00h
@@ -524,6 +556,7 @@ public CopperBarsDemo_Free
   GifDataPtr             dq ?
   GifImageInformation    IMAGE_INFORMATION <?>
 
+  DISPLAY_FIRE_WORD       dq 800
   FLASH_TO_BOLD_START     dq 1000
   BOLD_START              dq 1050
   FLASH_TO_LIGHT_START    dq 1500
@@ -542,8 +575,8 @@ public CopperBarsDemo_Free
   CopperBarsVertOneHead  dq ?
   CopperBarsVertTwoHead  dq ?
   
-  CopperBarsOneWave      WAVE_TRACKER <2, 0>
-  CopperBarsTwoWave      WAVE_TRACKER <2, 180>
+  CopperBarsOneWave      WAVE_TRACKER <4, 0, 512, 0, 300, 5>
+  CopperBarsTwoWave      WAVE_TRACKER <4, 180, 512, 0, 300, 5>
   PI                     mmword 3.14
 .CODE
 
@@ -972,6 +1005,32 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_RandomFireball
 
+  MOV RAX, [DISPLAY_FIRE_WORD]
+  CMP [DemoFrameCounter], RAX
+  JNE @SkipFireWord
+  XOR R8, R8
+  MOV RDX, R8
+
+  MOV R9, [CurrentFireWordPtr]
+  MOV R8W, WORD PTR [R9 + 2]
+  MOV DX, WORD PTR [R9]
+  MOV R9, QWORD PTR [R9 + 4]
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_DisplayFireWord
+
+  MOV R9, [CurrentFireWordPtr]
+  ADD R9, 2 + 2 + 8
+  MOV [CurrentFireWordPtr], R9
+  ADD [DISPLAY_FIRE_WORD], 50
+  CMP WORD PTR [R9], 0
+  JNE @SkipWordUpdate
+
+  ADD [DISPLAY_FIRE_WORD], 800
+  MOV R9, QWORD PTR [R9 + 4]
+  MOV [CurrentFireWordPtr], R9
+
+@SkipWordUpdate:
+@SkipFireWord:
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_UpdateTheFire
 @FireNoActivated:
@@ -1029,6 +1088,7 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
 
   MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+
   MOV RAX, [FLASH_TO_BOLD_START]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
@@ -1049,8 +1109,11 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
 
-  TEST [DemoFrameCounter], 1
-  JE @SkipTheDark
+
+  MOV RAX, [DemoFrameCounter]
+  AND AL, 3
+  CMP AL, 2
+  JB @SkipTheDark
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
 @SkipTheDark:
 
@@ -1068,7 +1131,7 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
   TEST [DemoFrameCounter], 1
   JE @SkipTheLight
-  MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
 @SkipTheLight:
   MOV RAX, [SOLID_START]
   CMP [DemoFrameCounter], RAX
@@ -1091,7 +1154,7 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV [LIGHT_START], RCX
   ADD RAX, 500
   MOV [FLASH_TO_SOLID_START], RAX
-  MOV RCX, 50
+  MOV RCX, 100
   ADD RCX, RAX
   MOV [SOLID_START], RCX
 
@@ -3120,21 +3183,21 @@ NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
   MOV RDI, RDX
   XOR RSI, RSI
   MOV R15, R8
-  MOV R12, 0
 @CopperBarsPlot:
   MOV RAX, COPPERBARS_FIELD_ENTRY.Y[RDI]
-  ADD RAX, R12
+  ADD RAX, WAVE_TRACKER.WaveThetaAddition[R15]
   XOR RDX, RDX
   MOV RCX, 360
   DIV RCX
   MOV RCX, RDX
   MOV R9, R15
-  MOV R8, COPPER_BARS_CENTER
-  MOV RDX, COPPER_BARS_RANGE
+
+  MOV R8, WAVE_TRACKER.WaveCenter[R15]
+  MOV RDX, WAVE_TRACKER.WaveRange[R15]
   DEBUG_FUNCTION_CALL CopperBarDemo_SineWave
   MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
+  
   MOV R13, COPPERBARS_FIELD_ENTRY.X[RDI]
-  ADD R12, R12
   SUB RDI, SIZEOF COPPERBARS_FIELD_ENTRY
   INC RSI  
   CMP RSI, NUMBER_OF_VERTICLE_BARS
@@ -3142,7 +3205,52 @@ NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
 
   MOV RAX, WAVE_TRACKER.WaveVelocity[R15]
   ADD WAVE_TRACKER.WaveThetaAddition[R15], RAX
-  
+
+
+  DEBUG_FUNCTION_CALL Math_rand
+
+  TEST RAX, 080h
+  JZ @DoNotUpdateRange
+  MOV RCX, WAVE_TRACKER.WaveRangeVelocity[R15]
+  ADD WAVE_TRACKER.WaveRange[R15], RCX
+
+  CMP WAVE_TRACKER.WaveRange[R15], COPPER_BARS_RANGE_LOW
+  JLE @FixUpRangeLow
+
+  CMP WAVE_TRACKER.WaveRange[R15], COPPER_BARS_RANGE_HIGH
+  JLE @DoNotUpdateRange
+
+  MOV WAVE_TRACKER.WaveRange[R15], COPPER_BARS_RANGE_HIGH - 1
+  NEG WAVE_TRACKER.WaveRangeVelocity[R15]
+  JMP @DoneUpdateRange
+@FixUpRangeLow:
+  MOV WAVE_TRACKER.WaveRange[R15], COPPER_BARS_RANGE_LOW + 1
+  NEG WAVE_TRACKER.WaveRangeVelocity[R15]
+@DoneUpdateRange:
+@DoNotUpdateRange:
+
+
+  ;    TEST RAX, 014h
+  ;    JZ @DoNotUpdateCenter
+  ;  
+  ;    MOV RCX, WAVE_TRACKER.WaveCenterVelocity[R15]
+  ;    ADD WAVE_TRACKER.WaveCenter[R15], RCX
+  ;  
+  ;    CMP WAVE_TRACKER.WaveCenter[R15], COPPER_BARS_CENTER_LOW
+  ;    JLE @FixUpCenterLow
+  ;  
+  ;    CMP WAVE_TRACKER.WaveCenter[R15], COPPER_BARS_CENTER_HIGH
+  ;    JLE @DoNotUpdateCenter
+  ;  
+  ;    MOV WAVE_TRACKER.WaveCenter[R15], COPPER_BARS_CENTER_HIGH - 1
+  ;    NEG WAVE_TRACKER.WaveCenterVelocity[R15]
+  ;    JMP @DoneUpdateCenter
+  ;  @FixUpCenterLow:
+  ;    MOV WAVE_TRACKER.WaveCenter[R15], COPPER_BARS_CENTER_LOW + 1
+  ;    NEG WAVE_TRACKER.WaveCenterVelocity[R15]
+  ;  @DoneUpdateCenter:
+  ;  @DoNotUpdateCenter:
+
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
@@ -3155,7 +3263,7 @@ NESTED_END CopperBarDemo_MoveVertBarsWave, _TEXT$00
 ;*********************************************************
 ;  CopperBarDemo_SineWave
 ;
-;        Parameters: Angle (Theta), Multiplier, Center, Wave Tracker Struct
+;        Parameters: Angle (Theta), Multiplier, Center
 ;
 ;           Return = Multiplier*SIN(Theta) + Center
 ;
@@ -3168,11 +3276,9 @@ NESTED_ENTRY CopperBarDemo_SineWave, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RBX, RDX
   MOV R12, R8
-  MOV R15, R9
 
   PXOR XMM0, XMM0
   PXOR XMM1, XMM1
-  ADD RCX, WAVE_TRACKER.WaveThetaAddition[R15]
   CVTSI2SD XMM0, RCX
   MOV RAX, 180
   CVTSI2SD XMM1, RAX
@@ -3190,6 +3296,106 @@ NESTED_ENTRY CopperBarDemo_SineWave, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END CopperBarDemo_SineWave, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarDemo_DisplayFireWord
+;
+;        Parameters: Master Context, X, Y, String
+;
+;           
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DisplayFireWord, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RBX, RCX
+  MOV R12, RDX
+  MOV RSI, R9
+  ;
+  ; Set double buffer to the start.
+  ;
+  MOV R13, [FireDoubleBuffer]
+  MOV RAX, R8
+  XOR RDX, RDX
+  MOV RCX, FIRE_WIDTH
+  SHL RCX, 1
+  MUL RCX
+  ADD R13, RAX
+  MOV RCX, R12
+  SHL RCX, 1
+  ADD R13, RCX
+
+@OutterWordLoop:
+  XOR RCX, RCX
+  MOV CL, BYTE PTR [RSI]
+  DEBUG_FUNCTION_CALL Font_GetBitFont  
+  MOV R14, RAX
+  XOR DH, DH
+
+@HeightLoop:
+  XOR R11, R11
+@InnerHeightLoop:
+  MOV R9, FIRE_FONT_HEIGHT_SIZE_PER_LINE
+@FontSizeHeightLoop:
+  XOR DL, DL
+  MOV AL, BYTE PTR [R14]
+  MOV AH, 080h
+@WidthLoop:
+  TEST AL, AH
+  JZ @NoDraw
+  MOV RCX, FIRE_FONT_WIDTH_SIZE
+@DrawIt:
+  MOV WORD PTR [R13 + R11], 255
+  ADD R11, 2
+  DEC RCX
+  JNZ @DrawIt
+  JMP @DontDoubleRemove
+@NoDraw:
+  ADD R11, 2*FIRE_FONT_WIDTH_SIZE
+@DontDoubleRemove:
+  SHR AH, 1
+  INC DL
+  CMP DL, 8
+  JB @WidthLoop
+  DEC R9
+  JZ @NextLine
+  
+  SUB R11, (8*FIRE_FONT_WIDTH_SIZE*2)
+  MOV RCX, FIRE_WIDTH
+  SHL RCX, 1
+  ADD R11, RCX
+  JMP @FontSizeHeightLoop
+
+@NextLine:
+  INC R14
+  SUB R11, (8*FIRE_FONT_WIDTH_SIZE*2)
+  MOV RCX, FIRE_WIDTH
+  SHL RCX, 1
+  ADD R11, RCX
+  INC DH
+  CMP DH, 8
+  JB @InnerHeightLoop
+@NextLetter:
+
+@ReTest:  
+  ADD R13, (8*FIRE_FONT_WIDTH_SIZE*2) + 4
+  INC RSI
+  CMP BYTE PTR [RSI], ' '
+  JNE @NextTest
+  JMP @ReTest
+@NextTest:
+  CMP BYTE PTR [RSI], 0
+  JNE @OutterWordLoop
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DisplayFireWord, _TEXT$00
+
 
 
 
