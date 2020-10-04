@@ -110,9 +110,23 @@ WAVE_TRACKER struct
   WaveRangeVelocity    dq ?
 WAVE_TRACKER ends
 
+
+PLASMA_DESCRIPTIONS_STRUCT struct
+  StartRange           dq ?
+  StartColor           dd ?
+  UseStartColor        dd ?
+  RedVelocity          db ?
+  GreenVelocity        db ?
+  BlueVelocity         db ?
+PLASMA_DESCRIPTIONS_STRUCT ends
+
+
+
 ;*********************************************************
 ; Demo Constants
 ;*********************************************************
+
+
 COLOR_DESCRIPTIONS_SIZE       EQU <38>
 NUMBER_TOP_HORIZONTAL_BARS    EQU <3>
 NUMBER_MID_HORIZONTAL_BARS    EQU <4>
@@ -123,9 +137,14 @@ MIDDLE_BACKGROUND             EQU <11>
 TILE_IMAGE_PIXELS             EQU <10000>
 THRESHOLD_LOW_MID             EQU <540>
 THRESHOLD_HIGH_MID            EQU <300>
-NUMBER_OF_VERTICLE_BARS       EQU <300/2>
+NUMBER_OF_VERTICLE_BARS       EQU <300/4>
+VERTICLE_BAR_DIFFERENCE       EQU <4>
 VERTICLE_BAR_START            EQU <255>
 VERTICLE_BAR_END              EQU <586>
+PLASMA_AREA_START             EQU <586>
+PLASMA_AREA_END               EQU <768>
+PLASMA_WIDTH                  EQU <1024>
+PLASMA_HEIGHT                 EQU <182>
 LEFT_VERT_WALL                EQU <20>
 RIGHT_VERT_WALL               EQU <1024 - 20>
 STARTING_VELOCITY             EQU <10>
@@ -145,13 +164,18 @@ TRANSPARENT_TILE_COLOR        EQU <0h>
 
 COPPER_BARS_CENTER_LOW        EQU <200>
 COPPER_BARS_CENTER_HIGH       EQU <512>
-COPPER_BARS_RANGE_LOW         EQU <80>
-COPPER_BARS_RANGE_HIGH        EQU <350>
+COPPER_BARS_RANGE_LOW         EQU <5>
+COPPER_BARS_RANGE_HIGH        EQU <325>
 
 FIRE_FONT_HEIGHT_SIZE_PER_LINE  EQU <8>
 FIRE_FONT_WIDTH_SIZE            EQU <8>
-
 FIRE_START_COUNT              EQU <500>
+
+TRIG_TABLE_SIZE               EQU <1>
+
+PLASMA_CENTER                 EQU <4096 / 15>
+
+
 ;*********************************************************
 ; Public Functions
 ;*********************************************************
@@ -464,6 +488,54 @@ public CopperBarsDemo_Free
                    db  3Fh, 3Fh, 3Fh , 0h
                    db  3Fh, 3Fh, 3Fh , 0h
 
+  PlasmaDefinition      PLASMA_DESCRIPTIONS_STRUCT<0, 0010456h, 1, 2, 2, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<100, 0, 0, -1, -3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<200, 0, 0, -2, -1, -1>
+                        PLASMA_DESCRIPTIONS_STRUCT<300, 0, 0, -1, 5, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<400, 0, 0, -5, 1, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<500, 0, 0, -1, 1, 6>
+                        PLASMA_DESCRIPTIONS_STRUCT<600, 0, 0, 1, 5, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<700, 0, 0, -1, -3, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<800, 0, 0, 2, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<900, 0, 0, 1, 3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<1000, 0, 0, 5, 1, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<1100, 0, 0, 5, 6, -1>
+                        PLASMA_DESCRIPTIONS_STRUCT<1200, 0, 0, 3, 0, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<1300, 0, 0, 0, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<1400, 0, 0, 2, 5, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<1500, 0, 0, -1, 0, 6>
+                        PLASMA_DESCRIPTIONS_STRUCT<1600, 0, 0, 0, 3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<1700, 0, 0, 0, 3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<1800, 0, 0, -4, 0, 3>
+                        PLASMA_DESCRIPTIONS_STRUCT<1900, 0, 0, 0, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<2000, 0, 0, 1, 1, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<2100, 0, 0, -1, 4, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<2200, 0, 0, 1, -1, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<2300, 0, 0, 1, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<2350, 0, 0, 2, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<2500, 0, 0, 0, 1, 5>
+                        PLASMA_DESCRIPTIONS_STRUCT<2600, 0, 0, -2, 0, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<2700, 0, 0, 1, 1, -1>
+                        PLASMA_DESCRIPTIONS_STRUCT<2800, 0, 0, 0, 3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<2900, 0, 0, 0, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<3000, 0, 0, 1, 0, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<3100, 0, 0, 0, -1, 9>
+                        PLASMA_DESCRIPTIONS_STRUCT<3200, 0, 0, 1, 0, -1>
+                        PLASMA_DESCRIPTIONS_STRUCT<3300, 0, 0, -1, 5, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<3400, 0, 0, 1, -3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<3500, 0, 0, -5, -1, -1>
+                        PLASMA_DESCRIPTIONS_STRUCT<3600, 0, 0, 1, 3, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<3700, 0, 0, 1, 5, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<3800, 0, 0, 0, 1, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<3900, 0, 0, 1, 5, 0>
+                        PLASMA_DESCRIPTIONS_STRUCT<4000, 0, 0, 5, 0, 1>
+                        PLASMA_DESCRIPTIONS_STRUCT<10000, 0, 0, 0, 0, 0>  ; Not Reachable
+
+
+
+ 
+
+
   ColorDescriptions     COLOR_DESCRIPTIONS_STRUCT<1, 0, 0, 1, 255, 01h, 0>
                         COLOR_DESCRIPTIONS_STRUCT<256, 3, 2, -1, 44, 00101FFh, 0>
   Middlebackground      COLOR_DESCRIPTIONS_STRUCT<300, 7, 2, 1, 30, 0160400h, 0>
@@ -542,6 +614,11 @@ public CopperBarsDemo_Free
                          dw 0, 0
                          dq OFFSET PureAssembly
 
+
+
+  SineTablePtr           dq 0
+  CosineTablePtr         dq 0
+
   DemoFrameCounter       dq 0
 
   AudioFormat            db 01h, 00h, 02h, 00h, 044h, 0ach, 00h, 00h, 010h, 0b1h, 02h, 00h, 04h, 00h, 010h, 00h, 00h, 00h
@@ -557,18 +634,35 @@ public CopperBarsDemo_Free
   GifImageInformation    IMAGE_INFORMATION <?>
 
   DISPLAY_FIRE_WORD       dq 800
-  FLASH_TO_BOLD_START     dq 1000
-  BOLD_START              dq 1050
-  FLASH_TO_LIGHT_START    dq 1500
-  LIGHT_START             dq 1550
-  FLASH_TO_SOLID_START    dq 2000
-  SOLID_START             dq 2050
+
+
+  FLASH_TO_BOLD_START      dq 1000
+  BOLD_START               dq 1050
+  FLASH_TO_LIGHT_START     dq 1500
+  LIGHT_START              dq 1550
+  FLASH_TO_SOLID_START     dq 2000
+  SOLID_START              dq 2050
+  FLASH_TO_UPSIDE_DOWN     dq 2500  
+  UPSIDE_DOWN_START        dq 2550
+  FLASH_TO_BOLD_UPSIDEDOWN dq 3000
+  BOLD_RESTART             dq 3050
+
+  HeightAngle            mmword 0.001
+  WidthAngle             mmword 0.023
+  HeightAngleInc         mmword 0.0001
+  WidthAngleInc          mmword 0.0011
+  MULTIPLER_X            mmword 0.001
+  MULTIPLER_Y            mmword 1.013
+  MULTIPLIER_Y_INC       mmword 0.12
+  MULTIPLIER_X_INC       mmword 0.052
 
   SquareGrid             SQUARE_TRCKER <20, 10, 1, 3, 200, 200, -3, 250, 250>
   Transparent            dq 1
   PaletteArray           dq ?
   DoubleBuffer           dq ?
   FireDoubleBuffer       dq ?
+  PlasmaDoubleBuffer     dq ?
+  PlasmaPalette          dq ?
   VirtualPalette         dq ?
   CopperBarsVertOne      dq ?
   CopperBarsVertTwo      dq ?
@@ -610,7 +704,22 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   MOV [FireDoubleBuffer], RAX
   TEST RAX, RAX
   JZ @CopperInit_Failed
+  
+  MOV RDX, PLASMA_WIDTH * PLASMA_HEIGHT * 2
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV [PlasmaDoubleBuffer], RAX
+  TEST RAX, RAX
+  JZ @CopperInit_Failed
 
+  MOV RDX, 4096*4
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  MOV [PlasmaPalette], RAX
+  TEST RAX, RAX
+  JZ @CopperInit_Failed
+
+  DEBUG_FUNCTION_CALL CopperBarDemo_CreatePlasmaColorTable
 
   MOV RCX, 65536
   DEBUG_FUNCTION_CALL VPal_Create
@@ -641,7 +750,9 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   DEBUG_FUNCTION_CALL CopperBarsDemo_LoadImages
 
   DEBUG_FUNCTION_CALL CopperBarsDemo_LoadAndStartAudio
-  
+  DEBUG_FUNCTION_CALL CopperBarsDemo_CreateSineTable
+  DEBUG_FUNCTION_CALL CopperBarsDemo_CreateCosineTable
+
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -777,7 +888,7 @@ NESTED_ENTRY CopperBarsDemo_InitializeVerticleBars, _TEXT$00
   MOV COPPERBARS_FIELD_ENTRY.Bounds[RCX], RSI
   MOV COPPERBARS_FIELD_ENTRY.LeftWall[RCX], LEFT_VERT_WALL
   MOV COPPERBARS_FIELD_ENTRY.RightWall[RCX], RIGHT_VERT_WALL
-  ADD R11, 2
+  ADD R11, VERTICLE_BAR_DIFFERENCE
   ADD R9, R10
 
   CMP R9, RIGHT_VERT_WALL
@@ -1088,33 +1199,40 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 
 
   MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+  MOV R15, R14
 
   MOV RAX, [FLASH_TO_BOLD_START]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
 
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, R14
+
+
   TEST [DemoFrameCounter], 1
   JE @SkipTheSolid
   MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+  MOV R15, R14
 @SkipTheSolid:
   MOV RAX, [BOLD_START]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
-  
+  MOV R15, R14
+    
   MOV RAX, [FLASH_TO_LIGHT_START]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
 
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
-
+  MOV R15, R14
 
   MOV RAX, [DemoFrameCounter]
   AND AL, 3
   CMP AL, 2
   JB @SkipTheDark
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, R14
 @SkipTheDark:
 
   MOV RAX, [LIGHT_START]
@@ -1122,34 +1240,68 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   JB @DrawVerticleBars
   
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsLightTransparent
-  
+  MOV R15, R14  
   MOV RAX, [FLASH_TO_SOLID_START]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
 
   MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
-
+  MOV R15, R14
   TEST [DemoFrameCounter], 1
   JE @SkipTheLight
   MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, R14
 @SkipTheLight:
   MOV RAX, [SOLID_START]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
-  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
 
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+  MOV R15, R14
+
+  MOV RAX, [FLASH_TO_UPSIDE_DOWN]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, OFFSET CopperBarDemo_DrawVertBarSolidUpsidedown  
+
+  TEST [DemoFrameCounter], 1
+  JE @SkipTheLight2
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+  MOV R15, OFFSET CopperBarDemo_DrawVertBarSolid  
+@SkipTheLight2:
+  MOV RAX, [UPSIDE_DOWN_START]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
+  MOV R15, OFFSET CopperBarDemo_DrawVertBarSolidUpsidedown  
+
+  MOV RAX, [FLASH_TO_BOLD_UPSIDEDOWN]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, OFFSET CopperBarDemo_DrawVertBarSolidUpsidedown  
+
+  TEST [DemoFrameCounter], 1
+  JE @SkipTheLight3
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent  
+@SkipTheLight3:
+  MOV RAX, [BOLD_RESTART]
+  CMP [DemoFrameCounter], RAX
+  JB @DrawVerticleBars
+
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R15, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent  
   ; 
   ; Reset cycle
   ;
-  MOV RAX, [SOLID_START]
-  ADD RAX, 500
-  MOV [FLASH_TO_BOLD_START], RAX
-  MOV RCX, 50
-  ADD RCX, RAX
-  MOV [BOLD_START], RCX
+  MOV RAX, [BOLD_RESTART]
+  MOV [BOLD_START], RAX
   ADD RAX, 500
   MOV [FLASH_TO_LIGHT_START], RAX
-  MOV RCX, 50
+  MOV RCX, 100
   ADD RCX, RAX
   MOV [LIGHT_START], RCX
   ADD RAX, 500
@@ -1157,13 +1309,22 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RCX, 100
   ADD RCX, RAX
   MOV [SOLID_START], RCX
-
+  ADD RAX, 500
+  MOV [FLASH_TO_UPSIDE_DOWN], RAX
+  MOV RCX, 100
+  ADD RCX, RAX
+  MOV [UPSIDE_DOWN_START], RCX
+  ADD RAX, 500
+  MOV [FLASH_TO_BOLD_UPSIDEDOWN], RAX
+  MOV RCX, 100
+  ADD RCX, RAX
+  MOV [BOLD_RESTART], RCX
 
 @DrawVerticleBars:
 
   MOV RDX, R12
   MOV RCX, RDI
-  DEBUG_FUNCTION_CALL R14
+  DEBUG_FUNCTION_CALL R15
 
   MOV RDX, R13
   MOV RCX, RDI
@@ -1186,6 +1347,8 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_OverlayFire
 @SkipFireOverlay:
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarDemo_PerformPlasma
 @ExitFunction:
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -1974,18 +2137,18 @@ NESTED_ENTRY CopperBarDemo_DrawVertBarsDarkTransparent, _TEXT$00
   XOR RAX, RAX
   MOV AL, BYTE PTR [RCX]
   MOV DL, BYTE PTR [R14]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
   XOR RDX, RDX
   MOV DL, BYTE PTR [R14 + 4]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
   XOR RDX, RDX
   ADD R14, R11
   MOV DL, BYTE PTR [R14 + 4]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
-  SHR RAX, 2
+  SHR RAX, 3
   MOV [R14], AL
   SUB R14, R11
   
@@ -1996,18 +2159,18 @@ NESTED_ENTRY CopperBarDemo_DrawVertBarsDarkTransparent, _TEXT$00
   XOR RAX, RAX
   MOV AL, BYTE PTR [RCX + 1]
   MOV DL, BYTE PTR [R14 + 1]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
   XOR RDX, RDX
   MOV DL, BYTE PTR [R14 + 5]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
   XOR RDX, RDX
   ADD R14, R11
   MOV DL, BYTE PTR [R14 + 5]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
-  SHR RAX, 2
+  SHR RAX, 3
   MOV [R14 + 1], AL
   SUB R14, R11
 
@@ -2018,18 +2181,18 @@ NESTED_ENTRY CopperBarDemo_DrawVertBarsDarkTransparent, _TEXT$00
   XOR RAX, RAX
   MOV AL, BYTE PTR [RCX + 1]
   MOV DL, BYTE PTR [R14 + 2]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
   XOR RDX, RDX
   MOV DL, BYTE PTR [R14 + 6]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
   XOR RDX, RDX
   ADD R14, R11
   MOV DL, BYTE PTR [R14 + 5]
-  SHR DL, 1
+;  SHR DL, 1
   ADD AX, DX
-  SHR RAX, 2
+  SHR RAX, 3
   MOV [R14 + 2], AL
 
   ADD R14, R11
@@ -2223,6 +2386,69 @@ NESTED_ENTRY CopperBarDemo_DrawVertBarSolid, _TEXT$00
   RET
 NESTED_END CopperBarDemo_DrawVertBarSolid, _TEXT$00
 
+
+;*********************************************************
+;  CopperBarDemo_DrawVertBarSolidUpsidedown
+;
+;        Parameters: MMaster Context, Vert Bar Structure
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DrawVertBarSolidUpsidedown, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, RCX 
+  MOV R15, RDX
+  MOV RDI, [DoubleBuffer]
+  XOR RDX, RDX
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  MOV R8, VERTICLE_BAR_START
+  MUL R8
+  SHL RAX, 2
+  ADD RDI, RAX
+  MOV RAX, COPPERBARS_FIELD_ENTRY.X[R15]
+  SHL RAX, 2
+  ADD RDI, RAX
+  XOR RCX, RCX
+  MOV CX, COPPERBARS_FIELD_ENTRY.StartColor[R15]
+  MOV RBX, [PaletteArray]
+  SHL RCX, 2
+  ADD RCX, RBX
+  XOR RBX, RBX
+@DrawVerticleBar:
+  MOV R10, VERTICLE_BAR_START
+  MOV R11, MASTER_DEMO_STRUCT.ScreenWidth[RSI]
+  SHL R11, 2
+  MOV R14, RDI
+
+ @DrawVerticleLine:
+    MOV R12D, DWORD PTR [RCX]
+    MOV DWORD PTR [R14], R12D
+    ADD R14, R11
+    INC R10
+
+    MOV RAX, COPPERBARS_FIELD_ENTRY.Y[R15]
+    SUB RAX, VERTICLE_BAR_START
+    MOV R12, VERTICLE_BAR_END
+    SUB R12, RAX
+
+    CMP R10, R12
+    JB @DrawVerticleLine
+
+    ADD RCX, 4
+    ADD RDI, 4
+    INC RBX
+    CMP RBX, 20
+    JB @DrawVerticleBar
+
+    RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DrawVertBarSolidUpsidedown, _TEXT$00
 
 
 ;*********************************************************
@@ -2768,12 +2994,15 @@ NESTED_ENTRY CopperBarDemo_OverlayFire, _TEXT$00
   XOR R9, R9
 @CopyFireRow:
   XOR RAX, RAX
+  CMP R8, FIRE_HEIGHT-15
+  JA @SkipZeroCheck
   MOV AX, WORD PTR [RSI]
   CMP EAX, 0
   JE @NothingToPlot
   SHL EAX, 2
   CMP DWORD PTR [R10 + RAX], 0
   JE @NothingToPlot
+@SkipZeroCheck:
   XOR R11, R11
   XOR RCX, RCX
   XOR RDX, RDX
@@ -3178,7 +3407,7 @@ NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-
+;  XOR R12, R12
   MOV RBX, RCX
   MOV RDI, RDX
   XOR RSI, RSI
@@ -3194,8 +3423,17 @@ NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
 
   MOV R8, WAVE_TRACKER.WaveCenter[R15]
   MOV RDX, WAVE_TRACKER.WaveRange[R15]
+;  ADD RDX, R12
   DEBUG_FUNCTION_CALL CopperBarDemo_SineWave
   MOV COPPERBARS_FIELD_ENTRY.X[RDI], RAX
+  
+;  MOV RAX, R12
+;  ADD RAX, WAVE_TRACKER.WaveRange[R15]
+;  ADD RAX, 15
+;  CMP RAX, COPPER_BARS_RANGE_HIGH
+;  JAE @QuitAdding
+;  ADD R12, 15
+;@QuitAdding:
   
   MOV R13, COPPERBARS_FIELD_ENTRY.X[RDI]
   SUB RDI, SIZEOF COPPERBARS_FIELD_ENTRY
@@ -3209,8 +3447,10 @@ NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
 
   DEBUG_FUNCTION_CALL Math_rand
 
-  TEST RAX, 080h
-  JZ @DoNotUpdateRange
+  AND RAX, 0FFh
+
+  CMP RAX, 100
+  JA @DoNotUpdateRange
   MOV RCX, WAVE_TRACKER.WaveRangeVelocity[R15]
   ADD WAVE_TRACKER.WaveRange[R15], RCX
 
@@ -3226,9 +3466,8 @@ NESTED_ENTRY CopperBarDemo_MoveVertBarsWave, _TEXT$00
 @FixUpRangeLow:
   MOV WAVE_TRACKER.WaveRange[R15], COPPER_BARS_RANGE_LOW + 1
   NEG WAVE_TRACKER.WaveRangeVelocity[R15]
-@DoneUpdateRange:
 @DoNotUpdateRange:
-
+@DoneUpdateRange:
 
   ;    TEST RAX, 014h
   ;    JZ @DoNotUpdateCenter
@@ -3279,13 +3518,15 @@ NESTED_ENTRY CopperBarDemo_SineWave, _TEXT$00
 
   PXOR XMM0, XMM0
   PXOR XMM1, XMM1
-  CVTSI2SD XMM0, RCX
-  MOV RAX, 180
-  CVTSI2SD XMM1, RAX
-  DIVSD XMM0, XMM1
-  MOVSD XMM1, [PI]
-  MULSD XMM0, XMM1
-  DEBUG_FUNCTION_CALL sin
+  MOV RDX, 0
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
+  ;CVTSI2SD XMM0, RCX
+  ;MOV RAX, 180
+  ;CVTSI2SD XMM1, RAX
+  ;DIVSD XMM0, XMM1
+  ;MOVSD XMM1, [PI]
+  ;MULSD XMM0, XMM1
+  ;DEBUG_FUNCTION_CALL sin
   CVTSI2SD XMM1, RBX
   MULSD XMM0, XMM1
   CVTSI2SD XMM1, R12
@@ -3397,7 +3638,541 @@ NESTED_ENTRY CopperBarDemo_DisplayFireWord, _TEXT$00
 NESTED_END CopperBarDemo_DisplayFireWord, _TEXT$00
 
 
+;*********************************************************
+;  CopperBarDemo_PerformPlasma (Not Plasma)
+;
+;        Parameters: Master Struct
+;
+;             Well, ended up not really being a plasma,
+;             but it was cool looking and kinda fit in with the
+;             color bars in the other segments, so I kept it.
+;               I was thinking that a plasma may look out of place anyway.
+;   
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_PerformPlasma, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+  SAVE_ALL_XMM_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RSI, [PlasmaDoubleBuffer]
+  MOV RDI, [DoubleBuffer]
+  MOV RAX, PLASMA_AREA_START
+  XOR RDX, RDX
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[RCX]
+  SHL RCX,2
+  MUL RCX
+  ADD RDI, RAX
+  PXOR XMM8, XMM8
 
+  XOR R12, R12
+@PlasmaHeight:
+  XOR R13, R13
+
+@PlasmaWidth:
+
+  MOV RAX, 3
+  CVTSI2SD XMM0, RAX
+  CVTSI2SD XMM1, R13
+  CVTSI2SD XMM2, R12
+  MULSD XMM1, XMM1
+  MULSD XMM2, XMM2
+  MULSD XMM0, XMM1
+  ADDSD XMM0, XMM2
+  ADDSD XMM0, XMM8
+  CVTSD2SI RCX, XMM0
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
+  CVTSI2SD XMM1, [DemoFrameCounter]
+  MULSD XMM0, XMM1
+  MOVSD XMM6, XMM0
+
+
+  CVTSI2SD XMM1, R12
+  CVTSI2SD XMM2, R13
+  MOVSD XMM0, XMM1
+  MULSD XMM1, XMM1
+  MULSD XMM1, XMM0
+  MOV RAX, 3
+  CVTSI2SD XMM0, RAX
+  MULSD XMM0, XMM1
+
+  MULSD XMM2, XMM2
+  SUBSD XMM0, XMM2
+  ADDSD XMM0, XMM8
+  CVTSD2SI RCX, XMM0
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Cos
+  MOV RAX, R13
+  INC RAX
+  CVTSI2SD XMM1, RAX
+  CVTSI2SD XMM2, [DemoFrameCounter]
+  DIVSD XMM1, XMM2
+  MULSD XMM0, XMM1
+
+  ADDSD XMM6, XMM0
+  MOV RAX, 1
+  CVTSI2SD XMM1, RAX
+  ADDSD XMM6, XMM1
+  MOV RAX, 180
+  CVTSI2SD XMM1, RAX
+  MULSD XMM6, XMM1
+  CVTSD2SI RCX, XMM6
+  ADD RCX, R13
+  ADD RCX, R12
+  XOR RDX, RDX
+  MOV RAX, 360
+  XCHG RAX, RCX
+  DIV RCX
+
+  MOV R15, RDX
+  MOV RCX, RDX
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
+  MOV RAX, 1
+  CVTSI2SD XMM1, RAX
+  ADDSD XMM0, XMM1
+  MOV RAX, 127
+  CVTSI2SD XMM1, RAX
+  MULSD XMM0, XMM1
+  CVTSD2SI RAX, XMM0
+  CMP R13, 0
+  JE @PlotBlue
+
+@PlotBlue:
+  MOV BYTE PTR [RDI], AL
+
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Cos
+  MOV RAX, 1
+  CVTSI2SD XMM1, RAX
+  ADDSD XMM0, XMM1
+  MOV RAX, 127
+  CVTSI2SD XMM1, RAX
+  MULSD XMM0, XMM1
+  CVTSD2SI RAX, XMM0
+  CMP R13, 0
+  JE @PlotGreen
+
+@PlotGreen:
+  MOV BYTE PTR [RDI + 1], AL
+
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
+  MULSD XMM0, XMM0
+  MOV RAX, 1
+  CVTSI2SD XMM1, RAX
+  ADDSD XMM0, XMM1
+  MOV RAX, 127
+  CVTSI2SD XMM1, RAX
+  MULSD XMM0, XMM1
+  CVTSD2SI RAX, XMM0
+  CMP R13, 0
+  JE @PlotRed
+
+@PlotRed:
+  MOV BYTE PTR [RDI + 2], AL
+
+
+; MOV CX, [RSI-2]
+; MOV DX, [RSI+2]
+; ADD CX, DX
+;
+;PXOR XMM0, XMM0
+;PXOR XMM1, XMM1
+;PXOR XMM6, XMM6
+;CVTSI2SD XMM0, RCX
+;MOVSD XMM1, [PI]
+;MULSD XMM0, XMM1              ; X * PI
+;MOV RAX, 360
+;CVTSI2SD XMM1, RAX
+;DIVSD XMM0, XMM1              ; (X * PI) / 360
+;MOVSD XMM1, [WidthAngle]
+;MULSD XMM0, XMM1
+;
+;DEBUG_FUNCTION_CALL sin
+;;MOVSD XMM6, [MULTIPLER_Y]
+;MOVSD XMM6, XMM0
+;
+; MOVSD XMM0, [HeightAngle]
+;MULSD XMM0, XMM7
+;DEBUG_FUNCTION_CALL sin
+;MOVSD XMM1, [MULTIPLER_X]
+;MULSD XMM1, XMM0
+;ADDSD XMM6, XMM1
+;MOVSD XMM1, [WidthAngle]
+;MULSD XMM0, XMM1
+;DEBUG_FUNCTION_CALL cos
+;MULSD XMM6, XMM0
+;
+;MOV RAX, PLASMA_CENTER
+;CVTSI2SD XMM1, RAX
+;MULSD XMM6, XMM1
+
+;  CVTSD2SI RAX, XMM6
+;  MOV CL, AL
+;  SHL EAX, 16
+;  MOV AH, CL
+;  MOV AL, CL
+
+ ; ADD AX, WORD PTR [RSI]
+ ; ADD CX, DX
+ ; SHR RAX, 2
+ ; AND RAX, (4096-1)
+ ; MOV WORD PTR [RSI], AX
+ ; SHL RAX, 2
+ ; ADD RAX, [PlasmaPalette]
+ ; MOV EAX, DWORD PTR [RAX]
+;  MOV DWORD PTR [RDI], EAX
+
+;  ADD RSI, 2
+  MOV RAX, 1
+  CVTSI2SD XMM1, RAX
+  ADDSD XMM8, XMM1
+  ADD RDI, 4
+  INC R13
+  CMP R13, PLASMA_WIDTH
+  JB @PlasmaWidth
+  INC R12
+  CMP R12, PLASMA_HEIGHT
+  JB @PlasmaHeight
+
+;  MOVSD xmm1, [HeightAngleInc]
+;  MOVSD xmm0, [HeightAngle]
+;  ADDSD xmm0, xmm1
+;  MOVSD [HeightAngle], xmm0
+;
+;  MOVSD xmm1, [WidthAngleInc]
+;  MOVSD xmm0, [WidthAngle]
+;  ADDSD xmm0, xmm1
+;  MOVSD [WidthAngle], xmm0
+;
+;  MOVSD xmm1, [MULTIPLIER_Y_INC]
+;  MOVSD xmm0, [MULTIPLER_Y]
+;  ADDSD xmm0, xmm1
+;  MOVSD [MULTIPLER_Y], xmm0
+;
+;  MOVSD xmm1, [MULTIPLIER_X_INC]
+;  MOVSD xmm0, [MULTIPLER_X]
+;  ADDSD xmm0, xmm1
+;  MOVSD [MULTIPLER_X], xmm0
+;
+
+  RESTORE_ALL_XMM_REGS STD_FUNCTION_STACK
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_PerformPlasma, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_CreatePlasmaColorTable
+;
+;        Parameters: Angle (Theta), Multiplier, Center
+;
+;           Return = Multiplier*SIN(Theta) + Center
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_CreatePlasmaColorTable, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV RDI, [PlasmaPalette]
+  MOV RSI, OFFSET PlasmaDefinition
+  MOV R12, RSI
+  ADD R12, SIZE PLASMA_DESCRIPTIONS_STRUCT
+  XOR RAX, RAX
+  XOR RBX, RBX
+@StartPlasmaPaletteEntry:
+
+  CMP PLASMA_DESCRIPTIONS_STRUCT.UseStartColor[RSI], 0
+  JE @SetColors
+
+  MOV EAX, PLASMA_DESCRIPTIONS_STRUCT.StartColor[RSI]
+  JMP @SetColorDirectly
+  
+@SetColors:
+  ;
+  ; Right now allow wrap around instead of truncate.
+  ;
+  MOV EDX, EAX
+  SHR EAX, 16
+  XOR AH, AH
+  XOR CX, CX
+  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
+  ADD AX, CX
+  CMP AX, 0
+  JL @NegativeRed
+
+  CMP AX, 255
+  JL @SkipForceUpdate
+
+  MOV AX, 255
+  NEG PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
+  JMP @SkipForceUpdate
+@NegativeRed:
+  MOV AX, 0
+  NEG PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
+@SkipForceUpdate:
+  SHL EAX, 16
+  
+  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
+  MOV AL, DH
+  ADD AX, CX
+
+  CMP AX, 0
+  JL @NegativeGreen
+  CMP AX, 255
+  JL @SkipForceUpdateGreen
+  MOV AX, 255
+  NEG PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
+  JMP @SkipForceUpdateGreen
+@NegativeGreen:
+  MOV AX, 0
+  NEG PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
+
+@SkipForceUpdateGreen:
+  MOV DH, AL
+
+  MOV AL, DL
+  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
+  ADD AX, CX
+  CMP AX, 0
+  JE @NegativeBlue
+
+  CMP AX, 255
+  JL @SkipForceUpdateBlue
+
+  MOV AX, 255
+  NEG PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
+  JMP @SkipForceUpdateBlue
+@NegativeBlue:
+  MOV AX, 0
+  NEG PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
+@SkipForceUpdateBlue:
+  MOV AH, DH
+
+@SetColorDirectly:
+  MOV DWORD PTR [RDI], EAX
+  CMP EAX, 0FFFFFFh
+  JNE @KeepGoing
+  INT 3
+@KeepGoing:
+  ADD RDI, 4
+  INC RBX
+  CMP RBX, 4096
+  JE @DoneWithColors  
+
+  CMP PLASMA_DESCRIPTIONS_STRUCT.StartRange[R12], RBX
+  JNE @SetColors
+  MOV RSI, R12
+  ADD R12, SIZE PLASMA_DESCRIPTIONS_STRUCT
+  JMP @StartPlasmaPaletteEntry
+@DoneWithColors:
+
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_CreatePlasmaColorTable, _TEXT$00
+
+;*********************************************************
+;  CopperBarsDemo_CreateSineTable
+;
+;        Parameters: 
+;
+;
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_CreateSineTable, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV RDX, 360 * TRIG_TABLE_SIZE * SIZE MMWORD
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JZ @FailedAllocation
+  MOV [SineTablePtr], RAX
+
+  PXOR XMM0, XMM0
+  PXOR XMM1, XMM1
+  PXOR XMM6, XMM6
+  XOR RBX, RBX
+  MOV RDI, [SineTablePtr]
+
+  ;
+  ; Create incremental angle and convert to radians
+  ;
+  MOV RAX, TRIG_TABLE_SIZE
+  CVTSI2SD XMM1, RAX
+  MOV RAX, 360
+  CVTSI2SD XMM0, RAX
+  MOVSD XMM2, XMM0
+  DIVSD XMM0, XMM1
+  DIVSD XMM0, XMM2
+  MOVSD XMM6, XMM0
+  MOVSD XMM1, [PI]
+  MULSD XMM6, XMM1
+  MOV RAX, 180
+  CVTSI2SD XMM2, RAX
+  DIVSD XMM6, XMM2
+  PXOR XMM7, XMM7
+@LoopForSineTableGeneration:
+  MOVSD XMM0, XMM7
+  DEBUG_FUNCTION_CALL sin
+  MOVSD MMWORD PTR [RDI], XMM0
+  ADD RDI, SIZEOF MMWORD
+  ADDSD XMM7, XMM6
+  INC RBX
+  CMP RBX, 360 * TRIG_TABLE_SIZE
+  JB @LoopForSineTableGeneration
+@FailedAllocation:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_CreateSineTable, _TEXT$00
+
+;*********************************************************
+;  CopperBarsDemo_CreateCosineTable
+;
+;        Parameters: 
+;
+;
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_CreateCosineTable, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  XOR RDX, RDX
+  MOV RDX, 360 * TRIG_TABLE_SIZE * SIZE MMWORD
+  MOV RCX, LMEM_ZEROINIT
+  DEBUG_FUNCTION_CALL LocalAlloc
+  CMP RAX, 0
+  JZ @FailedAllocation
+  MOV [CosineTablePtr], RAX
+
+  PXOR XMM0, XMM0
+  PXOR XMM1, XMM1
+  PXOR XMM6, XMM6
+  XOR RBX, RBX
+  MOV RDI, [CosineTablePtr]
+
+  ;
+  ; Create incremental angle and convert to radians
+  ;
+  MOV RAX, TRIG_TABLE_SIZE
+  CVTSI2SD XMM1, RAX
+  MOV RAX, 360
+  CVTSI2SD XMM0, RAX
+  MOVSD XMM2, XMM0
+  DIVSD XMM0, XMM1
+  DIVSD XMM0, XMM2
+  MOVSD XMM6, XMM0
+  MOVSD XMM1, [PI]
+  MULSD XMM6, XMM1
+  MOV RAX, 180
+  CVTSI2SD XMM2, RAX
+  DIVSD XMM6, XMM2
+  PXOR XMM7, XMM7
+@LoopForSineTableGeneration:
+  MOVSD XMM0, XMM7
+  DEBUG_FUNCTION_CALL cos
+  MOVSD MMWORD PTR [RDI], XMM0
+  ADD RDI, SIZEOF MMWORD
+  ADDSD XMM7, XMM6
+  INC RBX
+  CMP RBX, 360 * TRIG_TABLE_SIZE
+  JB @LoopForSineTableGeneration
+@FailedAllocation:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_CreateCosineTable, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarsDemo_Cos
+;
+;        Parameters: Angle, Strap to 360
+;
+;
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_Cos, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  CMP RDX, 1
+  JNZ @SkipStrapping
+  XOR RDX, RDX
+  MOV RAX, TRIG_TABLE_SIZE
+  MUL RCX
+  MOV RCX, RAX
+@SkipStrapping:
+  CMP RCX, 360*TRIG_TABLE_SIZE
+  JB @NoNeedToWrap
+  XOR RDX, RDX
+  MOV RCX, 360*TRIG_TABLE_SIZE
+  MUL RCX
+  MOV RCX, RDX
+@NoNeedToWrap:
+  MOV RDI, [CosineTablePtr]
+  SHL RCX, 3
+  ADD RDI, RCX
+  MOVSD XMM0, MMWORD PTR [RDI]
+@FailedAllocation:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_Cos, _TEXT$00
+
+;*********************************************************
+;  CopperBarsDemo_Sin
+;
+;        Parameters: Angle, Strap to 360
+;
+;
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_Sin, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  CMP RDX, 1
+  JNZ @SkipStrapping
+  XOR RDX, RDX
+  MOV RAX, TRIG_TABLE_SIZE
+  MUL RCX
+  MOV RCX, RAX
+@SkipStrapping:
+  CMP RCX, 360*TRIG_TABLE_SIZE
+  JB @NoNeedToWrap
+  XOR RDX, RDX
+  MOV RCX, 360*TRIG_TABLE_SIZE
+  DIV RCX
+  MOV RCX, RDX
+@NoNeedToWrap:
+  MOV RDI, [SineTablePtr]
+  SHL RCX, 3
+  ADD RDI, RCX
+  MOVSD XMM0, MMWORD PTR [RDI]
+@FailedAllocation:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_Sin, _TEXT$00
 
 END
 
