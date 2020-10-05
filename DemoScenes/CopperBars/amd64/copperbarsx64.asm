@@ -166,8 +166,8 @@ COPPER_BARS_CENTER_HIGH       EQU <512>
 COPPER_BARS_RANGE_LOW         EQU <5>
 COPPER_BARS_RANGE_HIGH        EQU <325>
 
-SIN_FONT_HEIGHT_SIZE_PER_LINE  EQU <8>
-SIN_FONT_WIDTH_SIZE            EQU <8>  
+SIN_FONT_HEIGHT_SIZE_PER_LINE  EQU <12>
+SIN_FONT_WIDTH_SIZE            EQU <12>  
 
 FIRE_FONT_HEIGHT_SIZE_PER_LINE  EQU <8>
 FIRE_FONT_WIDTH_SIZE            EQU <8>
@@ -837,8 +837,13 @@ endif
                          db " hard to read text talking about things no one understands anyway!  Special shout out to IRC Channels from"
                          db " the mid 90s #C #Coders #ASM #WIN32ASM #Winprog #GameDev #GameProg #RPGDEV ... Maybe I should also shout out"
                          db " some people from the mid 90s!  TheHornet PeZzA Bufferman Comrade fflush Zhivago Doc_O Sledgehammer"
-                         db " Iczelion hutch MultiAGP PenT|uM SD_Adept SilverStr coderman Dawai drano Furan KrZDG Eskimo programax"
-                         db " [ryan] RuebiaYat spec t_gypsy Wyatt xor magey kritical Stonecyph Pizzi and many more I've left out!", 0
+                         db " Iczelion hutch MultiAGP PenT|uM SD_Adept fatslayer SilverStr coderman Dawai drano Furan KrZDG Eskimo programax"
+                         db " [ryan] RuebiaYat spec t_gypsy Wyatt xor magey kritical Stonecyph Pizzi and many more I've left out!"
+                         db " This was written in 100% x86 64-bit assembly language using a framework I have written for games and demos."
+                         db " You can use it as well to write your own demos or games it is available on github!  https://github.com/opferman/SixtyFourBits"
+                         db " Even if you dont know assembly you can learn!  You can write a pixel onto the screen in a few minutes with the framework!"
+                         db " Demos would go on forever with text that you could barely comprehend what they were talking about so I have to figure out"
+                         db " some more things to add!  I'm basically building up this Assembly graphics library.", 0
   PlasmaX                dq 1023
   PlasmaXIncrement       dq -3  
                          
@@ -4633,11 +4638,11 @@ NESTED_ENTRY CopperBarsDemo_DisplaySineText, _TEXT$00
   JE @NoTextToDisplay
 
 @DisplayTextLoop:
-  MOV R9, PLASMA_HEIGHT / 2
-  MOV R8, PLASMA_HEIGHT / 4
+  MOV R9, 50
+  MOV R8, 30
   MOV RDX, R14
   MOV CL, BYTE PTR [R12]
-  DEBUG_FUNCTION_CALL CopperBarDemo_DisplaySineLetter
+  DEBUG_FUNCTION_CALL CopperBarDemo_DisplaySineLetterWithColumnAngle
   INC R12
   ADD R14, (BOTTOM_TEXT_LETTER_SPACE) + (SIN_FONT_WIDTH_SIZE*8)
   CMP RAX, 0
@@ -4663,6 +4668,136 @@ NESTED_ENTRY CopperBarsDemo_DisplaySineText, _TEXT$00
   RET
 NESTED_END CopperBarsDemo_DisplaySineText, _TEXT$00
 
+
+
+;*********************************************************
+;  CopperBarDemo_DisplaySineLetterWithColumnAngle
+;
+;        Parameters: Letter, X/Angle/Letter Center, Multiplier, CenterOffset
+;
+;           
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DisplaySineLetterWithColumnAngle, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R12, RDX                                  ; X which is used as the angle.  It is also the center X of the letter.
+  MOV R13, R8                                   ; Multiplier
+  MOV R14, R9                                   ; Center-OFFSET
+
+  ;
+  ; Adjust center X to left for X.
+  ;
+  MOV RAX, SIN_FONT_WIDTH_SIZE
+  SHL RAX, 3                            ; Ya, could do this in 1 SHL RAX, 2
+  SHR RAX, 1
+  SUB R12, RAX                          ; R12 = First X Location
+  
+  MOV RAX, SIN_FONT_WIDTH_SIZE*8
+  MOV RDX, R12
+  ADD RDX, RAX
+
+  ;
+  ; Determine if we are already off screen, then skip this letter.
+  ;
+  XOR RAX, RAX
+  CMP RDX, 0
+  JLE @OffScreenLetter
+
+  ; CL = Character already
+  DEBUG_FUNCTION_CALL Font_GetBitFont  
+  MOV RSI, RAX
+  
+  MOV R15, R12                  ; Save R15 = Start X Position.
+
+  MOV BL, 80h                   ; Bit Shift for Columns in the Font
+@LoopWidth:
+  MOV RBP, SIN_FONT_WIDTH_SIZE
+@CheckNextXLocation:
+  CMP R15, PLASMA_WIDTH
+  JGE @DoneWithLetter
+  CMP R15, 0
+  JGE @InitializeHeightLoop
+  INC R15                       ; Next X Location
+  DEC RBP
+  JNZ @CheckNextXLocation
+  SHR BL,1                      ; Next column of the font.
+  CMP BL, 0
+  JE @DoneWithLetter
+  JMP @LoopWidth
+
+@InitializeHeightLoop:
+  MOV RDX, 1
+  MOV RCX, R15
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
+  CVTSI2SD XMM1, R13
+  CVTSI2SD XMM2, R14
+  MULSD XMM0, XMM1
+  ADDSD XMM0, XMM2
+  CVTSD2SI R11, XMM0
+
+  ;
+  ; Set the Double Buffer to the plasma area start.
+  ;
+  MOV RDI, [DoubleBuffer]  
+  ;
+  ; Adjust center Y for top row
+  ;
+ ; XOR RDX, RDX
+ ; MOV RAX, SIN_FONT_HEIGHT_SIZE_PER_LINE
+ ; SHL RAX, 3                            ;  Ya, could do this in 1 SHL RAX, 2
+ ; SHR RAX, 1
+ ; SUB R11, RAX
+    
+  ;
+  ; Set drawing to start location for Y/X[0]
+  ;
+  XOR RDX, RDX
+  MOV RAX, PLASMA_AREA_START
+  ADD RAX, R11
+  MOV RCX, PLASMA_WIDTH
+  MUL RCX
+  SHL RAX,2
+  ADD RDI, RAX
+  MOV RCX, R15
+  SHL RCX, 2
+  ADD RDI, RCX
+  ;
+  ; RDI = (X,Y) starting Point of column
+  ;
+  XOR RDX, RDX
+  XOR R11, R11
+  MOV RCX, SIN_FONT_HEIGHT_SIZE_PER_LINE
+@DrawColumn:
+  TEST BL, BYTE PTR [RSI + R11]
+  JZ @SkipDrawing
+;  MOV EAX, DWORD PTR [RDI - PLASMA_WIDTH*5*4]
+;  MOV DWORD PTR [RDI], EAX
+  MOV DWORD PTR [RDI], 0FFFFFFh
+@SkipDrawing:
+  ADD RDI, PLASMA_WIDTH*4
+  DEC RCX
+  JNZ @DrawColumn
+  MOV RCX, SIN_FONT_HEIGHT_SIZE_PER_LINE
+  INC R11
+  INC DL
+  CMP DL, 8
+  JB @DrawColumn
+  INC R15
+  DEC RBP
+  JNZ @CheckNextXLocation
+  SHR BL,1
+  JMP @LoopWidth
+@DoneWithLetter:
+  MOV RAX, 1
+@OffScreenLetter:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DisplaySineLetterWithColumnAngle, _TEXT$00
 
 
 
