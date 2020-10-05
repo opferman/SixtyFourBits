@@ -833,22 +833,22 @@ endif
                          dq OFFSET PureAssembly
 
   BottomTextPtr          dq OFFSET BottomText
-  BottomText             db "Shout out to 90s demos like Kukoo2 Descent and Second Reality -- No demo would be complete without"
-                         db " hard to read text talking about things no one understands anyway!  Special shout out to IRC Channels from"
-                         db " the mid 90s #C #Coders #ASM #WIN32ASM #Winprog #GameDev #GameProg #RPGDEV ... Maybe I should also shout out"
-                         db " some people from the mid 90s!  TheHornet PeZzA Bufferman Comrade fflush Zhivago Doc_O Sledgehammer"
-                         db " Iczelion hutch MultiAGP PenT|uM SD_Adept fatslayer SilverStr coderman Dawai drano Furan KrZDG Eskimo programax"
-                         db " [ryan] RuebiaYat spec t_gypsy Wyatt xor magey kritical Stonecyph Pizzi and many more I've left out!"
-                         db " This was written in 100% x86 64-bit assembly language using a framework I have written for games and demos."
-                         db " You can use it as well to write your own demos or games it is available on github!  https://github.com/opferman/SixtyFourBits"
-                         db " Even if you dont know assembly you can learn!  You can write a pixel onto the screen in a few minutes with the framework!"
-                         db " Demos would go on forever with text that you could barely comprehend what they were talking about so I have to figure out"
-                         db " some more things to add!  I'm basically building up this Assembly graphics library.", 0
+  BottomText             db 1, 1, 1, "Shout out to 90s demos like Kukoo2 Descent and Second Reality ", 1, 1, 1
+                         db " This demo is all real time ", 1, 1, 1, " And was written in 100% x86 64-bit Assembly Language!  No demo would be complete without"
+                         db " hard to read text talking about things no one understands! ", 1, 1, 1, " -- Special shout out to the IRC Channels from"
+                         db " the mid 90s #C #Coders #ASM #WIN32ASM #Winprog #GameDev #GameProg #RPGDEV ... -- #Winprog was also featured in Wired Magazine ", 1, 1, 1, " --Maybe I should also shout out"
+                         db " some of the people from IRC in the mid 90s!  TheHornet PeZzA Bufferman Comrade fflush Zhivago Doc_O Sledgehammer"
+                         db " Iczelion hutch MultiAGP PenT|uM SD_Adept fatslayer SilverStr coderman Dawai <<Temer>> <<HaB>> drano Furan KrZDG Eskimo programax"
+                         db " [ryan] RuebiaYat spec t_gypsy Wyatt xor magey kritical Stonecyph and many more I've left out! ", 1, 1, 1
+                         db " The source for this demo is available at https://github.com/opferman/SixtyFourBits/DemoScenes\CopperBars\AMD64\copperbarsx64.asm ", 1, 1, 1
+                         db " Well onto the next project!!!!", 0
+                    
   PlasmaX                dq 1023
   PlasmaXIncrement       dq -3  
                          
   SineTablePtr           dq 0
   CosineTablePtr         dq 0
+  StartScreenMelt        dq 0
 
   DemoFrameCounter       dq 0
 
@@ -1300,36 +1300,17 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   DEBUG_RSP_CHECK_MACRO
   MOV RDI, RCX
   INC [DemoFrameCounter]
-  ;CMP [DemoFrameCounter], 5000
 
-  JMP @NoMelt
-  JB @NoMelt
-
-
-
-  MOV RCX, [DoubleBuffer]
-  ;MOV RDX, [VirtualPalette]
-  XOR RDX, RDX
-  XOR R8, R8
-  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
-
-;  TEST [ScreenMelt], 03h
-  JNZ @ExitFunction
+  CMP [StartScreenMelt], 0
+  JE @NoMelt
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_ScreenMelt
-
+  
+  CMP [DemoFrameCounter], 500
+  JAE @ExitFunctionExitDemo
   JMP @ExitFunction
 @NoMelt:
-
- ;
- ; Update the screen with the buffer
- ;  
-  MOV RCX, [DoubleBuffer]
-  ;MOV RDX, [VirtualPalette]
-  XOR RDX, RDX
-  MOV R8, DB_FLAG_CLEAR_BUFFER
-  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreen
 
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_ChangeDirections
@@ -1589,12 +1570,25 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarsDemo_DisplaySineText
 
-@ExitFunction:
 
+ ;
+ ; Update the screen with the buffer
+ ;  
+@ExitFunction:
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreenFast
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
+@ExitFunctionExitDemo:
+  MOV RCX, [DoubleBuffer]
+  DEBUG_FUNCTION_CALL Dbuffer_UpdateScreenFast
+  XOR EAX, EAX
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+
 NESTED_END CopperBarsDemo_Demo, _TEXT$00
 
 
@@ -4635,8 +4629,10 @@ NESTED_ENTRY CopperBarsDemo_DisplaySineText, _TEXT$00
   MOV R12, [BottomTextPtr]
   MOV R14, [PlasmaX]
   CMP BYTE PTR [R12], 0
-  JE @NoTextToDisplay
-
+  JNE @DisplayTextLoop
+  MOV [StartScreenMelt], 1
+  MOV [DemoFrameCounter], 0
+  JMP @NoTextToDisplay
 @DisplayTextLoop:
   MOV R9, 50
   MOV R8, 30

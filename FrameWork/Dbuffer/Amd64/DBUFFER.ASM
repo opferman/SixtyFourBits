@@ -47,8 +47,9 @@ DB_INIT_LOCALS struct
 DB_INIT_LOCALS ends
 
 DBUFFER_HANDLE struct
-     MasterContext dq ?
-	 BytesPerPixel dq ?
+         MasterContext    dq ?
+	 BytesPerPixel    dq ?
+         TotalBufferBytes dq ?
 DBUFFER_HANDLE ends
 
 extern LocalAlloc:proc
@@ -58,6 +59,7 @@ public Dbuffer_Free
 public Dbuffer_UpdateScreen
 public DBuffer_Create
 public Dbuffer_ClearBuffer
+public Dbuffer_UpdateScreenFast
 
 .CODE
 
@@ -74,6 +76,7 @@ NESTED_ENTRY DBuffer_Create, _TEXT$00
   alloc_stack(SIZEOF DB_INIT_LOCALS)
   save_reg rdi, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi
   save_reg rbp, DB_INIT_LOCALS.SaveRegsFrame.SaveRbp
+  save_reg rsi, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi
 .ENDPROLOG 
   
   MOV RDI, RCX
@@ -92,6 +95,7 @@ NESTED_ENTRY DBuffer_Create, _TEXT$00
   MOV CL, DL
   SHL RAX, CL
   MOV RDX, SIZEOF DBUFFER_HANDLE
+  MOV RSI, RAX
   ADD RDX, RAX  
   MOV RCX, 040h 
   DEBUG_FUNCTION_CALL LocalAlloc
@@ -100,10 +104,12 @@ NESTED_ENTRY DBuffer_Create, _TEXT$00
 
   MOV DBUFFER_HANDLE.MasterContext[RAX], RDI
   MOV DBUFFER_HANDLE.BytesPerPixel[RAX], RBP
+  MOV DBUFFER_HANDLE.TotalBufferBytes[RAX], RSI 
   ADD RAX, SIZEOF DBUFFER_HANDLE
 
  @AllocationFailed:
   MOV RDI, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV RSI, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
   MOV RBP, DB_INIT_LOCALS.SaveRegsFrame.SaveRbp[RSP]
   ADD RSP, SIZE DB_INIT_LOCALS
   RET
@@ -136,6 +142,56 @@ NESTED_ENTRY Dbuffer_Free, _TEXT$00
 NESTED_END Dbuffer_Free, _TEXT$00
 
 
+;*********************************************************
+;  Dbuffer_UpdateScreenFast - Must be 1:1 match
+;
+;        Parameters: Buffer
+;
+;       
+;
+;
+;*********************************************************  
+NESTED_ENTRY Dbuffer_UpdateScreenFast, _TEXT$00
+  alloc_stack(SIZEOF DB_INIT_LOCALS)
+  save_reg rdi, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi
+  save_reg rsi, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi
+.ENDPROLOG 
+  MOV RSI, RCX
+  SUB RCX, SIZEOF DBUFFER_HANDLE
+  MOV R10, DBUFFER_HANDLE.MasterContext[RCX]
+  MOV RDI, MASTER_DEMO_STRUCT.VideoBuffer[R10]
+
+  ; Calcluate Pitch
+  MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
+  SHL RAX, 2
+  MOV R8D, MASTER_DEMO_STRUCT.Pitch[R10]
+  SUB R8, RAX
+  CMP R8, 0
+  JE @FullFastLoop
+
+  MOV RDX, MASTER_DEMO_STRUCT.ScreenHeight[R10]
+@ScreenHeightLoop:
+  MOV RCX, MASTER_DEMO_STRUCT.ScreenWidth[R10]
+  SHR RCX, 1                                    
+  REP MOVSQ
+  ADD RDI, R8                                  ; Add the pitch.
+  DEC RDX
+  JNZ @ScreenHeightLoop
+  JMP @Complete  
+@FullFastLoop:
+   XOR RDX, RDX
+   MOV RCX, DBUFFER_HANDLE.TotalBufferBytes[RCX]
+   SHR RCX, 2                                   ; Reduce the buffer by 4 for the pixel depth.
+   SHR RCX, 1                                   ; Reduce the buffer by 1/2 for QWORD Moving.
+   REP MOVSQ
+
+@Complete:
+
+  MOV RDI, DB_INIT_LOCALS.SaveRegsFrame.SaveRdi[RSP]
+  MOV RSI, DB_INIT_LOCALS.SaveRegsFrame.SaveRsi[RSP]
+  ADD RSP, SIZE DB_INIT_LOCALS
+  RET
+NESTED_END Dbuffer_UpdateScreenFast, _TEXT$00
 
 ;*********************************************************
 ;  Dbuffer_UpdateScreen

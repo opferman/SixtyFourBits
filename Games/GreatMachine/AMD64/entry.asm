@@ -109,12 +109,14 @@ NESTED_ENTRY WinMain, _TEXT$00
   SETE AL
   MOV WINMAIN_FRAME.InitializationStruct.FullScreen[RSP], RAX
 
-  ;
-  ; If Windowed Mode, enable emulated verticle retrace
-  ;
+  MOV WINMAIN_FRAME.InitializationStruct.EmulateVRTrace[RSP], VR_RETRACE_DEFAULT_HARDWARE
   XOR AL, 1
-  SHL RAX, 3
-  MOV WINMAIN_FRAME.InitializationStruct.EmulateVRTrace[RSP], RAX
+  CMP AL, 0
+  JE @NoEmulationVr
+  
+  MOV WINMAIN_FRAME.InitializationStruct.EmulateVRTrace[RSP], VR_RETRACE_DWM_SYNC
+
+@NoEmulationVr:
 
   LEA RCX, WINMAIN_FRAME.InitializationStruct[RSP]
   CALL Initialization_Demo
