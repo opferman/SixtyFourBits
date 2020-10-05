@@ -5,7 +5,7 @@
 ; 
 ;  By Toby Opferman  2017
 ;
-;     Redone to look like Kukoo2 in September 2020.
+;     Completely Rewritten to look a style simmilar to Kukoo2 in September 2020.
 ;
 ;*********************************************************
 
@@ -121,7 +121,6 @@ PLASMA_DESCRIPTIONS_STRUCT struct
 PLASMA_DESCRIPTIONS_STRUCT ends
 
 
-
 ;*********************************************************
 ; Demo Constants
 ;*********************************************************
@@ -167,14 +166,18 @@ COPPER_BARS_CENTER_HIGH       EQU <512>
 COPPER_BARS_RANGE_LOW         EQU <5>
 COPPER_BARS_RANGE_HIGH        EQU <325>
 
+SIN_FONT_HEIGHT_SIZE_PER_LINE  EQU <8>
+SIN_FONT_WIDTH_SIZE            EQU <8>  
+
 FIRE_FONT_HEIGHT_SIZE_PER_LINE  EQU <8>
 FIRE_FONT_WIDTH_SIZE            EQU <8>
-FIRE_START_COUNT              EQU <500>
+FIRE_START_COUNT                EQU <500>
 
 TRIG_TABLE_SIZE               EQU <1>
 
 PLASMA_CENTER                 EQU <4096 / 15>
 
+BOTTOM_TEXT_LETTER_SPACE      EQU <2*(SIN_FONT_WIDTH_SIZE/2)>
 
 ;*********************************************************
 ; Public Functions
@@ -186,352 +189,567 @@ public CopperBarsDemo_Free
 
 .DATA
 
- FirePalette       db  0h, 0h, 0h    , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  0h, 0h, 00h , 0h
-                   db  2Ah, 0Bh, 02h , 0h
-                   db  2Bh, 0Bh, 02h , 0h
-                   db  2Ch, 0Ch, 02h , 0h
-                   db  2Dh, 0Ch, 02h , 0h
-                   db  2Eh, 0Dh, 02h , 0h
-                   db  2Fh, 0Dh, 02h , 0h
-                   db  2Fh, 0Dh, 03h , 0h
-                   db  30h, 0Eh, 03h , 0h
-                   db  31h, 0Eh, 03h , 0h
-                   db  32h, 0Fh, 03h , 0h
-                   db  33h, 0Fh, 03h , 0h
-                   db  34h, 10h, 03h , 0h
-                   db  35h, 10h, 03h , 0h
-                   db  36h, 11h, 03h , 0h
-                   db  37h, 11h, 03h , 0h
-                   db  38h, 11h, 03h , 0h
-                   db  39h, 12h, 03h , 0h
-                   db  3Ah, 12h, 03h , 0h
-                   db  3Ah, 13h, 04h , 0h
-                   db  3Bh, 13h, 04h , 0h
-                   db  3Ch, 14h, 04h , 0h
-                   db  3Dh, 14h, 04h , 0h
-                   db  3Eh, 15h, 04h , 0h
-                   db  3Fh, 15h, 04h , 0h
-                   db  3Fh, 15h, 04h , 0h
-                   db  3Fh, 16h, 04h , 0h
-                   db  3Fh, 17h, 04h , 0h
-                   db  3Fh, 17h, 04h , 0h
-                   db  3Fh, 18h, 05h , 0h
-                   db  3Fh, 19h, 05h , 0h
-                   db  3Fh, 19h, 05h , 0h
-                   db  3Fh, 1Ah, 05h , 0h
-                   db  3Fh, 1Bh, 05h , 0h
-                   db  3Fh, 1Bh, 05h , 0h
-                   db  3Fh, 1Ch, 05h , 0h
-                   db  3Fh, 1Dh, 05h , 0h
-                   db  3Fh, 1Dh, 06h , 0h
-                   db  3Fh, 1Eh, 06h , 0h
-                   db  3Fh, 1Fh, 06h , 0h
-                   db  3Fh, 1Fh, 06h , 0h
-                   db  3Fh, 20h, 06h , 0h
-                   db  3Fh, 20h, 06h , 0h
-                   db  3Fh, 21h, 06h , 0h
-                   db  3Fh, 22h, 06h , 0h
-                   db  3Fh, 22h, 07h , 0h
-                   db  3Fh, 23h, 07h , 0h
-                   db  3Fh, 24h, 07h , 0h
-                   db  3Fh, 24h, 07h , 0h
-                   db  3Fh, 25h, 07h , 0h
-                   db  3Fh, 26h, 07h , 0h
-                   db  3Fh, 26h, 07h , 0h
-                   db  3Fh, 27h, 07h , 0h
-                   db  3Fh, 28h, 08h , 0h
-                   db  3Fh, 28h, 08h , 0h
-                   db  3Fh, 29h, 08h , 0h
-                   db  3Fh, 2Ah, 08h , 0h
-                   db  3Fh, 2Ah, 08h , 0h
-                   db  3Fh, 2Bh, 08h , 0h
-                   db  3Fh, 2Ch, 08h , 0h
-                   db  3Fh, 2Ch, 08h , 0h
-                   db  3Fh, 2Dh, 09h , 0h
-                   db  3Fh, 2Eh, 09h , 0h
-                   db  3Fh, 2Eh, 09h , 0h
-                   db  3Fh, 2Fh, 09h , 0h
-                   db  3Fh, 30h, 09h , 0h
-                   db  3Fh, 30h, 09h , 0h
-                   db  3Fh, 31h, 09h , 0h
-                   db  3Fh, 32h, 09h , 0h
-                   db  3Fh, 32h, 0Ah , 0h
-                   db  3Fh, 33h, 0Ah , 0h
-                   db  3Fh, 34h, 0Ah , 0h
-                   db  3Fh, 34h, 0Ah , 0h
-                   db  3Fh, 35h, 0Ah , 0h
-                   db  3Fh, 36h, 0Ah , 0h
-                   db  3Fh, 36h, 0Ah , 0h
-                   db  3Fh, 37h, 0Ah , 0h
-                   db  3Fh, 38h, 0Bh , 0h
-                   db  3Fh, 38h, 0Bh , 0h
-                   db  3Fh, 39h, 0Bh , 0h
-                   db  3Fh, 3Ah, 0Bh , 0h
-                   db  3Fh, 3Ah, 0Bh , 0h
-                   db  3Fh, 3Bh, 0Bh , 0h
-                   db  3Fh, 3Ch, 0Bh , 0h
-                   db  3Fh, 3Ch, 0Bh , 0h
-                   db  3Fh, 3Dh, 0Ch , 0h
-                   db  3Fh, 3Eh, 0Ch , 0h
-                   db  3Fh, 3Eh, 0Ch , 0h
-                   db  3Fh, 3Fh, 0Ch , 0h
-                   db  3Fh, 3Fh, 0Ch , 0h
-                   db  3Fh, 3Fh, 0Dh , 0h
-                   db  3Fh, 3Fh, 0Dh , 0h
-                   db  3Fh, 3Fh, 0Eh , 0h
-                   db  3Fh, 3Fh, 0Eh , 0h
-                   db  3Fh, 3Fh, 0Fh , 0h
-                   db  3Fh, 3Fh, 0Fh , 0h
-                   db  3Fh, 3Fh, 10h , 0h
-                   db  3Fh, 3Fh, 10h , 0h
-                   db  3Fh, 3Fh, 11h , 0h
-                   db  3Fh, 3Fh, 11h , 0h
-                   db  3Fh, 3Fh, 12h , 0h
-                   db  3Fh, 3Fh, 12h , 0h
-                   db  3Fh, 3Fh, 13h , 0h
-                   db  3Fh, 3Fh, 14h , 0h
-                   db  3Fh, 3Fh, 14h , 0h
-                   db  3Fh, 3Fh, 15h , 0h
-                   db  3Fh, 3Fh, 15h , 0h
-                   db  3Fh, 3Fh, 16h , 0h
-                   db  3Fh, 3Fh, 16h , 0h
-                   db  3Fh, 3Fh, 17h , 0h
-                   db  3Fh, 3Fh, 17h , 0h
-                   db  3Fh, 3Fh, 18h , 0h
-                   db  3Fh, 3Fh, 18h , 0h
-                   db  3Fh, 3Fh, 19h , 0h
-                   db  3Fh, 3Fh, 19h , 0h
-                   db  3Fh, 3Fh, 1Ah , 0h
-                   db  3Fh, 3Fh, 1Ah , 0h
-                   db  3Fh, 3Fh, 1Bh , 0h
-                   db  3Fh, 3Fh, 1Ch , 0h
-                   db  3Fh, 3Fh, 1Ch , 0h
-                   db  3Fh, 3Fh, 1Dh , 0h
-                   db  3Fh, 3Fh, 1Dh , 0h
-                   db  3Fh, 3Fh, 1Eh , 0h
-                   db  3Fh, 3Fh, 1Eh , 0h
-                   db  3Fh, 3Fh, 1Fh , 0h
-                   db  3Fh, 3Fh, 1Fh , 0h
-                   db  3Fh, 3Fh, 20h , 0h
-                   db  3Fh, 3Fh, 20h , 0h
-                   db  3Fh, 3Fh, 21h , 0h
-                   db  3Fh, 3Fh, 21h , 0h
-                   db  3Fh, 3Fh, 22h , 0h
-                   db  3Fh, 3Fh, 23h , 0h
-                   db  3Fh, 3Fh, 23h , 0h
-                   db  3Fh, 3Fh, 24h , 0h
-                   db  3Fh, 3Fh, 24h , 0h
-                   db  3Fh, 3Fh, 25h , 0h
-                   db  3Fh, 3Fh, 25h , 0h
-                   db  3Fh, 3Fh, 26h , 0h
-                   db  3Fh, 3Fh, 26h , 0h
-                   db  3Fh, 3Fh, 27h , 0h
-                   db  3Fh, 3Fh, 27h , 0h
-                   db  3Fh, 3Fh, 28h , 0h
-                   db  3Fh, 3Fh, 28h , 0h
-                   db  3Fh, 3Fh, 29h , 0h
-                   db  3Fh, 3Fh, 2Ah , 0h
-                   db  3Fh, 3Fh, 2Ah , 0h
-                   db  3Fh, 3Fh, 2Bh , 0h
-                   db  3Fh, 3Fh, 2Bh , 0h
-                   db  3Fh, 3Fh, 2Ch , 0h
-                   db  3Fh, 3Fh, 2Ch , 0h
-                   db  3Fh, 3Fh, 2Dh , 0h
-                   db  3Fh, 3Fh, 2Dh , 0h
-                   db  3Fh, 3Fh, 2Eh , 0h
-                   db  3Fh, 3Fh, 2Eh , 0h
-                   db  3Fh, 3Fh, 2Fh , 0h
-                   db  3Fh, 3Fh, 2Fh , 0h
-                   db  3Fh, 3Fh, 30h , 0h
-                   db  3Fh, 3Fh, 31h , 0h
-                   db  3Fh, 3Fh, 31h , 0h
-                   db  3Fh, 3Fh, 32h , 0h
-                   db  3Fh, 3Fh, 32h , 0h
-                   db  3Fh, 3Fh, 33h , 0h
-                   db  3Fh, 3Fh, 33h , 0h
-                   db  3Fh, 3Fh, 34h , 0h
-                   db  3Fh, 3Fh, 34h , 0h
-                   db  3Fh, 3Fh, 35h , 0h
-                   db  3Fh, 3Fh, 35h , 0h
-                   db  3Fh, 3Fh, 36h , 0h
-                   db  3Fh, 3Fh, 36h , 0h
-                   db  3Fh, 3Fh, 37h , 0h
-                   db  3Fh, 3Fh, 37h , 0h
-                   db  3Fh, 3Fh, 38h , 0h
-                   db  3Fh, 3Fh, 39h , 0h
-                   db  3Fh, 3Fh, 39h , 0h
-                   db  3Fh, 3Fh, 3Ah , 0h
-                   db  3Fh, 3Fh, 3Ah , 0h
-                   db  3Fh, 3Fh, 3Bh , 0h
-                   db  3Fh, 3Fh, 3Bh , 0h
-                   db  3Fh, 3Fh, 3Ch , 0h
-                   db  3Fh, 3Fh, 3Ch , 0h
-                   db  3Fh, 3Fh, 3Dh , 0h
-                   db  3Fh, 3Fh, 3Dh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h                                                         
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h  
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Dh , 0h
-                   db  3Fh, 3Fh, 3Dh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h                                                         
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h  
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Eh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h   
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
-                   db  3Fh, 3Fh, 3Fh , 0h
+ifdef USE_SORTOF_FIRE_PAL
+FirePalette     db 0, 0, 0, 0
+db 0, 0, 0, 0
+db 4, 0, 4, 0
+db 4, 0, 4, 0
+db 8, 0, 8, 0
+db 8, 0, 8, 0
+db 12, 0, 12, 0
+db 12, 0, 12, 0
+db 12, 0, 16, 0
+db 16, 0, 16, 0
+db 16, 0, 20, 0
+db 20, 0, 20, 0
+db 20, 0, 20, 0
+db 20, 0, 24, 0
+db 24, 0, 24, 0
+db 24, 0, 28, 0
+db 28, 0, 28, 0
+db 28, 0, 32, 0
+db 32, 0, 32, 0
+db 32, 0, 36, 0
+db 32, 0, 36, 0
+db 36, 0, 36, 0
+db 36, 0, 40, 0
+db 40, 0, 40, 0
+db 40, 0, 44, 0
+db 40, 0, 44, 0
+db 44, 0, 48, 0
+db 44, 0, 48, 0
+db 48, 0, 52, 0
+db 48, 0, 52, 0
+db 52, 0, 56, 0
+db 52, 0, 56, 0
+db 52, 0, 56, 0
+db 52, 0, 52, 0
+db 56, 0, 48, 0
+db 56, 0, 44, 0
+db 60, 4, 40, 0
+db 60, 4, 36, 0
+db 64, 4, 32, 0
+db 64, 4, 28, 0
+db 68, 4, 28, 0
+db 68, 4, 24, 0
+db 72, 4, 20, 0
+db 72, 4, 16, 0
+db 76, 8, 12, 0
+db 76, 8, 8, 0
+db 80, 8, 4, 0
+db 80, 8, 0, 0
+db 85, 8, 0, 0
+db 89, 12, 0, 0
+db 93, 12, 0, 0
+db 97, 12, 0, 0
+db 97, 16, 4, 0
+db 101, 16, 4, 0
+db 105, 16, 4, 0
+db 109, 20, 4, 0
+db 113, 20, 4, 0
+db 117, 20, 4, 0
+db 121, 20, 4, 0
+db 125, 24, 4, 0
+db 125, 24, 4, 0
+db 129, 24, 4, 0
+db 133, 28, 4, 0
+db 137, 28, 4, 0
+db 141, 28, 4, 0
+db 145, 32, 4, 0
+db 145, 32, 8, 0
+db 149, 32, 8, 0
+db 153, 36, 8, 0
+db 157, 36, 8, 0
+db 161, 40, 8, 0
+db 165, 40, 8, 0
+db 170, 44, 8, 0
+db 174, 44, 8, 0
+db 178, 48, 8, 0
+db 182, 48, 8, 0
+db 186, 52, 8, 0
+db 190, 52, 8, 0
+db 190, 52, 12, 0
+db 194, 56, 12, 0
+db 198, 56, 12, 0
+db 202, 60, 12, 0
+db 206, 60, 12, 0
+db 210, 64, 12, 0
+db 214, 64, 12, 0
+db 218, 68, 12, 0
+db 222, 68, 12, 0
+db 226, 68, 12, 0
+db 230, 72, 12, 0
+db 234, 72, 12, 0
+db 234, 76, 16, 0
+db 238, 76, 16, 0
+db 242, 80, 16, 0
+db 246, 80, 16, 0
+db 250, 85, 16, 0
+db 255, 85, 16, 0
+db 255, 85, 16, 0
+db 255, 89, 16, 0
+db 255, 93, 16, 0
+db 255, 93, 16, 0
+db 255, 97, 20, 0
+db 255, 101, 20, 0
+db 255, 101, 20, 0
+db 255, 105, 20, 0
+db 255, 109, 20, 0
+db 255, 109, 20, 0
+db 255, 113, 20, 0
+db 255, 117, 20, 0
+db 255, 117, 24, 0
+db 255, 121, 24, 0
+db 255, 125, 24, 0
+db 255, 125, 24, 0
+db 255, 129, 24, 0
+db 255, 129, 24, 0
+db 255, 133, 24, 0
+db 255, 137, 24, 0
+db 255, 137, 28, 0
+db 255, 141, 28, 0
+db 255, 145, 28, 0
+db 255, 145, 28, 0
+db 255, 149, 28, 0
+db 255, 153, 28, 0
+db 255, 153, 28, 0
+db 255, 157, 28, 0
+db 255, 161, 32, 0
+db 255, 161, 32, 0
+db 255, 165, 32, 0
+db 255, 170, 32, 0
+db 255, 170, 32, 0
+db 255, 174, 32, 0
+db 255, 178, 32, 0
+db 255, 178, 32, 0
+db 255, 182, 36, 0
+db 255, 186, 36, 0
+db 255, 186, 36, 0
+db 255, 190, 36, 0
+db 255, 194, 36, 0
+db 255, 194, 36, 0
+db 255, 198, 36, 0
+db 255, 202, 36, 0
+db 255, 202, 40, 0
+db 255, 206, 40, 0
+db 255, 210, 40, 0
+db 255, 210, 40, 0
+db 255, 214, 40, 0
+db 255, 218, 40, 0
+db 255, 218, 40, 0
+db 255, 222, 40, 0
+db 255, 226, 44, 0
+db 255, 226, 44, 0
+db 255, 230, 44, 0
+db 255, 234, 44, 0
+db 255, 234, 44, 0
+db 255, 238, 44, 0
+db 255, 242, 44, 0
+db 255, 242, 44, 0
+db 255, 246, 48, 0
+db 255, 250, 48, 0
+db 255, 250, 48, 0
+db 255, 255, 48, 0
+db 255, 255, 48, 0
+db 255, 255, 52, 0
+db 255, 255, 52, 0
+db 255, 255, 56, 0
+db 255, 255, 56, 0
+db 255, 255, 60, 0
+db 255, 255, 60, 0
+db 255, 255, 64, 0
+db 255, 255, 64, 0
+db 255, 255, 68, 0
+db 255, 255, 68, 0
+db 255, 255, 72, 0
+db 255, 255, 72, 0
+db 255, 255, 76, 0
+db 255, 255, 80, 0
+db 255, 255, 80, 0
+db 255, 255, 85, 0
+db 255, 255, 85, 0
+db 255, 255, 89, 0
+db 255, 255, 89, 0
+db 255, 255, 93, 0
+db 255, 255, 93, 0
+db 255, 255, 97, 0
+db 255, 255, 97, 0
+db 255, 255, 101, 0
+db 255, 255, 101, 0
+db 255, 255, 105, 0
+db 255, 255, 105, 0
+db 255, 255, 109, 0
+db 255, 255, 113, 0
+db 255, 255, 113, 0
+db 255, 255, 117, 0
+db 255, 255, 117, 0
+db 255, 255, 121, 0
+db 255, 255, 121, 0
+db 255, 255, 125, 0
+db 255, 255, 125, 0
+db 255, 255, 129, 0
+db 255, 255, 129, 0
+db 255, 255, 133, 0
+db 255, 255, 133, 0
+db 255, 255, 137, 0
+db 255, 255, 141, 0
+db 255, 255, 141, 0
+db 255, 255, 145, 0
+db 255, 255, 145, 0
+db 255, 255, 149, 0
+db 255, 255, 149, 0
+db 255, 255, 153, 0
+db 255, 255, 153, 0
+db 255, 255, 157, 0
+db 255, 255, 157, 0
+db 255, 255, 161, 0
+db 255, 255, 161, 0
+db 255, 255, 165, 0
+db 255, 255, 170, 0
+db 255, 255, 170, 0
+db 255, 255, 174, 0
+db 255, 255, 174, 0
+db 255, 255, 178, 0
+db 255, 255, 178, 0
+db 255, 255, 182, 0
+db 255, 255, 182, 0
+db 255, 255, 186, 0
+db 255, 255, 186, 0
+db 255, 255, 190, 0
+db 255, 255, 190, 0
+db 255, 255, 194, 0
+db 255, 255, 198, 0
+db 255, 255, 198, 0
+db 255, 255, 202, 0
+db 255, 255, 202, 0
+db 255, 255, 206, 0
+db 255, 255, 206, 0
+db 255, 255, 210, 0
+db 255, 255, 210, 0
+db 255, 255, 214, 0
+db 255, 255, 214, 0
+db 255, 255, 218, 0
+db 255, 255, 218, 0
+db 255, 255, 222, 0
+db 255, 255, 222, 0
+db 255, 255, 226, 0
+db 255, 255, 230, 0
+db 255, 255, 230, 0
+db 255, 255, 234, 0
+db 255, 255, 234, 0
+db 255, 255, 238, 0
+db 255, 255, 238, 0
+db 255, 255, 242, 0
+db 255, 255, 242, 0
+db 255, 255, 246, 0
+db 255, 255, 246, 0
+db 255, 255, 250, 0
+db 255, 255, 250, 0
+db 255, 255, 255, 0
+else
 
-  PlasmaDefinition      PLASMA_DESCRIPTIONS_STRUCT<0, 0010456h, 1, 2, 2, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<100, 0, 0, -1, -3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<200, 0, 0, -2, -1, -1>
-                        PLASMA_DESCRIPTIONS_STRUCT<300, 0, 0, -1, 5, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<400, 0, 0, -5, 1, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<500, 0, 0, -1, 1, 6>
-                        PLASMA_DESCRIPTIONS_STRUCT<600, 0, 0, 1, 5, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<700, 0, 0, -1, -3, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<800, 0, 0, 2, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<900, 0, 0, 1, 3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<1000, 0, 0, 5, 1, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<1100, 0, 0, 5, 6, -1>
-                        PLASMA_DESCRIPTIONS_STRUCT<1200, 0, 0, 3, 0, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<1300, 0, 0, 0, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<1400, 0, 0, 2, 5, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<1500, 0, 0, -1, 0, 6>
-                        PLASMA_DESCRIPTIONS_STRUCT<1600, 0, 0, 0, 3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<1700, 0, 0, 0, 3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<1800, 0, 0, -4, 0, 3>
-                        PLASMA_DESCRIPTIONS_STRUCT<1900, 0, 0, 0, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<2000, 0, 0, 1, 1, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<2100, 0, 0, -1, 4, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<2200, 0, 0, 1, -1, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<2300, 0, 0, 1, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<2350, 0, 0, 2, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<2500, 0, 0, 0, 1, 5>
-                        PLASMA_DESCRIPTIONS_STRUCT<2600, 0, 0, -2, 0, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<2700, 0, 0, 1, 1, -1>
-                        PLASMA_DESCRIPTIONS_STRUCT<2800, 0, 0, 0, 3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<2900, 0, 0, 0, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<3000, 0, 0, 1, 0, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<3100, 0, 0, 0, -1, 9>
-                        PLASMA_DESCRIPTIONS_STRUCT<3200, 0, 0, 1, 0, -1>
-                        PLASMA_DESCRIPTIONS_STRUCT<3300, 0, 0, -1, 5, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<3400, 0, 0, 1, -3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<3500, 0, 0, -5, -1, -1>
-                        PLASMA_DESCRIPTIONS_STRUCT<3600, 0, 0, 1, 3, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<3700, 0, 0, 1, 5, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<3800, 0, 0, 0, 1, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<3900, 0, 0, 1, 5, 0>
-                        PLASMA_DESCRIPTIONS_STRUCT<4000, 0, 0, 5, 0, 1>
-                        PLASMA_DESCRIPTIONS_STRUCT<10000, 0, 0, 0, 0, 0>  ; Not Reachable
-
-
+FirePalette db 0, 0, 0, 0
+db 0, 0, 0, 0
+db 0, 0, 0, 0
+db 0, 0, 0, 0
+db 0, 0, 0, 0
+db 0, 0, 0, 0
+db 0, 0, 4, 0
+db 0, 0, 12, 0
+db 0, 0, 16, 0
+db 0, 0, 24, 0
+db 0, 0, 24, 0
+db 4, 0, 24, 0
+db 8, 0, 24, 0
+db 12, 0, 24, 0
+db 16, 0, 24, 0
+db 24, 0, 24, 0
+db 28, 0, 20, 0
+db 32, 0, 20, 0
+db 36, 0, 20, 0
+db 40, 0, 20, 0
+db 44, 0, 20, 0
+db 52, 0, 20, 0
+db 56, 0, 20, 0
+db 60, 0, 16, 0
+db 64, 0, 16, 0
+db 68, 0, 16, 0
+db 72, 0, 16, 0
+db 80, 0, 16, 0
+db 85, 0, 16, 0
+db 89, 0, 12, 0
+db 93, 0, 12, 0
+db 97, 0, 12, 0
+db 105, 0, 12, 0
+db 109, 0, 12, 0
+db 113, 0, 12, 0
+db 117, 0, 8, 0
+db 121, 0, 8, 0
+db 125, 0, 8, 0
+db 133, 0, 8, 0
+db 137, 0, 8, 0
+db 141, 0, 8, 0
+db 145, 0, 4, 0
+db 149, 0, 4, 0
+db 153, 0, 4, 0
+db 161, 0, 4, 0
+db 165, 0, 4, 0
+db 174, 0, 0, 0
+db 174, 4, 0, 0
+db 178, 4, 0, 0
+db 178, 8, 0, 0
+db 182, 12, 4, 0
+db 186, 16, 4, 0
+db 186, 20, 4, 0
+db 190, 24, 8, 0
+db 194, 28, 8, 0
+db 194, 32, 8, 0
+db 198, 36, 12, 0
+db 198, 40, 12, 0
+db 202, 44, 12, 0
+db 206, 48, 16, 0
+db 206, 52, 16, 0
+db 210, 56, 16, 0
+db 214, 60, 20, 0
+db 214, 64, 20, 0
+db 218, 64, 20, 0
+db 218, 68, 20, 0
+db 222, 72, 24, 0
+db 226, 76, 24, 0
+db 226, 80, 24, 0
+db 230, 85, 28, 0
+db 234, 89, 28, 0
+db 234, 93, 28, 0
+db 238, 97, 32, 0
+db 238, 101, 32, 0
+db 242, 105, 32, 0
+db 246, 109, 36, 0
+db 255, 121, 40, 0
+db 255, 133, 40, 0
+db 255, 145, 40, 0
+db 255, 157, 40, 0
+db 255, 174, 40, 0
+db 255, 186, 40, 0
+db 255, 198, 40, 0
+db 255, 214, 40, 0
+db 255, 226, 40, 0
+db 255, 238, 40, 0
+db 255, 242, 40, 0
+db 255, 242, 44, 0
+db 255, 242, 44, 0
+db 255, 242, 48, 0
+db 255, 242, 52, 0
+db 255, 242, 56, 0
+db 255, 242, 60, 0
+db 255, 242, 64, 0
+db 255, 242, 64, 0
+db 255, 242, 68, 0
+db 255, 242, 72, 0
+db 255, 242, 76, 0
+db 255, 242, 80, 0
+db 255, 242, 80, 0
+db 255, 242, 85, 0
+db 255, 242, 89, 0
+db 255, 242, 93, 0
+db 255, 242, 97, 0
+db 255, 242, 101, 0
+db 255, 242, 101, 0
+db 255, 242, 105, 0
+db 255, 242, 109, 0
+db 255, 246, 113, 0
+db 255, 246, 117, 0
+db 255, 246, 121, 0
+db 255, 246, 121, 0
+db 255, 246, 125, 0
+db 255, 246, 129, 0
+db 255, 246, 133, 0
+db 255, 246, 137, 0
+db 255, 246, 141, 0
+db 255, 246, 141, 0
+db 255, 246, 145, 0
+db 255, 246, 149, 0
+db 255, 246, 153, 0
+db 255, 246, 157, 0
+db 255, 246, 161, 0
+db 255, 246, 161, 0
+db 255, 246, 165, 0
+db 255, 246, 170, 0
+db 255, 246, 174, 0
+db 255, 246, 178, 0
+db 255, 246, 178, 0
+db 255, 250, 182, 0
+db 255, 250, 186, 0
+db 255, 250, 190, 0
+db 255, 250, 194, 0
+db 255, 250, 198, 0
+db 255, 250, 198, 0
+db 255, 250, 202, 0
+db 255, 250, 206, 0
+db 255, 250, 210, 0
+db 255, 250, 214, 0
+db 255, 250, 218, 0
+db 255, 250, 218, 0
+db 255, 250, 222, 0
+db 255, 250, 226, 0
+db 255, 250, 230, 0
+db 255, 250, 234, 0
+db 255, 250, 238, 0
+db 255, 250, 238, 0
+db 255, 250, 242, 0
+db 255, 250, 246, 0
+db 255, 250, 250, 0
+db 255, 255, 255, 0
+db 255, 255, 255, 0
+db 255, 255, 250, 0
+db 255, 255, 250, 0
+db 255, 255, 246, 0
+db 255, 255, 246, 0
+db 255, 250, 242, 0
+db 255, 250, 242, 0
+db 255, 250, 238, 0
+db 255, 250, 238, 0
+db 255, 250, 234, 0
+db 255, 250, 234, 0
+db 255, 250, 230, 0
+db 255, 246, 230, 0
+db 255, 246, 226, 0
+db 255, 246, 226, 0
+db 255, 246, 222, 0
+db 255, 246, 222, 0
+db 255, 246, 218, 0
+db 255, 242, 218, 0
+db 255, 242, 214, 0
+db 255, 242, 214, 0
+db 255, 242, 210, 0
+db 255, 242, 210, 0
+db 255, 242, 206, 0
+db 255, 242, 206, 0
+db 255, 238, 202, 0
+db 255, 238, 202, 0
+db 255, 238, 198, 0
+db 255, 238, 198, 0
+db 255, 238, 194, 0
+db 255, 238, 194, 0
+db 255, 234, 194, 0
+db 255, 234, 190, 0
+db 255, 234, 190, 0
+db 255, 234, 186, 0
+db 255, 234, 186, 0
+db 255, 234, 182, 0
+db 255, 230, 182, 0
+db 255, 230, 178, 0
+db 255, 230, 178, 0
+db 255, 230, 174, 0
+db 255, 230, 174, 0
+db 255, 230, 170, 0
+db 255, 230, 170, 0
+db 255, 226, 165, 0
+db 255, 226, 165, 0
+db 255, 226, 161, 0
+db 255, 226, 161, 0
+db 255, 226, 157, 0
+db 255, 226, 157, 0
+db 255, 222, 153, 0
+db 255, 222, 153, 0
+db 255, 222, 149, 0
+db 255, 222, 149, 0
+db 255, 222, 145, 0
+db 255, 222, 145, 0
+db 255, 222, 141, 0
+db 255, 218, 141, 0
+db 255, 218, 137, 0
+db 255, 218, 137, 0
+db 255, 218, 133, 0
+db 255, 218, 133, 0
+db 255, 218, 129, 0
+db 255, 214, 129, 0
+db 255, 214, 125, 0
+db 255, 214, 125, 0
+db 255, 214, 121, 0
+db 255, 214, 121, 0
+db 255, 214, 117, 0
+db 255, 210, 117, 0
+db 255, 210, 113, 0
+db 255, 210, 113, 0
+db 255, 210, 109, 0
+db 255, 210, 109, 0
+db 255, 210, 105, 0
+db 255, 210, 105, 0
+db 255, 206, 101, 0
+db 255, 206, 101, 0
+db 255, 206, 97, 0
+db 255, 206, 97, 0
+db 255, 206, 93, 0
+db 255, 206, 93, 0
+db 255, 202, 89, 0
+db 255, 202, 89, 0
+db 255, 202, 85, 0
+db 255, 202, 85, 0
+db 255, 202, 80, 0
+db 255, 202, 80, 0
+db 255, 202, 76, 0
+db 255, 198, 76, 0
+db 255, 198, 72, 0
+db 255, 198, 72, 0
+db 255, 198, 68, 0
+db 255, 198, 68, 0
+db 255, 198, 64, 0
+db 255, 194, 64, 0
+db 255, 194, 64, 0
+db 255, 194, 60, 0
+db 255, 194, 60, 0
+db 255, 194, 56, 0
+db 255, 194, 56, 0
+db 255, 190, 52, 0
+db 255, 190, 52, 0
+db 255, 190, 48, 0
+db 255, 190, 48, 0
+endif
+        
+;  PlasmaDefinition      PLASMA_DESCRIPTIONS_STRUCT<0, 0010456h, 1, 2, 2, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<100, 0, 0, -1, -3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<200, 0, 0, -2, -1, -1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<300, 0, 0, -1, 5, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<400, 0, 0, -5, 1, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<500, 0, 0, -1, 1, 6>
+;                        PLASMA_DESCRIPTIONS_STRUCT<600, 0, 0, 1, 5, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<700, 0, 0, -1, -3, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<800, 0, 0, 2, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<900, 0, 0, 1, 3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1000, 0, 0, 5, 1, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1100, 0, 0, 5, 6, -1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1200, 0, 0, 3, 0, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1300, 0, 0, 0, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1400, 0, 0, 2, 5, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1500, 0, 0, -1, 0, 6>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1600, 0, 0, 0, 3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1700, 0, 0, 0, 3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1800, 0, 0, -4, 0, 3>
+;                        PLASMA_DESCRIPTIONS_STRUCT<1900, 0, 0, 0, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2000, 0, 0, 1, 1, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2100, 0, 0, -1, 4, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2200, 0, 0, 1, -1, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2300, 0, 0, 1, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2350, 0, 0, 2, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2500, 0, 0, 0, 1, 5>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2600, 0, 0, -2, 0, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2700, 0, 0, 1, 1, -1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2800, 0, 0, 0, 3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<2900, 0, 0, 0, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3000, 0, 0, 1, 0, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3100, 0, 0, 0, -1, 9>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3200, 0, 0, 1, 0, -1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3300, 0, 0, -1, 5, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3400, 0, 0, 1, -3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3500, 0, 0, -5, -1, -1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3600, 0, 0, 1, 3, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3700, 0, 0, 1, 5, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3800, 0, 0, 0, 1, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<3900, 0, 0, 1, 5, 0>
+;                        PLASMA_DESCRIPTIONS_STRUCT<4000, 0, 0, 5, 0, 1>
+;                        PLASMA_DESCRIPTIONS_STRUCT<10000, 0, 0, 0, 0, 0>  ; Not Reachable
+;
+;
 
  
 
@@ -614,8 +832,16 @@ public CopperBarsDemo_Free
                          dw 0, 0
                          dq OFFSET PureAssembly
 
-
-
+  BottomTextPtr          dq OFFSET BottomText
+  BottomText             db "Shout out to 90s demos like Kukoo2 Descent and Second Reality -- No demo would be complete without"
+                         db " hard to read text talking about things no one understands anyway!  Special shout out to IRC Channels from"
+                         db " the mid 90s #C #Coders #ASM #WIN32ASM #Winprog #GameDev #GameProg #RPGDEV ... Maybe I should also shout out"
+                         db " some people from the mid 90s!  TheHornet PeZzA Bufferman Comrade fflush Zhivago Doc_O Sledgehammer"
+                         db " Iczelion hutch MultiAGP PenT|uM SD_Adept SilverStr coderman Dawai drano Furan KrZDG Eskimo programax"
+                         db " [ryan] RuebiaYat spec t_gypsy Wyatt xor magey kritical Stonecyph Pizzi and many more I've left out!", 0
+  PlasmaX                dq 1023
+  PlasmaXIncrement       dq -3  
+                         
   SineTablePtr           dq 0
   CosineTablePtr         dq 0
 
@@ -647,6 +873,8 @@ public CopperBarsDemo_Free
   FLASH_TO_BOLD_UPSIDEDOWN dq 3000
   BOLD_RESTART             dq 3050
 
+
+
   HeightAngle            mmword 0.001
   WidthAngle             mmword 0.023
   HeightAngleInc         mmword 0.0001
@@ -661,8 +889,8 @@ public CopperBarsDemo_Free
   PaletteArray           dq ?
   DoubleBuffer           dq ?
   FireDoubleBuffer       dq ?
-  PlasmaDoubleBuffer     dq ?
-  PlasmaPalette          dq ?
+;  PlasmaDoubleBuffer     dq ?
+;  PlasmaPalette          dq ?
   VirtualPalette         dq ?
   CopperBarsVertOne      dq ?
   CopperBarsVertTwo      dq ?
@@ -705,21 +933,21 @@ NESTED_ENTRY CopperBarsDemo_Init, _TEXT$00
   TEST RAX, RAX
   JZ @CopperInit_Failed
   
-  MOV RDX, PLASMA_WIDTH * PLASMA_HEIGHT * 2
-  MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
-  MOV [PlasmaDoubleBuffer], RAX
-  TEST RAX, RAX
-  JZ @CopperInit_Failed
+;  MOV RDX, PLASMA_WIDTH * PLASMA_HEIGHT * 2
+;  MOV RCX, LMEM_ZEROINIT
+;  DEBUG_FUNCTION_CALL LocalAlloc
+;  MOV [PlasmaDoubleBuffer], RAX
+;  TEST RAX, RAX
+;  JZ @CopperInit_Failed
 
-  MOV RDX, 4096*4
-  MOV RCX, LMEM_ZEROINIT
-  DEBUG_FUNCTION_CALL LocalAlloc
-  MOV [PlasmaPalette], RAX
-  TEST RAX, RAX
-  JZ @CopperInit_Failed
+;  MOV RDX, 4096*4
+;  MOV RCX, LMEM_ZEROINIT
+;  DEBUG_FUNCTION_CALL LocalAlloc
+;  MOV [PlasmaPalette], RAX
+;  TEST RAX, RAX
+;  JZ @CopperInit_Failed
 
-  DEBUG_FUNCTION_CALL CopperBarDemo_CreatePlasmaColorTable
+;  DEBUG_FUNCTION_CALL CopperBarDemo_CreatePlasmaColorTable
 
   MOV RCX, 65536
   DEBUG_FUNCTION_CALL VPal_Create
@@ -1068,8 +1296,11 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RDI, RCX
   INC [DemoFrameCounter]
   ;CMP [DemoFrameCounter], 5000
+
   JMP @NoMelt
   JB @NoMelt
+
+
 
   MOV RCX, [DoubleBuffer]
   ;MOV RDX, [VirtualPalette]
@@ -1280,7 +1511,7 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
   MOV RAX, [FLASH_TO_BOLD_UPSIDEDOWN]
   CMP [DemoFrameCounter], RAX
   JB @DrawVerticleBars
-  MOV R14, OFFSET CopperBarDemo_DrawVertBarsDarkTransparent
+  MOV R14, OFFSET CopperBarDemo_DrawVertBarSolid
   MOV R15, OFFSET CopperBarDemo_DrawVertBarSolidUpsidedown  
 
   TEST [DemoFrameCounter], 1
@@ -1349,7 +1580,12 @@ NESTED_ENTRY CopperBarsDemo_Demo, _TEXT$00
 @SkipFireOverlay:
   MOV RCX, RDI
   DEBUG_FUNCTION_CALL CopperBarDemo_PerformPlasma
+
+  MOV RCX, RDI
+  DEBUG_FUNCTION_CALL CopperBarsDemo_DisplaySineText
+
 @ExitFunction:
+
   MOV EAX, 1
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
   ADD RSP, SIZE STD_FUNCTION_STACK
@@ -2825,10 +3061,10 @@ NESTED_ENTRY CopperBarDemo_FeedTheFire, _TEXT$00
 @PrimeTheFire:
   DEBUG_FUNCTION_CALL Math_Rand
   XOR RDX, RDX
-  MOV RCX, 225
+  MOV RCX, 255
   TEST RBX, 1
   JZ @ContinueNumber
-  MOV RCX, 150
+  MOV RCX, 160
 @ContinueNumber:
   DIV RCX
   ADD RDX, MAX_FIRE_INDEX - 225
@@ -2890,7 +3126,13 @@ NESTED_ENTRY CopperBarDemo_UpdateTheFire, _TEXT$00
   ADD AX, [RDI + FIRE_WIDTH*4]
   ;ADD AX, [RDI + FIRE_WIDTH*2]
 
+
   SHR AX, 2
+
+  CMP AX, 40
+  JA @SkipForceZero
+  XOR AX, AX
+@SkipForceZero:
   CMP AX, 0
   JE @SkipDecrement
   DEC AX
@@ -2984,7 +3226,7 @@ NESTED_ENTRY CopperBarDemo_OverlayFire, _TEXT$00
   MOV RAX, MASTER_DEMO_STRUCT.ScreenWidth[R12]
   SHL RAX, 2
   XOR RDX, RDX
-  MOV RCX, FIRE_START_Y + 1
+  MOV RCX, FIRE_START_Y + 11
   MUL RCX
 
   ADD RDI, RAX
@@ -3006,51 +3248,17 @@ NESTED_ENTRY CopperBarDemo_OverlayFire, _TEXT$00
   XOR R11, R11
   XOR RCX, RCX
   XOR RDX, RDX
-
+  ADD RAX, 2
   MOV CL, BYTE PTR [R10 + RAX]
-  CMP CL, 63
-  JAE @NoTransparent
-  JMP @NoTransparent    ; Temporary trying this
-  MOV R11, 1
-  MOV DL, BYTE PTR [RDI + 2]
-  ADD CX, DX
-  SHR CX, 1
-  CMP CX, 255
-  JB @WriteRed
-  MOV CX, 255
-@NoTransparent:
-@WriteRed:
-  MOV BYTE PTR [RDI + 2], CL
-  
-  XOR RCX, RCX
-  XOR RDX, RDX
-  INC RAX
-  MOV CL, BYTE PTR [R10 + RAX]
-  CMP R11, 0
-  JE @WriteGreen
-  MOV DL, BYTE PTR [RDI + 1]
-  ADD CX, DX
-  SHR CX, 1
-  CMP CX, 255
-  JB @WriteGreen
-  MOV CX, 255
-@WriteGreen:
-  MOV BYTE PTR [RDI + 1], CL
-  
-  XOR RCX, RCX
-  XOR RDX, RDX
-  INC RAX
-  MOV CL, BYTE PTR [R10 + RAX]
-  CMP R11, 0
-  JE @WriteBlue
-  MOV DL, BYTE PTR [RDI]
-  ADD CX, DX
-  SHR CX, 1
-  CMP CX, 255
-  JB @WriteBlue
-  MOV CX, 255
-@WriteBlue:
   MOV BYTE PTR [RDI], CL
+
+  DEC RAX
+  MOV CL, BYTE PTR [R10 + RAX]
+  MOV BYTE PTR [RDI + 1], CL
+
+  DEC RAX
+  MOV CL, BYTE PTR [R10 + RAX]
+  MOV BYTE PTR [RDI + 2], CL
 @NothingToPlot:
   ADD RSI, 2
   ADD RDI, 4
@@ -3065,7 +3273,7 @@ NESTED_ENTRY CopperBarDemo_OverlayFire, _TEXT$00
   ADD RDI, RAX
    
   INC R8
-  CMP R8, FIRE_HEIGHT-3
+  CMP R8, FIRE_HEIGHT
   JB @CopyFireLoop
 
   RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
@@ -3656,7 +3864,7 @@ NESTED_ENTRY CopperBarDemo_PerformPlasma, _TEXT$00
   SAVE_ALL_XMM_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
-  MOV RSI, [PlasmaDoubleBuffer]
+ ; MOV RSI, [PlasmaDoubleBuffer]
   MOV RDI, [DoubleBuffer]
   MOV RAX, PLASMA_AREA_START
   XOR RDX, RDX
@@ -3724,6 +3932,7 @@ NESTED_ENTRY CopperBarDemo_PerformPlasma, _TEXT$00
   XCHG RAX, RCX
   DIV RCX
 
+  ; Blue
   MOV R15, RDX
   MOV RCX, RDX
   DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
@@ -3734,12 +3943,26 @@ NESTED_ENTRY CopperBarDemo_PerformPlasma, _TEXT$00
   CVTSI2SD XMM1, RAX
   MULSD XMM0, XMM1
   CVTSD2SI RAX, XMM0
-  CMP R13, 0
-  JE @PlotBlue
 
-@PlotBlue:
+;  CMP R12, 0
+;  JE @SkipForFirstRow
+;  CMP R12, PLASMA_HEIGHT-1
+;  JE @SkipForLastRow
+;  XOR RCX, RCX
+;  XOR RDX, RDX
+;  XOR R8, R8
+;  MOV CL, BYTE PTR [RSI - 4]
+;  MOV DL, BYTE PTR [RSI + 4]
+;  MOV R8B, BYTE PTR [RSI - PLASMA_WIDTH*4]
+ ; ADD CX, DX
+ ; ADD CX, R8W
+ ; ADD AX, CX
+ ; SHR AX, 2 
+@SkipForFirstRow:
+@SkipForLastRow:
   MOV BYTE PTR [RDI], AL
 
+  ; Green
   MOV RCX, R15
   DEBUG_FUNCTION_CALL CopperBarsDemo_Cos
   MOV RAX, 1
@@ -3749,12 +3972,27 @@ NESTED_ENTRY CopperBarDemo_PerformPlasma, _TEXT$00
   CVTSI2SD XMM1, RAX
   MULSD XMM0, XMM1
   CVTSD2SI RAX, XMM0
-  CMP R13, 0
-  JE @PlotGreen
 
-@PlotGreen:
+;  CMP R12, 0
+;  JE @SkipForFirstRow2
+;  CMP R12, PLASMA_HEIGHT-1
+;  JE @SkipForLastRow2
+;  XOR RCX, RCX
+;  XOR RDX, RDX
+;  XOR R8, R8
+;  MOV CL, BYTE PTR [RSI - 3]
+;  MOV DL, BYTE PTR [RSI + 5]
+;  MOV R8B, BYTE PTR [RSI - PLASMA_WIDTH*4+1]
+;  ADD CX, DX
+;  ADD CX, R8W
+;  ADD AX, CX
+;  SHR AX, 2 
+
+@SkipForFirstRow2:
+@SkipForLastRow2:
   MOV BYTE PTR [RDI + 1], AL
 
+  ;Red
   MOV RCX, R15
   DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
   MULSD XMM0, XMM0
@@ -3765,10 +4003,26 @@ NESTED_ENTRY CopperBarDemo_PerformPlasma, _TEXT$00
   CVTSI2SD XMM1, RAX
   MULSD XMM0, XMM1
   CVTSD2SI RAX, XMM0
-  CMP R13, 0
-  JE @PlotRed
 
-@PlotRed:
+;  CMP R12, 0
+;  JE @SkipForFirstRow3
+;  CMP R12, PLASMA_HEIGHT-1
+;  JE @SkipForLastRow3
+;  XOR RCX, RCX
+;  XOR RDX, RDX
+;  XOR R8, R8
+;  MOV CL, BYTE PTR [RSI - 2]
+;  MOV DL, BYTE PTR [RSI + 6]
+;  MOV R8B, BYTE PTR [RSI - PLASMA_WIDTH*4+2]
+;  ADD CX, DX
+;  ADD CX, R8W
+;  ADD AX, CX
+;  SHR AX, 2 
+
+@SkipForFirstRow3:
+@SkipForLastRow3:
+
+
   MOV BYTE PTR [RDI + 2], AL
 
 
@@ -3865,118 +4119,118 @@ NESTED_END CopperBarDemo_PerformPlasma, _TEXT$00
 
 
 
-;*********************************************************
-;  CopperBarDemo_CreatePlasmaColorTable
+;;*********************************************************
+;;  CopperBarDemo_CreatePlasmaColorTable
+;;
+;;        Parameters: Angle (Theta), Multiplier, Center
+;;
+;;           Return = Multiplier*SIN(Theta) + Center
+;;
+;;
+;;*********************************************************  
+;NESTED_ENTRY CopperBarDemo_CreatePlasmaColorTable, _TEXT$00
+;  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+;  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+;.ENDPROLOG 
+;  DEBUG_RSP_CHECK_MACRO
+;  MOV RDI, [PlasmaPalette]
+;  MOV RSI, OFFSET PlasmaDefinition
+;  MOV R12, RSI
+;  ADD R12, SIZE PLASMA_DESCRIPTIONS_STRUCT
+;  XOR RAX, RAX
+;  XOR RBX, RBX
+;@StartPlasmaPaletteEntry:
 ;
-;        Parameters: Angle (Theta), Multiplier, Center
+;  CMP PLASMA_DESCRIPTIONS_STRUCT.UseStartColor[RSI], 0
+;  JE @SetColors
 ;
-;           Return = Multiplier*SIN(Theta) + Center
+;  MOV EAX, PLASMA_DESCRIPTIONS_STRUCT.StartColor[RSI]
+;  JMP @SetColorDirectly
+;  
+;@SetColors:
+;  ;
+;  ; Right now allow wrap around instead of truncate.
+;  ;
+;  MOV EDX, EAX
+;  SHR EAX, 16
+;  XOR AH, AH
+;  XOR CX, CX
+;  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
+;  ADD AX, CX
+;  CMP AX, 0
+;  JL @NegativeRed
 ;
+;  CMP AX, 255
+;  JL @SkipForceUpdate
 ;
-;*********************************************************  
-NESTED_ENTRY CopperBarDemo_CreatePlasmaColorTable, _TEXT$00
-  alloc_stack(SIZEOF STD_FUNCTION_STACK)
-  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
-.ENDPROLOG 
-  DEBUG_RSP_CHECK_MACRO
-  MOV RDI, [PlasmaPalette]
-  MOV RSI, OFFSET PlasmaDefinition
-  MOV R12, RSI
-  ADD R12, SIZE PLASMA_DESCRIPTIONS_STRUCT
-  XOR RAX, RAX
-  XOR RBX, RBX
-@StartPlasmaPaletteEntry:
-
-  CMP PLASMA_DESCRIPTIONS_STRUCT.UseStartColor[RSI], 0
-  JE @SetColors
-
-  MOV EAX, PLASMA_DESCRIPTIONS_STRUCT.StartColor[RSI]
-  JMP @SetColorDirectly
-  
-@SetColors:
-  ;
-  ; Right now allow wrap around instead of truncate.
-  ;
-  MOV EDX, EAX
-  SHR EAX, 16
-  XOR AH, AH
-  XOR CX, CX
-  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
-  ADD AX, CX
-  CMP AX, 0
-  JL @NegativeRed
-
-  CMP AX, 255
-  JL @SkipForceUpdate
-
-  MOV AX, 255
-  NEG PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
-  JMP @SkipForceUpdate
-@NegativeRed:
-  MOV AX, 0
-  NEG PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
-@SkipForceUpdate:
-  SHL EAX, 16
-  
-  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
-  MOV AL, DH
-  ADD AX, CX
-
-  CMP AX, 0
-  JL @NegativeGreen
-  CMP AX, 255
-  JL @SkipForceUpdateGreen
-  MOV AX, 255
-  NEG PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
-  JMP @SkipForceUpdateGreen
-@NegativeGreen:
-  MOV AX, 0
-  NEG PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
-
-@SkipForceUpdateGreen:
-  MOV DH, AL
-
-  MOV AL, DL
-  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
-  ADD AX, CX
-  CMP AX, 0
-  JE @NegativeBlue
-
-  CMP AX, 255
-  JL @SkipForceUpdateBlue
-
-  MOV AX, 255
-  NEG PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
-  JMP @SkipForceUpdateBlue
-@NegativeBlue:
-  MOV AX, 0
-  NEG PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
-@SkipForceUpdateBlue:
-  MOV AH, DH
-
-@SetColorDirectly:
-  MOV DWORD PTR [RDI], EAX
-  CMP EAX, 0FFFFFFh
-  JNE @KeepGoing
-  INT 3
-@KeepGoing:
-  ADD RDI, 4
-  INC RBX
-  CMP RBX, 4096
-  JE @DoneWithColors  
-
-  CMP PLASMA_DESCRIPTIONS_STRUCT.StartRange[R12], RBX
-  JNE @SetColors
-  MOV RSI, R12
-  ADD R12, SIZE PLASMA_DESCRIPTIONS_STRUCT
-  JMP @StartPlasmaPaletteEntry
-@DoneWithColors:
-
-  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
-  ADD RSP, SIZE STD_FUNCTION_STACK
-  RET
-NESTED_END CopperBarDemo_CreatePlasmaColorTable, _TEXT$00
-
+;  MOV AX, 255
+;  NEG PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
+;  JMP @SkipForceUpdate
+;@NegativeRed:
+;  MOV AX, 0
+;  NEG PLASMA_DESCRIPTIONS_STRUCT.RedVelocity[RSI]
+;@SkipForceUpdate:
+;  SHL EAX, 16
+;  
+;  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
+;  MOV AL, DH
+;  ADD AX, CX
+;
+;  CMP AX, 0
+;  JL @NegativeGreen
+;  CMP AX, 255
+;  JL @SkipForceUpdateGreen
+;  MOV AX, 255
+;  NEG PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
+;  JMP @SkipForceUpdateGreen
+;@NegativeGreen:
+;  MOV AX, 0
+;  NEG PLASMA_DESCRIPTIONS_STRUCT.GreenVelocity[RSI]
+;
+;@SkipForceUpdateGreen:
+;  MOV DH, AL
+;
+;  MOV AL, DL
+;  MOVSX CX, PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
+;  ADD AX, CX
+;  CMP AX, 0
+;  JE @NegativeBlue
+;
+;  CMP AX, 255
+;  JL @SkipForceUpdateBlue
+;
+;  MOV AX, 255
+;  NEG PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
+;  JMP @SkipForceUpdateBlue
+;@NegativeBlue:
+;  MOV AX, 0
+;  NEG PLASMA_DESCRIPTIONS_STRUCT.BlueVelocity[RSI]
+;@SkipForceUpdateBlue:
+;  MOV AH, DH
+;
+;@SetColorDirectly:
+;  MOV DWORD PTR [RDI], EAX
+;  CMP EAX, 0FFFFFFh
+;  JNE @KeepGoing
+;  INT 3
+;@KeepGoing:
+;  ADD RDI, 4
+;  INC RBX
+;  CMP RBX, 4096
+;  JE @DoneWithColors  
+;
+;  CMP PLASMA_DESCRIPTIONS_STRUCT.StartRange[R12], RBX
+;  JNE @SetColors
+;  MOV RSI, R12
+;  ADD R12, SIZE PLASMA_DESCRIPTIONS_STRUCT
+;  JMP @StartPlasmaPaletteEntry
+;@DoneWithColors:
+;
+;  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+;  ADD RSP, SIZE STD_FUNCTION_STACK
+;  RET
+;NESTED_END CopperBarDemo_CreatePlasmaColorTable, _TEXT$00
+;
 ;*********************************************************
 ;  CopperBarsDemo_CreateSineTable
 ;
@@ -4150,6 +4404,12 @@ NESTED_ENTRY CopperBarsDemo_Sin, _TEXT$00
   SAVE_ALL_STD_REGS STD_FUNCTION_STACK
 .ENDPROLOG 
   DEBUG_RSP_CHECK_MACRO
+@RetryNegative:
+  CMP RCX, 0
+  JG @Positive
+  ADD RCX, 360
+  JMP @RetryNegative
+@Positive:
   CMP RDX, 1
   JNZ @SkipStrapping
   XOR RDX, RDX
@@ -4173,6 +4433,241 @@ NESTED_ENTRY CopperBarsDemo_Sin, _TEXT$00
   ADD RSP, SIZE STD_FUNCTION_STACK
   RET
 NESTED_END CopperBarsDemo_Sin, _TEXT$00
+
+
+
+
+;*********************************************************
+;  CopperBarDemo_DisplaySineLetter
+;
+;        Parameters: Letter, X/Angle/Letter Center, Multiplier, CenterOffset
+;
+;           
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarDemo_DisplaySineLetter, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+  MOV R12, RDX                                  ; X which is used as the angle.  It is also the center X of the letter.
+  MOV R13, R8                                   ; Multiplier
+  MOV R14, R9                                   ; Center-OFFSET
+
+  DEBUG_FUNCTION_CALL Font_GetBitFont  
+  MOV RSI, RAX
+  
+  ;
+  ; Set the Double Buffer to the plasma area start.
+  ;
+  MOV RDI, [DoubleBuffer]
+
+
+  MOV RDX, 1
+  MOV RCX, R12
+  DEBUG_FUNCTION_CALL CopperBarsDemo_Sin
+  CVTSI2SD XMM1, R13
+  CVTSI2SD XMM2, R14
+  MULSD XMM0, XMM1
+  ADDSD XMM0, XMM2
+  CVTSD2SI R11, XMM0
+
+  ;
+  ; Adjust center X to left for X.
+  ;
+  MOV RAX, SIN_FONT_WIDTH_SIZE
+  SHL RAX, 3                            ; Ya, could do this in 1 SHL RAX, 2
+  SHR RAX, 1
+  SUB R12, RAX
+  
+  MOV RDX, SIN_FONT_WIDTH_SIZE*8
+  MOV RCX, R12
+  ADD RCX, RDX
+
+  XOR RAX, RAX
+  CMP RCX, 0
+  JLE @OffScreenLetter
+
+  ;
+  ; Adjust center Y for top row
+  ;
+  XOR RDX, RDX
+  MOV RAX, SIN_FONT_HEIGHT_SIZE_PER_LINE
+
+  SHL RAX, 3                            ;  Ya, could do this in 1 SHL RAX, 2
+  SHR RAX, 1
+  SUB R11, RAX
+  
+  ;
+  ; Set drawing to start location for Y/X[0]
+  ;
+  XOR RDX, RDX
+  MOV RAX, PLASMA_AREA_START
+  ADD RAX, R11
+  MOV RCX, PLASMA_WIDTH
+  MUL RCX
+  SHL RAX,2
+  ADD RDI, RAX
+  MOV R15, R12
+  CMP R12, 0
+  JGE @NoAdjustment
+  XOR R12, R12
+@NoAdjustment:
+  SHL R12, 2
+  ADD RDI, R12
+
+  XOR R8, R8  
+@HeightLoop:
+  MOV R9, SIN_FONT_HEIGHT_SIZE_PER_LINE
+@FontSizeHeightLoop:
+  XOR DL, DL
+  MOV AL, BYTE PTR [RSI]
+  MOV AH, 080h
+  XOR R11, R11
+  MOV R10, R15
+@WidthLoop:
+  TEST AL, AH
+  JZ @NoDraw
+  MOV RCX, SIN_FONT_WIDTH_SIZE
+@DrawIt:
+  CMP R10, 0
+  JL @SkipDrawingPart
+  CMP R10, PLASMA_WIDTH
+  JGE @SkipDrawingPart
+
+  MOV RBP, R11
+  SUB RBP, PLASMA_WIDTH*5
+  MOV EBP, DWORD PTR [RDI + RBP]
+  MOV DWORD PTR [RDI + R11], EBP
+;  SHL RAX, 16
+;  MOV AL, BYTE PTR [RDI + R11]
+;  MOV AH, 255
+;  SUB AH, AL
+;  SHR AH, 1
+;  ADD AL, AH
+;  MOV BYTE PTR [RDI + R11], AL
+;
+;  MOV RBP, R11
+;  INC RBP
+;  MOV AL, BYTE PTR [RDI + RBP]
+;  MOV AH, 255
+;  SUB AH, AL
+;  SHR AH, 1
+;  ADD AL, AH
+;  MOV BYTE PTR [RDI + RBP], AL
+;  
+;  INC RBP
+;  MOV AL, BYTE PTR [RDI + RBP]
+;  MOV AH, 255
+;  SUB AH, AL
+;  SHR AH, 1
+;  ADD AL, AH
+;  MOV BYTE PTR [RDI + RBP], AL
+;  SHR RAX, 16
+
+  ADD R11, 4
+@SkipDrawingPart:
+  INC R10
+  DEC RCX
+  JNZ @DrawIt
+  JMP @DontDoubleRemove
+@NoDraw:
+  MOV RCX, SIN_FONT_WIDTH_SIZE
+@NoDrawLoop:
+  CMP R10, 0
+  JL @SkipNoDrawingPart
+  CMP R10, PLASMA_WIDTH
+  JGE @SkipNoDrawingPart
+  ADD R11, 4
+@SkipNoDrawingPart:    
+  INC R10
+  DEC RCX
+  JNZ @NoDrawLoop
+@DontDoubleRemove:
+  SHR AH, 1
+  INC DL
+  CMP DL, 8
+  JB @WidthLoop
+  DEC R9
+  JZ @NextLine
+ 
+  XOR R11, R11
+  ADD RDI, PLASMA_WIDTH*4
+  JMP @FontSizeHeightLoop
+
+@NextLine:
+  ADD RDI, PLASMA_WIDTH*4
+  INC RSI
+  INC DH
+  CMP DH, 8
+  JB @HeightLoop
+
+  MOV RAX, 1
+ @OffScreenLetter:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarDemo_DisplaySineLetter, _TEXT$00
+
+
+;*********************************************************
+;  CopperBarsDemo_DisplaySineText
+;
+;        Parameters: Master Context
+;
+;
+;
+;
+;*********************************************************  
+NESTED_ENTRY CopperBarsDemo_DisplaySineText, _TEXT$00
+  alloc_stack(SIZEOF STD_FUNCTION_STACK)
+  SAVE_ALL_STD_REGS STD_FUNCTION_STACK
+.ENDPROLOG 
+  DEBUG_RSP_CHECK_MACRO
+
+  MOV R13, 1
+  MOV R12, [BottomTextPtr]
+  MOV R14, [PlasmaX]
+  CMP BYTE PTR [R12], 0
+  JE @NoTextToDisplay
+
+@DisplayTextLoop:
+  MOV R9, PLASMA_HEIGHT / 2
+  MOV R8, PLASMA_HEIGHT / 4
+  MOV RDX, R14
+  MOV CL, BYTE PTR [R12]
+  DEBUG_FUNCTION_CALL CopperBarDemo_DisplaySineLetter
+  INC R12
+  ADD R14, (BOTTOM_TEXT_LETTER_SPACE) + (SIN_FONT_WIDTH_SIZE*8)
+  CMP RAX, 0
+  JNE @LetterStillActive
+  CMP R13, 0
+  JE @EndOfTheLine
+  MOV [PlasmaX], R14
+  MOV [BottomTextPtr], R12
+  JMP @NowWeAreStillAtFirstLetter
+@LetterStillActive:
+  XOR R13, R13
+@NowWeAreStillAtFirstLetter:
+  CMP BYTE PTR [R12], 0
+  JNE @DisplayTextLoop
+@EndOfTheLine:
+
+  MOV RAX, [PlasmaXIncrement]
+  ADD [PlasmaX], RAX  
+
+@NoTextToDisplay:
+  RESTORE_ALL_STD_REGS STD_FUNCTION_STACK
+  ADD RSP, SIZE STD_FUNCTION_STACK
+  RET
+NESTED_END CopperBarsDemo_DisplaySineText, _TEXT$00
+
+
+
+
+
+
 
 END
 
