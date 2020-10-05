@@ -3,9 +3,8 @@
 ;
 ;  Written in Assembly x64
 ; 
-;  By Toby Opferman  2017
+;  By Toby Opferman  September 2020
 ;
-;     Completely Rewritten to look a style simmilar to Kukoo2 in September 2020.
 ;
 ;*********************************************************
 
