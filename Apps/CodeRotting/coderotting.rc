@@ -1,0 +1,6 @@
+#include <windows.h>
+
+
+AUDIODEMO           AUDIO_TYPE resources\coderotting.audio
+BACKGROUND          GIF_TYPE   resources\background.gif
+CODROTTING          GIF_TYPE   resources\coderottinglogo.gif

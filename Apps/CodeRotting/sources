@@ -1,0 +1,39 @@
+TARGETNAME=CodeRotting
+TARGETPATH=obj
+TARGETTYPE=PROGRAM
+UMTYPE=windows
+UMENTRY=winmain
+
+
+USE_MSVCRT = 1
+
+MSC_WARNING_LEVEL = $(MSC_WARNING_LEVEL) -WX
+
+C_DEFINES = $(CFASTFLAGS) $(C_DEFINES) -DWIN64 
+
+UMTYPE = windows
+INCLUDES=$(INCLUDES);..\..\public\inc;..\..\public\inc\amd64;..\..\private\inc;..\..\private\inc\amd64;..\..\demoscenes\inc\amd64;..\..\DemoScenes\inc\
+
+AMD64_SOURCES = entry.asm coderotting.asm coderotting.rc
+SOURCES=
+
+TARGETLIBS = $(TARGETLIBS) \
+             $(SDK_LIB_PATH)\user32.lib \
+             $(SDK_LIB_PATH)\kernel32.lib \
+             $(SDK_LIB_PATH)\ddraw.lib \
+             $(SDK_LIB_PATH)\ole32.lib \
+             ..\..\libs\x64\Dwmapi.lib \
+             $(OBJ_PATH)\..\..\Framework\Window\$O\Windowx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Ddraw\$O\Ddrawx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Math\$O\Mathx64.lib \
+             $(OBJ_PATH)\..\..\DemoScenes\CopperBars\$O\CopperBarsx64.lib \
+             $(OBJ_PATH)\..\..\Framework\Engine\$O\Enginex64.lib \
+             $(OBJ_PATH)\..\..\Framework\vpal\$O\vpalx64.lib \
+             $(OBJ_PATH)\..\..\Framework\font\$O\fontx64.lib \
+             $(OBJ_PATH)\..\..\Framework\init\$O\Initx64.lib \
+             $(OBJ_PATH)\..\..\Framework\dbuffer\$O\dbufferx64.lib \
+             $(OBJ_PATH)\..\..\Framework\audio\$O\audiox64.lib \
+             $(OBJ_PATH)\..\..\Framework\soft3d\$O\soft3dx64.lib \
+             $(OBJ_PATH)\..\..\Framework\gif\$O\gifx64.lib \
+             $(OBJ_PATH)\..\..\Framework\gameengine\$O\gameenginex64.lib
+
