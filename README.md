@@ -392,17 +392,17 @@ The framework contains various functions you can use to accellerate your demo bu
     - Parameters: (RCX - Audio Handle)
     - Return: None
 
-- ** Audio_PlayEffect**
+- **Audio_PlayEffect**
     - Description: Sets an effect to be played.
     - Parameters: (RCX - Audio Handle, RDX - Effect ID to be played)
     - Return: TRUE/FASE
 
-- ** Audio_PlayMusic**
+- **Audio_PlayMusic**
     - Description: Sets audio to be played.
     - Parameters: (RCX - Audio Handle, RDX - Audio ID to be played)
     - Return: TRUE/FASE
  
-- ** Audio_SetVolume**
+- **Audio_SetVolume**
     - Description: Sets the volumne
     - Parameters: (RCX - Audio Handle, RDX - Volumne 0 - 1000)
     - Return: Error Code
