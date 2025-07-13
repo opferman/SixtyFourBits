@@ -365,6 +365,48 @@ The framework contains various functions you can use to accellerate your demo bu
     - Parameters: (RCX - Gif Handle, RDX - Image Number, R8 - Return Buffer must be preallocated to include a sequential buffer of all images)
     - Return: TRUE or FALSE
    
+
+### audio_public.inc
+- **Audio_Init**
+    - Description: Initializes WASAPI
+    - Parameters: (RCX - Wave File Header)
+    - Return: Audio Handle
+
+- **Audio_AddMusic**
+    - Description: Adds a music stream that can be played.
+    - Parameters: (RCX - Audio Handle, RDX - Audio Sound Structure)
+    - Return: Audio ID
+
+- **Audio_AddEffect**
+    - Description: Adds an effect that can be played over the music.
+    - Parameters: (RCX - Audio Handle, RDX - Audio Sound Structure)
+    - Return: Audio ID
+
+- **Audio_TogglePauseEffects**
+    - Description: Pauses or enables effects
+    - Parameters: (RCX - Audio Handle)
+    - Return: None
+
+- **Audio_TogglePauseMusic**
+    - Description: Pauses or enables music
+    - Parameters: (RCX - Audio Handle)
+    - Return: None
+
+- ** Audio_PlayEffect**
+    - Description: Sets an effect to be played.
+    - Parameters: (RCX - Audio Handle, RDX - Effect ID to be played)
+    - Return: TRUE/FASE
+
+- ** Audio_PlayMusic**
+    - Description: Sets audio to be played.
+    - Parameters: (RCX - Audio Handle, RDX - Audio ID to be played)
+    - Return: TRUE/FASE
+ 
+- ** Audio_SetVolume**
+    - Description: Sets the volumne
+    - Parameters: (RCX - Audio Handle, RDX - Volumne 0 - 1000)
+    - Return: Error Code
+
 # Programming Guide (Examples)
 
 The following are coding examples of how to use some of the library and framework functionality in your demo.
